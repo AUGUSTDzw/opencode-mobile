@@ -33,6 +33,15 @@
       "contributions": [
         "bug"
       ]
+    },
+    {
+      "login": "electronrancher",
+      "name": "electronrancher",
+      "avatar_url": "https://avatars.githubusercontent.com/u/6657599?v=4",
+      "profile": "https://github.com/electronrancher",
+      "contributions": [
+        "code"
+      ]
     }
   ],
   "contributorsPerLine": 7,
