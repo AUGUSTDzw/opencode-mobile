@@ -261,10 +261,11 @@ The ticket authenticates the WebSocket rather than placing Basic credentials in 
 
 ### V2 PTY mapping
 
-V2 mounts PTYs under `/api` and scopes them with `location[directory]` instead of `directory`. The adapter maps:
+V2 mounts PTYs under `/api` and scopes them with `location[directory]` instead of `directory`. Every PTY endpoint must carry that location; mixing a scoped read with an unscoped lookup produces "PTY session not found". The adapter maps:
 
 - `pty.list()` / `pty.create()` → `GET/POST /api/pty` with `location[directory]` from the active project, so listing and creation target the same location the UI is scoped to
-- `pty.connectToken()` → `POST /api/pty/{ptyID}/connect-token`; the `x-opencode-ticket: 1` header is required and is sent both as the generated `PtyConnectTokenInput` field and as a request header
+- `pty.get()` / `pty.update()` / `pty.remove()` → `GET/PUT/DELETE /api/pty/{ptyID}` with the same `location[directory]`
+- `pty.connectToken()` → `POST /api/pty/{ptyID}/connect-token` with `location[directory]`; the `x-opencode-ticket: 1` header is required and is sent both as the generated `PtyConnectTokenInput` field and as a request header
 - WebSocket → `ws(s)://{origin}{prefix}/api/pty/{ptyID}/connect?location[directory]=…&cursor=…&ticket=…`
 
 The connect token is short-lived and single-use; every open/reconnect requests a fresh one. The live terminal socket lives in the provider, so event handling for `pty.created`/`pty.updated`/`pty.exited`/`pty.deleted` must be registered in the provider event switch (not only the history replay path) or the terminal list stops reconciling after the first change.

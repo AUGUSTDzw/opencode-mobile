@@ -918,20 +918,25 @@ function buildV2Raw(settings: OpencodeConnectionSettings): { client: Record<stri
         return ok(response.data);
       },
       get: async (parameters: { ptyID: string }) => {
-        const response = await api.pty.get({ ptyID: parameters.ptyID });
+        const response = await api.pty.get({ ptyID: parameters.ptyID, ...(ctx.directory ? { location: { directory: ctx.directory } } : {}) });
         return ok(response.data);
       },
       update: async (parameters: { ptyID: string; title?: string; size?: { rows: number; cols: number } }) => {
-        const response = await api.pty.update({ ptyID: parameters.ptyID, ...(parameters.title !== undefined ? { title: parameters.title } : {}), ...(parameters.size ? { size: parameters.size } : {}) });
+        const response = await api.pty.update({
+          ptyID: parameters.ptyID,
+          ...(ctx.directory ? { location: { directory: ctx.directory } } : {}),
+          ...(parameters.title !== undefined ? { title: parameters.title } : {}),
+          ...(parameters.size ? { size: parameters.size } : {}),
+        });
         return ok(response.data);
       },
       remove: async (parameters: { ptyID: string }) => {
-        await api.pty.remove({ ptyID: parameters.ptyID });
+        await api.pty.remove({ ptyID: parameters.ptyID, ...(ctx.directory ? { location: { directory: ctx.directory } } : {}) });
         return ok(undefined);
       },
       connectToken: async (parameters: { ptyID: string }) => {
         const response = await api.pty.connect.token(
-          { ptyID: parameters.ptyID },
+          { ptyID: parameters.ptyID, ...(ctx.directory ? { location: { directory: ctx.directory } } : {}) },
           { headers: { 'x-opencode-ticket': '1' } },
         );
         return ok({ ticket: response.data?.ticket });
