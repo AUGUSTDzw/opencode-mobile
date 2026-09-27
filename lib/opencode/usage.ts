@@ -107,15 +107,16 @@ export function getLatestAssistantTurnUsage(messages: SessionMessageRecord[], pr
 }
 
 // Session token totals accumulate across every call, so they overstate what is
-// in the context window. The prompt size of the most recent model call is the
-// window's actual fill level.
+// in the context window. The most recent call's prompt plus its reply is what
+// the next call starts from. Reasoning is excluded: it is normally dropped from
+// history before the next request.
 export function getLatestContextTokens(messages: SessionMessageRecord[]) {
   for (let index = messages.length - 1; index >= 0; index -= 1) {
     const { info, parts } = messages[index];
     if (info.role !== 'assistant') continue;
     for (let partIndex = parts.length - 1; partIndex >= 0; partIndex -= 1) {
       const part = parts[partIndex];
-      if (part.type === 'step-finish') return part.tokens.input + part.tokens.cache.read + part.tokens.cache.write;
+      if (part.type === 'step-finish') return part.tokens.input + part.tokens.cache.read + part.tokens.cache.write + part.tokens.output;
     }
   }
   return undefined;

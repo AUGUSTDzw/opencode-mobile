@@ -55,7 +55,7 @@ assert.equal(formatTokenCount(842), '842');
 assert.equal(formatTokenCount(12_400), '12.4K');
 assert.equal(formatTokenCount(1_800_000), '1.8M');
 
-// Context fill is the last step's prompt size, not the sum across steps or turns.
+// Context fill is the last step's prompt plus reply, not the sum across steps or turns.
 const multiStep = [
   assistant([step('s1', 0, { input: 1000, output: 50, reasoning: 0, cache: { read: 0, write: 0 } })]),
   { info: { id: 'message-2', sessionID: 'session-1', role: 'user' }, parts: [] },
@@ -64,7 +64,7 @@ const multiStep = [
     step('s3', 0, { input: 300, output: 10, reasoning: 0, cache: { read: 1800, write: 0 } }),
   ]),
 ];
-assert.equal(getLatestContextTokens(multiStep), 2100);
+assert.equal(getLatestContextTokens(multiStep), 2110);
 assert.equal(getLatestContextTokens([]), undefined);
 assert.equal(getLatestContextTokens([{ info: { id: 'u', sessionID: 'session-1', role: 'user' }, parts: [] }]), undefined);
 
