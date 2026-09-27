@@ -106,9 +106,8 @@ npm run build:development:android
 ```
 
 **Release Automation**:
-- Push to `main` to trigger Android release build and artifact upload
-- Push a version tag (e.g., `v1.2.3`) to trigger production Play Store upload
-- Use `workflow_dispatch` for manual internal-track uploads
+- Every CI run (push to `main`, tags, manual dispatch) builds the Android release and uploads it as the `android-release-artifacts` artifact
+- The GitHub Release asset and production Play Store upload happen only on `v*` tags
 
 ### iOS Builds
 

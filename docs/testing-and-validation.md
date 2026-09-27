@@ -19,7 +19,8 @@ The single `.github/workflows/build.yml` workflow owns both validation and relea
 
 Release automation in the same workflow:
 
-- release jobs run only after `validate` passes, on `v*` tags (or manual dispatch), never on every `main` push
+- the `android-release` job always runs after `validate` passes and uploads the signed Android artifacts, including on `main` pushes and manual dispatch
+- GitHub Release publishing and Play Store upload run only on `v*` tags; the iOS release job still runs on `v*` tags or manual dispatch
 - Actions artifacts expire after 3 days; the permanent copy is the GitHub Release asset, Play Store upload, or TestFlight upload
 - `.github/workflows/cleanup.yml` runs weekly to delete artifacts older than 3 days and keep only the newest Gradle/npm cache
 
@@ -253,4 +254,4 @@ After that baseline, the next most valuable parity suite would add:
 
 The fake server self-test covers the expanded REST contract plus a real ticket-authenticated PTY WebSocket exchange. Playwright covers patch save, archive/restore, worktree creation, MCP addition, and terminal input/output. It does not prove full terminal emulation, native WebSocket behavior, MCP OAuth UI completion, attachment capability, provider OAuth callback, or global reconnect behavior.
 
-Android native validation now happens only in the tagged release build in `.github/workflows/build.yml`; there is no push-time Android development build gate.
+Android native validation happens on every CI run in the tagged/`main`/manual `android-release` job in `.github/workflows/build.yml`; there is no separate push-time Android development build gate.

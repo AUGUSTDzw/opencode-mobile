@@ -24,7 +24,7 @@ It enforces a single `validate` gate:
    - starts the Expo web app in CI mode
    - runs Playwright flow tests against the fake server
 
-iOS native validation happens in the `ios-release` job, so there is no separate prebuild job. Release builds (`v*` tags) run in the same workflow only after `validate` passes. Actions artifacts expire after 3 days; the permanent copy is the GitHub Release asset or store upload. `.github/workflows/cleanup.yml` runs weekly to purge artifacts older than 3 days and keep only the newest Gradle/npm cache.
+iOS native validation happens in the `ios-release` job, so there is no separate prebuild job. The `android-release` job always runs after `validate` passes and uploads the signed artifacts; release publishing and store uploads (`v*` tags) run in the same workflow only after `validate` passes. Actions artifacts expire after 3 days; the permanent copy is the GitHub Release asset or store upload. `.github/workflows/cleanup.yml` runs weekly to purge artifacts older than 3 days and keep only the newest Gradle/npm cache.
 
 ## Why This Repo Uses Flow Tests
 
@@ -100,4 +100,4 @@ npm run test:fake-server
 
 The app is built in `EXPO_PUBLIC_E2E_MODE=1` for CI flow tests so notification and voice bootstrap side effects do not interfere with deterministic automation.
 
-Android native validation happens only in the tagged release build in `.github/workflows/build.yml`; the local `npm run build:development:android` command remains available for manual use.
+Android native validation happens on every CI run in the `android-release` job in `.github/workflows/build.yml`; the local `npm run build:development:android` command remains available for manual use.
