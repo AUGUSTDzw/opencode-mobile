@@ -42,6 +42,15 @@
       "contributions": [
         "code"
       ]
+    },
+    {
+      "login": "subho1999",
+      "name": "Subhabrata Ghosh",
+      "avatar_url": "https://avatars.githubusercontent.com/u/29020364?v=4",
+      "profile": "https://github.com/subho1999",
+      "contributions": [
+        "bug"
+      ]
     }
   ],
   "contributorsPerLine": 7,
