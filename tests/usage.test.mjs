@@ -4,7 +4,7 @@ import ts from 'typescript';
 
 const source = await readFile(new URL('../lib/opencode/usage.ts', import.meta.url), 'utf8');
 const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2020 } }).outputText;
-const { aggregateSessionUsage, formatEstimatedCost, formatTokenCount, getLatestAssistantTurnUsage } = await import(`data:text/javascript,${encodeURIComponent(output)}`);
+const { aggregateSessionUsage, formatEstimatedCost, formatTokenCount, getLatestAssistantTurnUsage, getLatestContextTokens } = await import(`data:text/javascript,${encodeURIComponent(output)}`);
 
 const pricing = { 'anthropic/sonnet': { input: 0.000003, output: 0.000015, cache: { read: 0.0000003, write: 0.00000375 } } };
 
@@ -54,5 +54,18 @@ assert.equal(formatEstimatedCost(0.043), '$0.043');
 assert.equal(formatTokenCount(842), '842');
 assert.equal(formatTokenCount(12_400), '12.4K');
 assert.equal(formatTokenCount(1_800_000), '1.8M');
+
+// Context fill is the last step's prompt size, not the sum across steps or turns.
+const multiStep = [
+  assistant([step('s1', 0, { input: 1000, output: 50, reasoning: 0, cache: { read: 0, write: 0 } })]),
+  { info: { id: 'message-2', sessionID: 'session-1', role: 'user' }, parts: [] },
+  assistant([
+    step('s2', 0, { input: 200, output: 10, reasoning: 0, cache: { read: 1500, write: 100 } }),
+    step('s3', 0, { input: 300, output: 10, reasoning: 0, cache: { read: 1800, write: 0 } }),
+  ]),
+];
+assert.equal(getLatestContextTokens(multiStep), 2100);
+assert.equal(getLatestContextTokens([]), undefined);
+assert.equal(getLatestContextTokens([{ info: { id: 'u', sessionID: 'session-1', role: 'user' }, parts: [] }]), undefined);
 
 console.log('usage tests passed');
