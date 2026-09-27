@@ -18,6 +18,10 @@ const server = spawn(process.execPath, ['tests/fake-opencode/server.mjs'], {
   stdio: 'inherit',
 });
 
+const v2Port = 4197;
+const v2Origin = `http://127.0.0.1:${v2Port}`;
+let v2Server;
+
 async function response(pathname, init) {
   return fetch(`${origin}${prefix}${pathname}`, init);
 }
@@ -72,6 +76,18 @@ async function waitUntilReady() {
     await sleep(100);
   }
   throw new Error('Fake server did not start');
+}
+
+async function waitForV2Ready() {
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    try {
+      if ((await fetch(`${v2Origin}/api/info`)).ok) return;
+    } catch {
+      // Server startup is intentionally polled.
+    }
+    await sleep(100);
+  }
+  throw new Error('Fake V2 server did not start');
 }
 
 async function nextEvent(reader, predicate) {
@@ -239,7 +255,54 @@ try {
   assert(questions.length === 1, 'Pending question list failed');
   await request(`/question/${questions[0].id}/reply`, json('POST', { answers: [['Minimal']] }));
 
+  // --- OpenCode 2 contract -------------------------------------------------
+  v2Server = spawn(process.execPath, ['tests/fake-opencode/server-v2.mjs'], {
+    cwd: process.cwd(),
+    env: {
+      ...process.env,
+      FAKE_OPENCODE_PORT: String(v2Port),
+      FAKE_OPENCODE_SCENARIO: 'happy-path',
+    },
+    stdio: 'inherit',
+  });
+  await waitForV2Ready();
+
+  async function v2request(pathname, init) {
+    const result = await fetch(`${v2Origin}${pathname}`, init);
+    if (!result.ok) throw new Error(`${pathname} failed with ${result.status}`);
+    if (result.status === 204) return undefined;
+    return result.json();
+  }
+
+  const v2Info = await v2request('/api/info');
+  assert(v2Info.version === '2.0.0-fake', 'V2 server info missing');
+  const v2Session = (await v2request('/api/session', json('POST', { title: 'V2 smoke session' }))).data;
+  assert(v2Session.model?.id === 'gpt-4.1-mini' && v2Session.model.providerID === 'openai', 'V2 session did not expose a model');
+  assert(v2Session.tokens?.input === 0 && v2Session.cost === 0, 'V2 session did not expose usage fields');
+
+  await v2request(`/api/session/${v2Session.id}/prompt`, json('POST', { text: 'Validate V2 contract' }));
+  await sleep(900);
+  const v2Messages = (await v2request(`/api/session/${v2Session.id}/message`)).data;
+  const v2Assistant = v2Messages.find((message) => message.type === 'assistant');
+  assert(v2Assistant.tokens.input === 1200 && v2Assistant.tokens.cache.read === 800 && v2Assistant.tokens.output === 240, 'V2 assistant usage missing');
+  assert(v2Assistant.cost > 0, 'V2 assistant cost missing');
+  const v2Listed = (await v2request('/api/session')).data.find((entry) => entry.id === v2Session.id);
+  assert(v2Listed.tokens.input === 1200 && v2Listed.cost > 0, 'V2 session usage did not accumulate');
+  assert(v2Listed.model?.id === 'gpt-4.1-mini', 'V2 session list dropped the model');
+
+  // Session instruction entries back the adapter's `system` prompt mapping.
+  const instructionPath = `/api/experimental/session/${v2Session.id}/instructions/entries/opencode-mobile.chat-preferences`;
+  await v2request(instructionPath, json('PUT', { value: 'prefer brief answers' }));
+  const instructions = (await v2request(`/api/experimental/session/${v2Session.id}/instructions/entries`)).data;
+  assert(instructions.some((entry) => entry.key === 'opencode-mobile.chat-preferences' && entry.value === 'prefer brief answers'), 'V2 instruction entry was not stored');
+  await v2request(instructionPath, { method: 'DELETE' });
+  assert((await v2request(`/api/experimental/session/${v2Session.id}/instructions/entries`)).data.length === 0, 'V2 instruction entry was not removed');
+  const missingInstruction = await fetch(`${v2Origin}/api/experimental/session/ses_missing/instructions/entries/x`, json('PUT', { value: 'x' }));
+  assert(missingInstruction.status === 404, `V2 instruction put for a missing session returned ${missingInstruction.status}`);
+
   console.log('Fake OpenCode 1.18.3 server self-test passed.');
+  console.log('Fake OpenCode 2.0 server self-test passed.');
 } finally {
   server.kill('SIGTERM');
+  v2Server?.kill('SIGTERM');
 }

@@ -264,6 +264,8 @@ Derived by converting `currentMessages` with `toTranscriptEntry()`.
 
 Derived from persisted assistant `step-finish` parts in `currentMessages`. Stable step IDs prevent replayed SSE events and reloads from being double counted; streaming parts are excluded. OpenCode step cost is preferred, with exact OpenCode model metadata used only as a USD fallback when reported cost is zero or absent and tokens are nonzero.
 
+Context utilization is derived separately by `getLatestContextTokens()`: it walks back to the newest completed `step-finish` and reports that call's prompt (`input + cache.read + cache.write`) plus its reply (`output`). Cumulative session totals are intentionally not used, because every call re-sends the history. All-zero placeholder steps, which the V2 adapter emits for in-flight assistant messages, are skipped so the last completed call stays visible until usage arrives.
+
 ### Session Preview By ID
 
 Derived from message history using `getHistoryPreview()`.
@@ -339,6 +341,7 @@ The app currently uses these logical server capabilities:
 - session diff
 - session todo
 - session prompt or promptAsync
+- session instruction entries (V2 mapping for the V1 prompt `system` field)
 - session abort
 - session summarize
 - command list and session command execution

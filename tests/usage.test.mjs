@@ -68,4 +68,15 @@ assert.equal(getLatestContextTokens(multiStep), 2110);
 assert.equal(getLatestContextTokens([]), undefined);
 assert.equal(getLatestContextTokens([{ info: { id: 'u', sessionID: 'session-1', role: 'user' }, parts: [] }]), undefined);
 
+// V2 emits a placeholder step-finish while an assistant message is still in
+// flight. The previous completed step stays visible until usage arrives.
+const streaming = [
+  assistant([step('s1', 0, { input: 1000, output: 50, reasoning: 0, cache: { read: 800, write: 100 } })]),
+  { info: { id: 'message-2', sessionID: 'session-1', role: 'user' }, parts: [] },
+  assistant([{ id: 'message-3-step-finish', sessionID: 'session-1', messageID: 'message-3', type: 'step-finish', reason: 'stop', cost: 0, tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } } }]),
+];
+assert.equal(getLatestContextTokens(streaming), 1950);
+assert.equal(getLatestContextTokens([assistant([step('zero-step', 0, { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } })])]), undefined);
+assert.equal(getLatestContextTokens([assistant([{ id: 'in-flight', type: 'step-finish', tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } } }])]), undefined);
+
 console.log('usage tests passed');

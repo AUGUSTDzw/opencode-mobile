@@ -12,10 +12,12 @@ That choice matches the app's risk profile:
 
 ## CI Gates
 
-The single `.github/workflows/build.yml` workflow owns both validation and release. It runs on pushes to `main` and `v*` tags:
+`.github/workflows/build.yml` owns validation and release. It runs on pushes to `main` and `v*` tags:
 
 - a single `validate` job covers static validation and flow regression testing, and is the required gate for both release jobs
 - validation uploads artifacts only on failure (`playwright-report`), with 3-day retention
+
+`.github/workflows/pr-validate.yml` runs the same validate steps on pull requests targeting `main`, so contributor branches get the static, fake-server, and Playwright gates before review. It does not build or publish releases, and it cancels superseded runs for the same PR.
 
 Release automation in the same workflow:
 
@@ -29,6 +31,7 @@ From `TESTING.md`, those gates include:
 - `npm run lint`
 - `npm run typecheck`
 - `npm run test:usage`
+- `npm run test:v2-mappers`
 - `npm run test:format`
 - `npm run test:provider-utils`
 - `npm run test:workspace-patch`
@@ -143,6 +146,7 @@ The SSE endpoint intentionally fails, forcing the app to complete the workflow t
 
 - point at the V2 fake server and verify contract detection connects
 - verify capabilities, session bootstrap, prompt completion, and transcript rendering work through the V2 adapter
+- verify context utilization resolves the session model's limit and renders the latest model call's tokens (`2.3K of 128K input tokens`) instead of "Unavailable"
 - verify the derived plan renders (`Plan`, `2 of 2 tasks completed`) from the transcript's `todowrite` tool part, since V2 has no todo endpoint
 - verify permission requests and form-backed questions unblock the flow
 - verify form option labels are translated back to option values on reply (the fake server records the decoded answer)
