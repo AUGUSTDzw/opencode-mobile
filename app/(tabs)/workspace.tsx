@@ -1,8 +1,6 @@
-import * as Clipboard from 'expo-clipboard';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ActivityIndicator,
@@ -12,151 +10,18 @@ import {
   Divider,
   IconButton,
   List,
-  Menu,
-  SegmentedButtons,
   Snackbar,
   Text,
 } from 'react-native-paper';
 
 import { Colors, Fonts } from '@/constants/theme';
 import { TextInput } from '@/components/ui/text-input';
+import { TopTab } from '@/components/chat/chat-controls';
+import { WorkspacePicker } from '@/components/ui/workspace-picker';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { formatRelativeTime, getSessionSubtitle } from '@/lib/opencode/format';
-import type { Session } from '@/lib/opencode/types';
 import { useOpencode } from '@/providers/opencode-provider';
 
-type Palette = typeof Colors.light;
-
-// Returns a callback with stable identity that always invokes the latest
-// handler. Rows memoize on callback identity; provider handlers such as
-// openSession are recreated when the active project changes, so a row must
-// never capture a stale project-scoped closure.
-function useStableCallback<Args extends unknown[], Result>(handler: (...args: Args) => Result) {
-  const handlerRef = useRef(handler);
-  useEffect(() => {
-    handlerRef.current = handler;
-  });
-  return useCallback((...args: Args) => handlerRef.current(...args), []);
-}
-
-function favoriteProjectLabel(projectPath: string) {
-  return projectPath.split('/').filter(Boolean).pop() || projectPath;
-}
-
-type SessionListItemProps = {
-  canArchive: boolean;
-  canShare: boolean;
-  compact: boolean;
-  isActionMenuOpen: boolean;
-  isBusy: boolean;
-  isCurrent: boolean;
-  isFavorite: boolean;
-  isRenaming: boolean;
-  onArchive: (sessionId: string) => void;
-  onCloseActionMenu: () => void;
-  onCloseRename: () => void;
-  onDeleteRequest: (session: Session) => void;
-  onOpen: (sessionId: string) => void;
-  onRename: (sessionId: string, title: string) => void;
-  onShareRequest: (session: Session) => void;
-  onStartActionMenu: (sessionId: string) => void;
-  onStartRename: (session: Session) => void;
-  onToggleFavorite: (session: Session) => void;
-  palette: Palette;
-  preview?: string;
-  session: Session;
-  statusLabel: string;
-};
-
-// Memoized row for the active-sessions list. renderSessionItem previously
-// rebuilt a fresh closure tree on every parent state change (typing in the
-// search box, opening a menu, renaming any session), re-rendering every
-// visible row. The parent stabilizes all callbacks (stable identity, always
-// invoking the latest handler), so default shallow comparison is sufficient —
-// no custom comparator that could silently retain stale closures.
-function SessionListItemImpl({
-  canArchive,
-  canShare,
-  compact,
-  isActionMenuOpen,
-  isBusy,
-  isCurrent,
-  isFavorite,
-  isRenaming,
-  onArchive,
-  onCloseActionMenu,
-  onCloseRename,
-  onDeleteRequest,
-  onOpen,
-  onRename,
-  onShareRequest,
-  onStartActionMenu,
-  onStartRename,
-  onToggleFavorite,
-  palette,
-  preview,
-  session,
-  statusLabel,
-}: SessionListItemProps) {
-  const [renameValue, setRenameValue] = useState(session.title || '');
-  // Sync the local rename input only when entering rename mode for this row.
-  // Refs guard against re-firing when session.title updates mid-rename
-  // (server pushes a new title via SSE) which would clobber the draft.
-  const sessionTitleRef = useRef(session.title);
-  const wasRenamingRef = useRef(false);
-  useEffect(() => {
-    sessionTitleRef.current = session.title;
-  }, [session.title]);
-  useEffect(() => {
-    if (isRenaming && !wasRenamingRef.current) {
-      setRenameValue(sessionTitleRef.current || '');
-    }
-    wasRenamingRef.current = isRenaming;
-  }, [isRenaming]);
-
-  return (
-    <View>
-      <List.Item
-        title={session.parentID ? `↳ ${session.title || 'Untitled chat'}` : session.title || 'Untitled chat'}
-        description={session.parentID ? `Subagent · ${preview || getSessionSubtitle(session)}` : preview || getSessionSubtitle(session)}
-        onPress={() => onOpen(session.id)}
-        titleStyle={{ color: session.parentID ? palette.muted : palette.text, fontWeight: isCurrent ? '700' : '500', fontStyle: session.parentID ? 'italic' : 'normal' }}
-        descriptionStyle={{ color: palette.muted }}
-        right={() => (
-          <View style={styles.sessionMeta}>
-            <Text style={{ color: palette.tint }}>{statusLabel}</Text>
-            {/* ponytail: Paper 5.15.3 Menu leaves a stale hide-animation callback that
-                unmounts the portal right after opening. Remounting on visibility change
-                discards that callback. Remove when Paper fixes it upstream. */}
-            <Menu
-              key={isActionMenuOpen ? 'open' : 'closed'}
-              visible={isActionMenuOpen}
-              onDismiss={onCloseActionMenu}
-              anchor={<IconButton icon="dots-vertical" accessibilityLabel={`Actions for ${session.title || 'Untitled chat'}`} onPress={() => onStartActionMenu(session.id)} />}>
-              <Menu.Item title="Rename" leadingIcon="pencil" onPress={() => { onCloseActionMenu(); onStartRename(session); }} />
-              {canShare ? <Menu.Item title={session.share?.url ? 'Unshare' : 'Share'} leadingIcon="share-variant" onPress={() => { onCloseActionMenu(); onShareRequest(session); }} /> : null}
-              <Menu.Item title={isFavorite ? 'Remove from favorites' : 'Add to favorites'} leadingIcon={isFavorite ? 'star' : 'star-outline'} onPress={() => { onCloseActionMenu(); onToggleFavorite(session); }} />
-              {canArchive ? <Menu.Item title="Archive" leadingIcon="archive-outline" disabled={isBusy} onPress={() => { onCloseActionMenu(); onArchive(session.id); }} /> : null}
-              <Menu.Item title="Delete" leadingIcon="delete-outline" titleStyle={{ color: palette.danger }} onPress={() => { onCloseActionMenu(); onDeleteRequest(session); }} />
-            </Menu>
-          </View>
-        )}
-      />
-      {isRenaming ? (
-        <View style={[styles.renameRow, compact && styles.compactFormRow]}>
-          <TextInput testID="workspace-session-title-input" mode="outlined" dense value={renameValue} onChangeText={setRenameValue} style={styles.renameInput} />
-          <Button mode="contained" onPress={() => onRename(session.id, renameValue)}>Save</Button>
-          <Button onPress={onCloseRename}>Cancel</Button>
-        </View>
-      ) : null}
-    </View>
-  );
-}
-
-const SessionListItem = memo(SessionListItemImpl);
-
 export default function WorkspaceScreen() {
-  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const compact = width < 700;
@@ -164,37 +29,16 @@ export default function WorkspaceScreen() {
   const palette = Colors[colorScheme];
   const {
     activeProject,
-    chatPreferences,
+    addWorkspace,
     connection,
-    createSession,
-    deleteSession,
     currentProjectPath,
-    currentSessionId,
-    isRefreshingSessions,
     isRefreshingWorkspaceCatalog,
-    openSession,
-    openSessionInProject,
     projects,
-    refreshSessions,
     refreshWorkspaceCatalog,
     refreshWorkspaceStatus,
-    renameSession,
     selectProject,
     serverCapabilities,
     serverRootPath,
-    sessionPreviewById,
-    sessionStatuses,
-    sessions,
-    archivedSessions,
-    favoriteSessions,
-    isFavoriteSession,
-    toggleFavoriteSession,
-    clearFavoriteSession,
-    archiveSession,
-    restoreSession,
-    refreshArchivedSessions,
-    shareSession,
-    unshareSession,
     searchWorkspaceFiles,
     openWorkspaceFile,
     workspaceFiles,
@@ -208,17 +52,12 @@ export default function WorkspaceScreen() {
     resetWorktree,
     removeWorktree,
   } = useOpencode();
-  const [isCreating, setIsCreating] = useState(false);
-  const [activePanel, setActivePanel] = useState<'chats' | 'files' | 'tools'>('chats');
-  const [showArchived, setShowArchived] = useState(false);
-  const [sessionActionId, setSessionActionId] = useState<string>();
-  const [projectMenuVisible, setProjectMenuVisible] = useState(false);
-  const [updatingSessionId, setUpdatingSessionId] = useState<string | undefined>();
-  const [renamingSessionId, setRenamingSessionId] = useState<string>();
+  const [activePanel, setActivePanel] = useState<'files' | 'tools'>('files');
+  const [workspacePickerVisible, setWorkspacePickerVisible] = useState(false);
   const [fileQuery, setFileQuery] = useState('');
+  const [fileDetailsOpen, setFileDetailsOpen] = useState(false);
   const [editingFile, setEditingFile] = useState<{ path: string; original: string; value: string }>();
   const [isSavingFile, setIsSavingFile] = useState(false);
-  const [updatingArchivedSessionId, setUpdatingArchivedSessionId] = useState<string>();
   const [worktreeName, setWorktreeName] = useState('');
   const [worktreeStartCommand, setWorktreeStartCommand] = useState('');
   const [isCreatingWorktree, setIsCreatingWorktree] = useState(false);
@@ -226,97 +65,10 @@ export default function WorkspaceScreen() {
   const [updatingWorktree, setUpdatingWorktree] = useState<string>();
   const [error, setError] = useState<string>();
 
-  const isRefreshing = isRefreshingSessions || isRefreshingWorkspaceCatalog;
-  const orderedSessions = useMemo(
-    () => [...sessions].sort((left, right) => {
-      const leftPriority = left.id === currentSessionId ? 0 : sessionStatuses[left.id]?.type === 'idle' ? 2 : 1;
-      const rightPriority = right.id === currentSessionId ? 0 : sessionStatuses[right.id]?.type === 'idle' ? 2 : 1;
-      return leftPriority - rightPriority || right.time.updated - left.time.updated;
-    }),
-    [currentSessionId, sessionStatuses, sessions],
-  );
-
-  const filteredSessions = useMemo(
-    () => chatPreferences.hideSubagentChats ? orderedSessions.filter((session) => !session.parentID) : orderedSessions,
-    [chatPreferences.hideSubagentChats, orderedSessions],
-  );
-
-  // Stable row callbacks: memoized rows compare callback identity, and every
-  // handler here always runs the latest closure (see useStableCallback).
-  const openSessionFromRow = useStableCallback((sessionId: string) => {
-    void openSession(sessionId)
-      .then(() => router.push('/(tabs)'))
-      .catch((reason) => setError(reason instanceof Error ? reason.message : 'Could not open the session.'));
-  });
-  const toggleFavoriteFromRow = useStableCallback((session: Session) => {
-    toggleFavoriteSession(session.id, activeProject?.path || '', session.title);
-  });
-  const renameFromRow = useStableCallback((sessionId: string, title: string) => {
-    void renameSession(sessionId, title)
-      .then(() => setRenamingSessionId(undefined))
-      .catch((reason) => setError(reason instanceof Error ? reason.message : 'Could not rename the session.'));
-  });
-  const closeActionMenu = useCallback(() => setSessionActionId(undefined), []);
-  const closeRename = useCallback(() => setRenamingSessionId(undefined), []);
-  const startActionMenu = useCallback((sessionId: string) => setSessionActionId(sessionId), []);
-  const startRename = useCallback((session: Session) => {
-    setSessionActionId(undefined);
-    setRenamingSessionId(session.id);
-  }, []);
-
+  const isRefreshing = isRefreshingWorkspaceCatalog;
   async function handleRefresh() {
-    await Promise.all([refreshWorkspaceCatalog(), refreshSessions(), refreshWorkspaceStatus()])
+    await Promise.all([refreshWorkspaceCatalog(), refreshWorkspaceStatus()])
       .catch((reason) => setError(reason instanceof Error ? reason.message : 'Could not refresh the workspace.'));
-  }
-
-  async function handleNewChat() {
-    setIsCreating(true);
-    try {
-      const session = await createSession();
-      await openSession(session.id);
-      router.push('/(tabs)');
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Could not create a session.');
-    } finally {
-      setIsCreating(false);
-    }
-  }
-
-  async function handleDelete(sessionId: string) {
-    setUpdatingSessionId(sessionId);
-    try {
-      await deleteSession(sessionId);
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Could not delete the session.');
-    } finally {
-      setUpdatingSessionId(undefined);
-    }
-  }
-
-  async function handleArchive(sessionId: string) {
-    setUpdatingSessionId(sessionId);
-    try {
-      await archiveSession(sessionId);
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Could not archive the session.');
-    } finally {
-      setUpdatingSessionId(undefined);
-    }
-  }
-
-  async function handleArchivedSession(sessionId: string, action: 'restore' | 'delete') {
-    setUpdatingArchivedSessionId(sessionId);
-    try {
-      if (action === 'restore') await restoreSession(sessionId);
-      else {
-        await deleteSession(sessionId);
-        await refreshArchivedSessions();
-      }
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : `Could not ${action} the session.`);
-    } finally {
-      setUpdatingArchivedSessionId(undefined);
-    }
   }
 
   function confirmDestructive(title: string, message: string, actionLabel: string, action: () => void) {
@@ -330,79 +82,6 @@ export default function WorkspaceScreen() {
     ]);
   }
 
-  function confirmDelete(session: Session) {
-    const message = `“${session.title || 'Untitled chat'}” and all of its data will be permanently deleted.`;
-    confirmDestructive('Delete session?', message, 'Delete', () => void handleDelete(session.id));
-  }
-
-  async function handleShare(session: Session) {
-    setUpdatingSessionId(session.id);
-    try {
-      if (session.share?.url) {
-        await unshareSession(session.id);
-      } else {
-        const shared = await shareSession(session.id);
-        if (shared.share?.url) await Clipboard.setStringAsync(shared.share.url);
-      }
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Could not update session sharing.');
-    } finally {
-      setUpdatingSessionId(undefined);
-    }
-  }
-
-  function confirmShare(session: Session) {
-    if (session.share?.url) {
-      void handleShare(session);
-      return;
-    }
-    const message = 'Anyone with the generated link may be able to view this session.';
-    if (Platform.OS === 'web') {
-      if (globalThis.confirm(`Share session publicly?\n\n${message}`)) void handleShare(session);
-      return;
-    }
-    Alert.alert('Share session publicly?', message, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Share', onPress: () => void handleShare(session) },
-    ]);
-  }
-
-  const archiveFromRow = useStableCallback((sessionId: string) => void handleArchive(sessionId));
-  const deleteFromRow = useStableCallback((session: Session) => confirmDelete(session));
-  const shareFromRow = useStableCallback((session: Session) => confirmShare(session));
-
-  function renderSessionItem(session: Session, index: number, total: number) {
-    return (
-      <View key={session.id}>
-        <SessionListItem
-          canArchive={serverCapabilities.archive}
-          canShare={serverCapabilities.share}
-          compact={compact}
-          isActionMenuOpen={sessionActionId === session.id}
-          isBusy={updatingSessionId === session.id}
-          isCurrent={currentSessionId === session.id}
-          isFavorite={isFavoriteSession(session.id)}
-          isRenaming={renamingSessionId === session.id}
-          onArchive={archiveFromRow}
-          onCloseActionMenu={closeActionMenu}
-          onCloseRename={closeRename}
-          onDeleteRequest={deleteFromRow}
-          onOpen={openSessionFromRow}
-          onRename={renameFromRow}
-          onShareRequest={shareFromRow}
-          onStartActionMenu={startActionMenu}
-          onStartRename={startRename}
-          onToggleFavorite={toggleFavoriteFromRow}
-          palette={palette}
-          preview={sessionPreviewById[session.id]}
-          session={session}
-          statusLabel={sessionStatuses[session.id]?.type || 'idle'}
-        />
-        {index < total - 1 ? <Divider /> : null}
-      </View>
-    );
-  }
-
   return (
     <>
       <Appbar.Header
@@ -410,74 +89,30 @@ export default function WorkspaceScreen() {
         statusBarHeight={0}
         elevated>
         <View style={styles.headerMain}>
-          <Menu
-            key={projectMenuVisible ? 'open' : 'closed'}
-            visible={projectMenuVisible}
-            onDismiss={() => setProjectMenuVisible(false)}
-            anchor={
-              <Pressable onPress={() => setProjectMenuVisible(true)} style={({ pressed }) => [styles.headerSelector, pressed && styles.headerSelectorPressed]}>
-                <View style={styles.headerCopy}>
-                  <Text numberOfLines={1} variant="titleMedium" style={[styles.headerTitle, { color: palette.text }]}>{activeProject?.label || 'Workspace'}</Text>
-                  <Text numberOfLines={1} variant="bodySmall" style={{ color: palette.muted }}>{connection.status === 'connected' ? activeProject?.path || currentProjectPath || serverRootPath : connection.message}</Text>
-                </View>
-                <MaterialCommunityIcons name="chevron-down" size={20} color={palette.muted} />
-              </Pressable>
-            }>
-            {projects.length === 0 ? <Menu.Item title="No projects available" disabled /> : null}
-            {projects.map((project) => <Menu.Item key={project.path} title={project.label} leadingIcon={project.path === activeProject?.path ? 'check' : undefined} onPress={() => { setProjectMenuVisible(false); selectProject(project.path); }} />)}
-          </Menu>
+          <Pressable accessibilityRole="button" accessibilityLabel="Change workspace" onPress={() => setWorkspacePickerVisible(true)} style={({ pressed }) => [styles.headerSelector, pressed && styles.headerSelectorPressed]}>
+            <View style={styles.headerCopy}>
+              <Text numberOfLines={1} variant="titleMedium" style={[styles.headerTitle, { color: palette.text }]}>{activeProject?.label || 'Workspace'}</Text>
+              <Text numberOfLines={1} variant="bodySmall" style={{ color: palette.muted }}>{connection.status === 'connected' ? activeProject?.path || currentProjectPath || serverRootPath : connection.message}</Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-down" size={20} color={palette.muted} />
+          </Pressable>
         </View>
         <View style={styles.headerActions}>
           <Appbar.Action testID="workspace-sync-button" icon="sync" accessibilityLabel="Sync projects" onPress={() => void refreshWorkspaceCatalog()} />
           <Appbar.Action testID="workspace-refresh-button" icon="refresh" accessibilityLabel="Refresh workspace" onPress={() => void handleRefresh()} />
-          <Appbar.Action testID="workspace-new-chat-button" icon="plus" accessibilityLabel="New chat" disabled={!activeProject || isCreating} onPress={() => void handleNewChat()} />
         </View>
       </Appbar.Header>
+      <WorkspacePicker visible={workspacePickerVisible} testID="workspace-picker" projects={projects} activePath={activeProject?.path} onClose={() => setWorkspacePickerVisible(false)} onSelect={selectProject} onAdd={addWorkspace} />
+      <View style={[styles.tabsRow, { backgroundColor: palette.surface, borderBottomColor: palette.border }]}>
+        <TopTab active={activePanel === 'files'} label="Files" onPress={() => setActivePanel('files')} />
+        <TopTab active={activePanel === 'tools'} label="Worktrees" onPress={() => setActivePanel('tools')} />
+      </View>
       <ScrollView
         style={[styles.screen, { backgroundColor: palette.background }]}
         contentContainerStyle={[styles.content, styles.centeredContent]}
         keyboardDismissMode="on-drag"
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => void handleRefresh()} tintColor={palette.tint} />}>
-      <SegmentedButtons value={activePanel} onValueChange={(value) => setActivePanel(value as typeof activePanel)} buttons={[{ value: 'chats', label: 'Chats' }, { value: 'files', label: 'Files' }, { value: 'tools', label: 'Tools' }]} />
-
-      {activePanel === 'chats' && favoriteSessions.length > 0 ? (
-        <View testID="workspace-favorites-bar" style={[styles.favoritesBar, { borderColor: palette.border }]}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.favoritesScroll}>
-            {favoriteSessions.map((favorite) => (
-              <View key={`${favorite.connectionScope}:${favorite.sessionId}`} style={[styles.favoriteChip, { backgroundColor: palette.surface, borderColor: palette.border }]}>
-                <Pressable
-                  accessibilityLabel={`Open favorite ${favorite.title || favorite.sessionId}`}
-                  onPress={() => {
-                    void openSessionInProject(favorite.projectPath, favorite.sessionId, favorite.connectionScope)
-                      .then(() => router.push('/(tabs)'))
-                      .catch((reason) => setError(reason instanceof Error ? reason.message : 'Could not open the favorite session.'));
-                  }}
-                  style={({ pressed }) => [styles.favoriteChipBody, pressed && styles.favoriteChipBodyPressed]}>
-                  <Text numberOfLines={1} variant="labelLarge" style={{ color: palette.text }}>{favorite.title || 'Untitled chat'}</Text>
-                  {favorite.projectPath !== activeProject?.path ? (
-                    <Text numberOfLines={1} variant="labelSmall" style={{ color: palette.muted }}>{favoriteProjectLabel(favorite.projectPath)}</Text>
-                  ) : null}
-                </Pressable>
-                <IconButton
-                  icon="star-off-outline"
-                  size={16}
-                  accessibilityLabel={`Remove favorite ${favorite.title || favorite.sessionId}`}
-                  onPress={() => clearFavoriteSession(favorite.sessionId)}
-                />
-              </View>
-            ))}
-          </ScrollView>
-        </View>
-      ) : null}
-
-      {activePanel === 'chats' ? <Card mode="contained" style={[styles.card, { backgroundColor: palette.surface }]}>
-        <Card.Title title={showArchived ? 'Archived chats' : 'Chats'} subtitle={showArchived ? 'Restore or permanently delete chats.' : activeProject ? 'Current and running chats appear first.' : 'Choose a project to load chats.'} right={serverCapabilities.archive ? () => <IconButton icon={showArchived ? 'archive-remove-outline' : 'archive-outline'} accessibilityLabel={showArchived ? 'Show active chats' : 'Show archived chats'} onPress={() => { setShowArchived((value) => !value); if (!showArchived) void refreshArchivedSessions(); }} /> : undefined} />
-        <Card.Content style={styles.listContent}>
-          {showArchived ? archivedSessions.length === 0 ? <Text style={[styles.emptyText, { color: palette.muted }]}>No archived chats.</Text> : archivedSessions.map((session, index) => <View key={session.id}><View style={styles.archiveRow}><View style={styles.archiveCopy}><Text variant="titleMedium" style={{ color: palette.text }}>{session.title || 'Untitled chat'}</Text><Text style={{ color: palette.muted }}>{session.directory} · {formatRelativeTime(session.time.updated)}</Text></View><View style={styles.iconActions}><IconButton icon="restore" accessibilityLabel={`Restore ${session.title || 'Untitled chat'}`} loading={updatingArchivedSessionId === session.id} onPress={() => void handleArchivedSession(session.id, 'restore')} /><IconButton icon="delete-outline" iconColor={palette.danger} accessibilityLabel={`Delete ${session.title || 'Untitled chat'}`} disabled={updatingArchivedSessionId === session.id} onPress={() => confirmDestructive('Delete archived session?', `“${session.title || 'Untitled chat'}” and all of its data will be permanently deleted.`, 'Delete', () => void handleArchivedSession(session.id, 'delete'))} /></View></View>{index < archivedSessions.length - 1 ? <Divider /> : null}</View>) : <>{!activeProject ? <Text style={{ color: palette.muted }}>Select a project first.</Text> : null}{activeProject && filteredSessions.length === 0 ? <Text style={{ color: palette.muted }}>{chatPreferences.hideSubagentChats && orderedSessions.length > 0 ? 'All chats are hidden by the subagent filter.' : 'No chats in this workspace yet.'}</Text> : null}{filteredSessions.map((session, index) => renderSessionItem(session, index, filteredSessions.length))}</>}
-        </Card.Content>
-      </Card> : null}
-
-      {activePanel === 'files' ? <Card mode="contained" style={[styles.card, { backgroundColor: palette.surface }]}>
+      {activePanel === 'files' ? <Card mode="contained" style={styles.panel}>
         <Card.Title title="Workspace files" subtitle={vcsInfo?.branch ? `Branch: ${vcsInfo.branch}` : 'Search and inspect files'} />
         <Card.Content style={styles.fileSection}>
           <View style={[styles.renameRow, compact && styles.compactFormRow]}>
@@ -485,9 +120,16 @@ export default function WorkspaceScreen() {
             <Button mode="contained" onPress={() => void searchWorkspaceFiles(fileQuery).catch((reason) => setError(reason instanceof Error ? reason.message : 'Could not search workspace files.'))}>Search</Button>
           </View>
           {serverCapabilities.fileStatus && workspaceFileStatuses.length > 0 ? <Text style={{ color: palette.muted }}>{workspaceFileStatuses.length} changed files</Text> : null}
-          {workspaceFiles.map((path) => <List.Item key={path} title={path} onPress={() => void openWorkspaceFile(path).catch((reason) => setError(reason instanceof Error ? reason.message : 'Could not open the file.'))} />)}
+          {workspaceFiles.map((path) => <List.Item key={path} title={path} onPress={() => void openWorkspaceFile(path).then(() => { setEditingFile(undefined); setFileDetailsOpen(true); }).catch((reason) => setError(reason instanceof Error ? reason.message : 'Could not open the file.'))} />)}
           {selectedWorkspaceFile ? (
-            <View style={[styles.filePreview, { borderColor: palette.border, backgroundColor: palette.background }]}>
+            <Modal visible={fileDetailsOpen} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setFileDetailsOpen(false)}>
+              <KeyboardAvoidingView style={{ flex: 1, backgroundColor: palette.background }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+                <Appbar.Header statusBarHeight={0} style={{ backgroundColor: palette.surface, paddingTop: insets.top, height: 64 + insets.top }}>
+                  <Appbar.BackAction accessibilityLabel="Close file" onPress={() => setFileDetailsOpen(false)} />
+                  <Appbar.Content title={selectedWorkspaceFile.path.split('/').pop() || selectedWorkspaceFile.path} subtitle={selectedWorkspaceFile.path} />
+                </Appbar.Header>
+                <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 16, paddingBottom: Math.max(insets.bottom, 16) + 16 }}>
+            <View style={[styles.filePreview, { borderColor: palette.border, backgroundColor: palette.surface }]}>
               <Text variant="labelLarge" style={{ color: palette.text }}>{selectedWorkspaceFile.path}</Text>
               {editingFile?.path === selectedWorkspaceFile.path ? (
                 <>
@@ -538,11 +180,14 @@ export default function WorkspaceScreen() {
                 </>
               )}
             </View>
+                </ScrollView>
+              </KeyboardAvoidingView>
+            </Modal>
           ) : null}
         </Card.Content>
       </Card> : null}
 
-      {activePanel === 'tools' ? <Card mode="contained" style={[styles.card, { backgroundColor: palette.surface }]}>
+      {activePanel === 'tools' ? <Card mode="contained" style={styles.panel}>
         <Card.Title
           title="Worktrees"
           subtitle="Create isolated working directories or manage existing ones."
@@ -656,8 +301,9 @@ const styles = StyleSheet.create({
   headerSelectorPressed: { opacity: 0.82 },
   headerCopy: { flex: 1, minWidth: 0 },
   headerTitle: { fontFamily: Fonts.display, fontWeight: '700' },
+  tabsRow: { flexDirection: 'row', borderBottomWidth: 1 },
   actions: { flexDirection: 'row', gap: 12 },
-  card: { borderRadius: 16 },
+  panel: { backgroundColor: 'transparent', borderRadius: 0 },
   listContent: { paddingHorizontal: 0 },
   filterRow: { paddingHorizontal: 16, paddingBottom: 8, alignItems: 'flex-start' },
   headerAction: { marginRight: 16, alignSelf: 'center' },

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { StyleSheet, Switch, View } from 'react-native';
-import { Button, Card, Chip, HelperText, List, SegmentedButtons, Text } from 'react-native-paper';
+import { Button, Chip, HelperText, List, SegmentedButtons, Text } from 'react-native-paper';
 
 import { TextInput } from '@/components/ui/text-input';
 
@@ -73,8 +73,7 @@ export function McpSection({
   }
 
   return (
-    <Card mode="contained" style={[styles.card, { backgroundColor: palette.surface }]}>
-      <Card.Content style={styles.section}>
+    <View style={styles.section}>
         <View style={styles.header}>
           <Text variant="titleLarge" style={[styles.title, { color: palette.text }]}>MCP servers</Text>
           <Button compact loading={busy === 'refresh'} onPress={() => void run('refresh', onRefresh)}>Refresh</Button>
@@ -173,14 +172,13 @@ export function McpSection({
           );
         })}
         {error ? <HelperText type="error">{error}</HelperText> : null}
-      </Card.Content>
-    </Card>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: { borderRadius: 16 },
-  section: { gap: 14 },
+  section: { gap: 14, paddingHorizontal: 16, paddingBottom: 16 },
   title: { fontWeight: '600' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   server: { borderRadius: 14, borderWidth: 1, padding: 8 },

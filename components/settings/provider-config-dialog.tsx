@@ -1,5 +1,6 @@
-import { StyleSheet, View } from 'react-native';
-import { Button, Chip, Dialog, HelperText, RadioButton, Text } from 'react-native-paper';
+import { KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { Appbar, Button, Chip, HelperText, RadioButton, Text } from 'react-native-paper';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TextInput } from '@/components/ui/text-input';
 
@@ -41,10 +42,15 @@ export function ProviderConfigDialog({
   selectedProviderLabel,
   visiblePrompts,
 }: ProviderConfigDialogProps) {
+  const insets = useSafeAreaInsets();
   return (
-    <Dialog visible onDismiss={onDismiss}>
-      <Dialog.Title>{`Configure ${selectedProviderLabel}`}</Dialog.Title>
-      <Dialog.Content style={styles.dialogContent}>
+    <Modal visible animationType="slide" presentationStyle="fullScreen" onRequestClose={onDismiss}>
+      <KeyboardAvoidingView style={[styles.screen, { backgroundColor: palette.background }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <Appbar.Header statusBarHeight={0} style={{ backgroundColor: palette.surface, paddingTop: insets.top, height: 64 + insets.top }}>
+        <Appbar.BackAction accessibilityLabel="Cancel provider setup" onPress={onDismiss} />
+        <Appbar.Content title={`Configure ${selectedProviderLabel}`} />
+      </Appbar.Header>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.dialogContent}>
         {selectedProviderDescription ? (
           <Text variant="bodyMedium" style={{ color: palette.muted }}>
             {selectedProviderDescription}
@@ -100,19 +106,22 @@ export function ProviderConfigDialog({
           <HelperText type="error">Setup details for this provider are unavailable right now.</HelperText>
         ) : null}
         {providerDialogError ? <HelperText type="error">{providerDialogError}</HelperText> : null}
-      </Dialog.Content>
-      <Dialog.Actions>
+      </ScrollView>
+      <View style={[styles.actions, { backgroundColor: palette.surface, borderTopColor: palette.border, paddingBottom: Math.max(insets.bottom, 12) }]}>
         <Button onPress={onDismiss}>Cancel</Button>
-        <Button testID="settings-provider-save-button" disabled={!selectedMethod} loading={isConfiguringProvider} onPress={onSubmit}>
+        <Button mode="contained" testID="settings-provider-save-button" disabled={!selectedMethod} loading={isConfiguringProvider} onPress={onSubmit}>
           {selectedMethod?.type === 'oauth' ? 'Continue' : 'Save'}
         </Button>
-      </Dialog.Actions>
-    </Dialog>
+      </View>
+      </KeyboardAvoidingView>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  dialogContent: { gap: 14 },
+  screen: { flex: 1 },
+  dialogContent: { gap: 14, padding: 16 },
+  actions: { borderTopWidth: 1, flexDirection: 'row', justifyContent: 'flex-end', gap: 8, paddingHorizontal: 16, paddingTop: 12 },
   authMethodRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   promptGroup: { gap: 8 },
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },

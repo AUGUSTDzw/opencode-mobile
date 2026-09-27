@@ -1,8 +1,9 @@
 import * as IntentLauncher from 'expo-intent-launcher';
 import * as Linking from 'expo-linking';
 import Constants from 'expo-constants';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -10,7 +11,6 @@ import {
   Button,
   Dialog,
   HelperText,
-  List,
   Portal,
   Snackbar,
   Text,
@@ -21,7 +21,6 @@ import { ProviderConfigDialog } from '@/components/settings/provider-config-dial
 import { McpSection } from '@/components/settings/mcp-section';
 import {
   AiDefaultsSection,
-  ChatsSection,
   ConnectionSection,
   DiagnosticsSection,
   NotificationsSection,
@@ -34,6 +33,7 @@ import {
   WORKING_SOUND_OPTIONS,
 } from '@/components/settings/settings-utils';
 import { TextInput } from '@/components/ui/text-input';
+import { OverlaySheet } from '@/components/ui/overlay-sheet';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import {
   ensureNotificationPermissionsAsync,
@@ -76,9 +76,7 @@ export default function SettingsScreen() {
     updateChatPreferences,
   } = useOpencode();
   const [isConnecting, setIsConnecting] = useState(false);
-  // Saved connections are the main reason to open this screen, so the
-  // Connection card starts open; the other cards are one tap away.
-  const [expandedSection, setExpandedSection] = useState<string>('connection');
+  const [openSection, setOpenSection] = useState<string>();
   const [selectedProviderId, setSelectedProviderId] = useState<string>();
   const [selectedMethodIndex, setSelectedMethodIndex] = useState(0);
   const [authValues, setAuthValues] = useState<Record<string, string>>({});
@@ -240,11 +238,6 @@ export default function SettingsScreen() {
     void refreshSpeechVoices();
   }, []);
 
-  // The expanded card is intentionally user-controlled: it always starts on
-  // Connection (saved connections are the main reason to open this screen) and
-  // is not reset when the connection status changes, which used to collapse
-  // whatever card the user had open.
-
   const selectedSpeechVoiceLabel = useMemo(
     () => availableSpeechVoices.find((voice) => voice.id === chatPreferences.speechVoiceId)?.label || 'System default',
     [availableSpeechVoices, chatPreferences.speechVoiceId],
@@ -371,94 +364,37 @@ export default function SettingsScreen() {
         elevated>
         <View style={styles.headerMain}>
           <Text variant="titleMedium" style={[styles.headerTitle, { color: palette.text }]}>Settings</Text>
-          <Text numberOfLines={1} variant="bodySmall" style={{ color: palette.muted }}>{connection.status === 'connected' ? 'Connected to OpenCode' : connection.message}</Text>
         </View>
         <View style={styles.headerActions}>
           <Appbar.Action icon="refresh" accessibilityLabel="Reconnect" loading={isConnecting} disabled={isConnecting} onPress={() => void handleConnect()} />
         </View>
       </Appbar.Header>
       <ScrollView style={[styles.screen, { backgroundColor: palette.background }]} contentContainerStyle={styles.content}>
-        <List.AccordionGroup expandedId={expandedSection} onAccordionPress={(id) => setExpandedSection((current) => (current === String(id) ? '' : String(id)))}>
-          <List.Accordion id="connection" title="Connection" description={connection.status === 'connected' ? 'Connected' : connection.message} titleStyle={{ color: palette.text }} descriptionStyle={{ color: palette.muted }} style={[styles.category, { backgroundColor: palette.surface, borderColor: palette.border }]}>
-            <ConnectionSection
-              connection={connection}
-              palette={palette}
-            />
-          </List.Accordion>
-          <List.Accordion id="ai" title="AI & providers" description={`${configuredProviders.length} configured`} titleStyle={{ color: palette.text }} descriptionStyle={{ color: palette.muted }} style={[styles.category, { backgroundColor: palette.surface, borderColor: palette.border }]}>
-            <AiDefaultsSection
-              availableModels={availableModels}
-              availableProviders={availableProviders}
-              chatPreferences={chatPreferences}
-              configuredProviders={configuredProviders}
-              enabledModelIds={enabledModelIds}
-              expandedProviderId={expandedProviderId}
-              onExpandedProviderChange={setExpandedProviderId}
-              onModelToggle={handleModelToggle}
-              onRemoveProvider={handleRemoveProvider}
-              onStartProviderConfiguration={startProviderConfiguration}
-              palette={palette}
-            />
-          </List.Accordion>
-          <List.Accordion id="notifications" title="Notifications" description={notificationStatus?.permissionGranted ? 'Enabled' : 'Off'} titleStyle={{ color: palette.text }} descriptionStyle={{ color: palette.muted }} style={[styles.category, { backgroundColor: palette.surface, borderColor: palette.border }]}>
-            <NotificationsSection
-              isRefreshingNotificationStatus={isRefreshingNotificationStatus}
-              notificationStatus={notificationStatus}
-              onEnableNotifications={() => void handleEnableNotifications()}
-              onOpenAppSettings={() => void handleOpenAppSettings()}
-              onOpenBatterySaverSettings={() => void handleOpenBatterySaverSettings()}
-              onOpenBatterySettings={() => void handleOpenBatterySettings()}
-              onOpenNotificationSettings={() => void handleOpenNotificationSettings()}
-              onRefreshStatus={() => void refreshNotificationStatus()}
-              palette={palette}
-            />
-          </List.Accordion>
-          <List.Accordion id="chats" title="Chats" description={chatPreferences.hideSubagentChats ? 'Subagent chats hidden' : 'All chats shown'} titleStyle={{ color: palette.text }} descriptionStyle={{ color: palette.muted }} style={[styles.category, { backgroundColor: palette.surface, borderColor: palette.border }]}>
-            <ChatsSection
-              chatPreferences={chatPreferences}
-              palette={palette}
-              updateChatPreferences={updateChatPreferences}
-            />
-          </List.Accordion>
-          <List.Accordion id="voice" title="Voice & responses" description={chatPreferences.autoPlayAssistantReplies ? 'Reply playback on' : 'Reply playback off'} titleStyle={{ color: palette.text }} descriptionStyle={{ color: palette.muted }} style={[styles.category, { backgroundColor: palette.surface, borderColor: palette.border }]}>
-            <VoiceSection
-              availableSpeechVoices={availableSpeechVoices}
-              chatPreferences={chatPreferences}
-              isRefreshingSpeechVoices={isRefreshingSpeechVoices}
-              palette={palette}
-              selectedResponseScope={selectedResponseScope}
-              selectedSpeechVoiceLabel={selectedSpeechVoiceLabel}
-              selectedWorkingSound={selectedWorkingSound}
-              updateChatPreferences={updateChatPreferences}
-            />
-          </List.Accordion>
-          <List.Accordion id="advanced" title="Advanced" description="MCP servers and diagnostics" titleStyle={{ color: palette.text }} descriptionStyle={{ color: palette.muted }} style={[styles.category, { backgroundColor: palette.surface, borderColor: palette.border }]}>
-            <McpSection
-              configs={currentConfig?.mcp}
-              mcpStatuses={mcpStatuses}
-              onAdd={addMcpServer}
-              onCompleteOAuth={completeMcpOAuth}
-              onConnect={connectMcpServer}
-              onDisconnect={disconnectMcpServer}
-              onRefresh={refreshMcpServers}
-              onSetEnabled={setMcpServerEnabled}
-              onStartOAuth={async (name) => {
-                const url = await startMcpOAuth(name);
-                if (!url) {
-                  await refreshMcpServers();
-                  return false;
-                }
-                await WebBrowser.openBrowserAsync(url);
-                return true;
-              }}
-              oauthAvailable={serverCapabilities.mcpOAuth}
-              palette={palette}
-            />
-            <DiagnosticsSection diagnostics={diagnostics} eventStreamStatus={eventStreamStatus} formatterAvailable={serverCapabilities.formatter} lspAvailable={serverCapabilities.lsp} onRefresh={() => void refreshDiagnostics()} palette={palette} />
-          </List.Accordion>
-        </List.AccordionGroup>
-
+        <View style={[styles.categoryGroup, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+        {[
+          { id: 'connection', title: 'Connection', summary: connection.status === 'connected' ? 'Connected' : connection.message, icon: 'server-network' as const },
+          { id: 'ai', title: 'AI & providers', summary: `${configuredProviders.length} configured`, icon: 'creation' as const },
+          { id: 'notifications', title: 'Notifications', summary: notificationStatus?.permissionGranted ? 'Enabled' : 'Off', icon: 'bell-outline' as const },
+          { id: 'voice', title: 'Voice & responses', summary: chatPreferences.autoPlayAssistantReplies ? 'Reply playback on' : 'Reply playback off', icon: 'waveform' as const },
+          { id: 'advanced', title: 'Advanced', summary: 'MCP servers and diagnostics', icon: 'tune' as const },
+        ].map((section, index) => <Pressable key={section.id} accessibilityRole="button" accessibilityLabel={`${section.title}. ${section.summary}`} onPress={() => setOpenSection(section.id)} style={[styles.category, index < 4 && { borderBottomColor: palette.border, borderBottomWidth: StyleSheet.hairlineWidth }]}>
+          <MaterialCommunityIcons name={section.icon} size={22} color={palette.tint} />
+          <View style={styles.categoryText}><Text variant="titleMedium" style={{ color: palette.text }}>{section.title}</Text><Text variant="bodyMedium" numberOfLines={1} style={{ color: palette.muted }}>{section.summary}</Text></View>
+          <MaterialCommunityIcons name="chevron-right" size={20} color={palette.muted} />
+        </Pressable>)}
+        </View>
       </ScrollView>
+
+      <OverlaySheet visible={Boolean(openSection)} fitContent testID="settings-section-overlay" title={{ connection: 'Connection', ai: 'AI & providers', notifications: 'Notifications', voice: 'Voice & responses', advanced: 'Advanced' }[openSection || ''] || 'Settings'} onClose={() => setOpenSection(undefined)}>
+        {openSection === 'connection' ? <ConnectionSection connection={connection} palette={palette} /> : null}
+        {openSection === 'ai' ? <AiDefaultsSection availableModels={availableModels} availableProviders={availableProviders} chatPreferences={chatPreferences} configuredProviders={configuredProviders} enabledModelIds={enabledModelIds} expandedProviderId={expandedProviderId} onExpandedProviderChange={setExpandedProviderId} onModelToggle={handleModelToggle} onRemoveProvider={handleRemoveProvider} onStartProviderConfiguration={startProviderConfiguration} palette={palette} /> : null}
+        {openSection === 'notifications' ? <NotificationsSection isRefreshingNotificationStatus={isRefreshingNotificationStatus} notificationStatus={notificationStatus} onEnableNotifications={() => void handleEnableNotifications()} onOpenAppSettings={() => void handleOpenAppSettings()} onOpenBatterySaverSettings={() => void handleOpenBatterySaverSettings()} onOpenBatterySettings={() => void handleOpenBatterySettings()} onOpenNotificationSettings={() => void handleOpenNotificationSettings()} onRefreshStatus={() => void refreshNotificationStatus()} palette={palette} /> : null}
+        {openSection === 'voice' ? <VoiceSection availableSpeechVoices={availableSpeechVoices} chatPreferences={chatPreferences} isRefreshingSpeechVoices={isRefreshingSpeechVoices} palette={palette} selectedResponseScope={selectedResponseScope} selectedSpeechVoiceLabel={selectedSpeechVoiceLabel} selectedWorkingSound={selectedWorkingSound} updateChatPreferences={updateChatPreferences} /> : null}
+        {openSection === 'advanced' ? <>
+          <McpSection configs={currentConfig?.mcp} mcpStatuses={mcpStatuses} onAdd={addMcpServer} onCompleteOAuth={completeMcpOAuth} onConnect={connectMcpServer} onDisconnect={disconnectMcpServer} onRefresh={refreshMcpServers} onSetEnabled={setMcpServerEnabled} onStartOAuth={async (name) => { const url = await startMcpOAuth(name); if (!url) { await refreshMcpServers(); return false; } await WebBrowser.openBrowserAsync(url); return true; }} oauthAvailable={serverCapabilities.mcpOAuth} palette={palette} />
+          <DiagnosticsSection diagnostics={diagnostics} eventStreamStatus={eventStreamStatus} formatterAvailable={serverCapabilities.formatter} lspAvailable={serverCapabilities.lsp} onRefresh={() => void refreshDiagnostics()} palette={palette} />
+        </> : null}
+      </OverlaySheet>
 
       <Portal>
         <Dialog visible={Boolean(pendingOAuth)} onDismiss={dismissPendingOAuth}>
@@ -519,10 +455,12 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  content: { padding: 16, gap: 16, paddingBottom: 28 },
+  content: { padding: 16, paddingBottom: 28, width: '100%', maxWidth: 800, alignSelf: 'center' },
   header: { elevation: 0 },
   headerMain: { alignSelf: 'stretch', flex: 1, justifyContent: 'center', minWidth: 0 },
   headerActions: { alignItems: 'center', flexDirection: 'row', flexShrink: 0 },
   headerTitle: { fontFamily: Fonts.display, fontWeight: '700' },
-  category: { borderRadius: 16, borderWidth: 1, marginBottom: 10, overflow: 'hidden' },
+  categoryGroup: { borderRadius: 18, borderWidth: 1, overflow: 'hidden' },
+  category: { minHeight: 76, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', gap: 16 },
+  categoryText: { flex: 1, gap: 2 },
 });

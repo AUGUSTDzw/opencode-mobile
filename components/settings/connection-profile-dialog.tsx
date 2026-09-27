@@ -1,7 +1,11 @@
 import { useState } from 'react';
-import { Button, Dialog, HelperText, Portal } from 'react-native-paper';
+import { KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { Appbar, Button, HelperText } from 'react-native-paper';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TextInput } from '@/components/ui/text-input';
+import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { isValidServerUrl } from '@/lib/opencode/client';
 
 export type ConnectionProfileFormValues = {
@@ -29,6 +33,8 @@ export function ConnectionProfileDialog({
   onSubmit: (values: ConnectionProfileFormValues) => Promise<void> | void;
   onDismiss: () => void;
 }) {
+  const insets = useSafeAreaInsets();
+  const palette = Colors[useColorScheme() ?? 'light'];
   const [name, setName] = useState(initial?.name ?? '');
   const [serverUrl, setServerUrl] = useState(initial?.serverUrl ?? '');
   const [username, setUsername] = useState(initial?.username ?? '');
@@ -70,10 +76,13 @@ export function ConnectionProfileDialog({
   }
 
   return (
-    <Portal>
-      <Dialog visible onDismiss={saving ? undefined : onDismiss}>
-        <Dialog.Title>{title}</Dialog.Title>
-        <Dialog.Content>
+    <Modal visible animationType="slide" presentationStyle="fullScreen" onRequestClose={saving ? undefined : onDismiss}>
+      <KeyboardAvoidingView style={[styles.screen, { backgroundColor: palette.background }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <Appbar.Header statusBarHeight={0} style={{ backgroundColor: palette.surface, paddingTop: insets.top, height: 64 + insets.top }}>
+          <Appbar.BackAction accessibilityLabel="Cancel" disabled={saving} onPress={onDismiss} />
+          <Appbar.Content title={title} />
+        </Appbar.Header>
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
           {showName ? (
             <TextInput
               mode="outlined"
@@ -114,14 +123,20 @@ export function ConnectionProfileDialog({
             autoCorrect={false}
           />
           <HelperText type="error" visible={Boolean(error)}>{error}</HelperText>
-        </Dialog.Content>
-        <Dialog.Actions>
+        </ScrollView>
+        <View style={[styles.actions, { backgroundColor: palette.surface, borderTopColor: palette.border, paddingBottom: Math.max(insets.bottom, 12) }]}>
           <Button testID="connection-profile-save-cancel" disabled={saving} onPress={onDismiss}>Cancel</Button>
-          <Button testID="connection-profile-save-confirm" loading={saving} disabled={saving} onPress={() => void handleSubmit()}>
+          <Button mode="contained" testID="connection-profile-save-confirm" loading={saving} disabled={saving} onPress={() => void handleSubmit()}>
             {submitLabel}
           </Button>
-        </Dialog.Actions>
-      </Dialog>
-    </Portal>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: { flex: 1 },
+  content: { padding: 16, gap: 10 },
+  actions: { borderTopWidth: 1, flexDirection: 'row', justifyContent: 'flex-end', gap: 8, paddingHorizontal: 16, paddingTop: 12 },
+});

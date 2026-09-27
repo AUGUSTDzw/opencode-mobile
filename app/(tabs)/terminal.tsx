@@ -14,8 +14,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Appbar,
   Button,
+  Card,
   IconButton,
-  Menu,
   Snackbar,
   Surface,
   Text,
@@ -23,6 +23,8 @@ import {
 
 import { Colors, Fonts } from '@/constants/theme';
 import { TextInput } from '@/components/ui/text-input';
+import { OverlaySheet } from '@/components/ui/overlay-sheet';
+import { SwipeRow } from '@/components/ui/swipe-row';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import type { Pty } from '@/lib/opencode/types';
 import { useOpencode } from '@/providers/opencode-provider';
@@ -50,7 +52,7 @@ export default function TerminalScreen() {
   const [line, setLine] = useState('');
   const [busyId, setBusyId] = useState<string>();
   const [isCreating, setIsCreating] = useState(false);
-  const [terminalMenuVisible, setTerminalMenuVisible] = useState(false);
+  const [terminalPickerVisible, setTerminalPickerVisible] = useState(false);
   const [error, setError] = useState<string>();
 
   useEffect(() => {
@@ -158,39 +160,22 @@ export default function TerminalScreen() {
           statusBarHeight={0}
           elevated>
           <View style={styles.headerMain}>
-            <Menu
-              key={terminalMenuVisible ? 'open' : 'closed'}
-              visible={terminalMenuVisible}
-              onDismiss={() => setTerminalMenuVisible(false)}
-              anchor={
-                <Pressable
-                  testID="terminal-selector"
-                  onPress={() => setTerminalMenuVisible(true)}
-                  style={({ pressed }) => [styles.headerSelector, pressed && styles.headerSelectorPressed]}>
-                  <View style={styles.headerCopy}>
-                    <Text numberOfLines={1} variant="titleMedium" style={[styles.headerTitle, { color: palette.text }]}> 
-                      {activeTerminal?.title || activeTerminal?.command || 'Select terminal'}
-                    </Text>
-                    <Text numberOfLines={1} variant="bodySmall" style={{ color: palette.muted }}>
-                      {activeProject.path}  |  {terminalConnection}
-                    </Text>
-                  </View>
-                  <MaterialCommunityIcons name="chevron-down" size={20} color={palette.muted} />
-                </Pressable>
-              }>
-              {terminals.length === 0 ? <Menu.Item title="No terminals yet" disabled /> : null}
-              {terminals.map((terminal) => (
-                <Menu.Item
-                  key={terminal.id}
-                  title={terminal.title || terminal.command}
-                  leadingIcon={terminal.id === activeTerminalId ? 'check' : undefined}
-                  onPress={() => {
-                    setTerminalMenuVisible(false);
-                    void handleOpen(terminal.id);
-                  }}
-                />
-              ))}
-            </Menu>
+            <Pressable
+              testID="terminal-selector"
+              accessibilityRole="button"
+              accessibilityLabel="Select terminal"
+              onPress={() => setTerminalPickerVisible(true)}
+              style={({ pressed }) => [styles.headerSelector, pressed && styles.headerSelectorPressed]}>
+              <View style={styles.headerCopy}>
+                <Text numberOfLines={1} variant="titleMedium" style={[styles.headerTitle, { color: palette.text }]}>
+                  {activeTerminal?.title || activeTerminal?.command || 'Select terminal'}
+                </Text>
+                <Text numberOfLines={1} variant="bodySmall" style={{ color: palette.muted }}>
+                  {activeProject.path}  |  {terminalConnection}
+                </Text>
+              </View>
+              <MaterialCommunityIcons name="chevron-down" size={20} color={palette.muted} />
+            </Pressable>
           </View>
           <View style={styles.headerActions}>
             <Appbar.Action
@@ -206,23 +191,16 @@ export default function TerminalScreen() {
               disabled={Boolean(busyId) || isCreating}
               onPress={() => void refreshTerminals().catch((reason) => setError(message(reason, 'Could not refresh terminals.')))}
             />
-            {activeTerminal ? (
-              <Appbar.Action
-                testID="terminal-close-button"
-                icon="close"
-                color={palette.danger}
-                accessibilityLabel="Close terminal"
-                disabled={Boolean(busyId) || isCreating}
-                onPress={() => confirmTerminate(activeTerminal)}
-              />
-            ) : null}
           </View>
         </Appbar.Header>
 
         <ScrollView ref={outputRef} style={styles.output} contentContainerStyle={styles.outputContent} keyboardDismissMode="on-drag" nestedScrollEnabled>
-          <Text testID="terminal-output" selectable style={[styles.outputText, { color: activeTerminalId ? palette.text : palette.muted }]}> 
-            {activeTerminalId ? terminalOutput || 'Connected. Waiting for output...' : 'Open or create a terminal to begin.'}
-          </Text>
+          {activeTerminalId ? <Text testID="terminal-output" selectable style={[styles.outputText, { color: palette.text }]}>{terminalOutput || 'Connected. Waiting for output...'}</Text> : (
+            <Card mode="contained" style={{ backgroundColor: palette.surface, borderRadius: 16 }}>
+              <Card.Title title="Terminal" subtitle={activeProject.label} />
+              <Card.Content><Text style={{ color: palette.muted }}>Open or create a terminal to begin.</Text></Card.Content>
+            </Card>
+          )}
         </ScrollView>
 
         <Surface style={[styles.composer, { backgroundColor: palette.surface, borderTopColor: palette.border, paddingBottom: Math.max(insets.bottom, 12) }]} elevation={4}>
@@ -260,6 +238,15 @@ export default function TerminalScreen() {
           </View>
         </Surface>
       </KeyboardAvoidingView>
+      <OverlaySheet visible={terminalPickerVisible} fitContent testID="terminal-picker" title="Terminals" onClose={() => setTerminalPickerVisible(false)}>
+        {terminals.length === 0 ? <Text style={{ color: palette.muted }}>No terminals yet. Use + to create one.</Text> : null}
+        {terminals.map((terminal) => <SwipeRow key={terminal.id} title={`${terminal.title || terminal.command}, ${terminal.id.slice(0, 8)}`} actions={[{ label: 'Close', icon: 'close', onPress: () => confirmTerminate(terminal) }]}>
+          <Pressable accessibilityRole="button" accessibilityLabel={`Open ${terminal.title || terminal.command}, ${terminal.id.slice(0, 8)}`} accessibilityHint="Swipe left to close terminal" accessibilityState={{ selected: terminal.id === activeTerminalId }} onPress={() => { setTerminalPickerVisible(false); void handleOpen(terminal.id); }} style={[styles.terminalOption, { borderColor: terminal.id === activeTerminalId ? palette.tint : palette.border }]}>
+            <MaterialCommunityIcons name={terminal.id === activeTerminalId ? 'check-circle' : 'console'} size={20} color={terminal.id === activeTerminalId ? palette.tint : palette.muted} />
+            <View style={styles.terminalOptionText}><Text numberOfLines={1} variant="titleSmall">{terminal.title || terminal.command}</Text><Text numberOfLines={1} variant="bodySmall" style={{ color: palette.muted }}>{terminal.command} · {terminal.id.slice(0, 8)}</Text></View>
+          </Pressable>
+        </SwipeRow>)}
+      </OverlaySheet>
       <Snackbar visible={Boolean(error)} onDismiss={() => setError(undefined)}>{error}</Snackbar>
     </>
   );
@@ -280,6 +267,8 @@ const styles = StyleSheet.create({
   headerSelectorPressed: { opacity: 0.82 },
   headerCopy: { flex: 1, minWidth: 0 },
   headerTitle: { fontFamily: Fonts.display, fontWeight: '700' },
+  terminalOption: { minHeight: 64, borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  terminalOptionText: { flex: 1, minWidth: 0 },
   output: { flex: 1 },
   outputContent: { flexGrow: 1, padding: 16 },
   outputText: { fontFamily: Fonts.mono, fontSize: 14, lineHeight: 21 },

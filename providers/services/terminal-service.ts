@@ -35,7 +35,7 @@ export async function updateTerminal(
 }
 
 export async function removeTerminal(client: OpencodeClient, ptyId: string) {
-  return requireData((await client.pty.remove({ ptyID: ptyId })).data, 'terminal remove request');
+  await client.pty.remove({ ptyID: ptyId });
 }
 
 export async function createTerminalConnectToken(client: OpencodeClient, ptyId: string) {

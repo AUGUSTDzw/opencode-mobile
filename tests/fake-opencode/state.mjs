@@ -4,6 +4,21 @@ export function getNow() {
   return now();
 }
 
+export function resolveProject(state, directory) {
+  if (!directory) return state.project;
+  const existing = state.projects.find((project) => project.worktree === directory);
+  if (existing) return existing;
+  if (!directory.startsWith(`${state.rootPath}/`)) return undefined;
+  const project = {
+    id: `project-added-${state.projects.length}`,
+    worktree: directory,
+    time: { created: now(), initialized: now(), updated: now() },
+    sandboxes: [],
+  };
+  state.projects.push(project);
+  return project;
+}
+
 export function createState(scenario) {
   const rootPath = '/workspace';
   const projectPath = '/workspace/demo-project';

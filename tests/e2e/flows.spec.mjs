@@ -31,6 +31,36 @@ async function openReadyChat(page) {
   await expect(page.getByPlaceholder('Ask anything...')).toBeVisible();
 }
 
+async function openChatLibrary(page) {
+  await page.getByRole('button', { name: /^Open chats/ }).click();
+  await expect(page.getByTestId('chat-library')).toBeVisible();
+}
+
+async function closeSettingsOverlay(page) {
+  const overlay = page.getByTestId('settings-section-overlay');
+  if (await overlay.isVisible().catch(() => false)) await overlay.getByRole('button', { name: 'Close', exact: true }).first().click();
+}
+
+async function goToTab(page, name) {
+  await closeSettingsOverlay(page);
+  await page.getByRole('tab', { name }).click();
+}
+
+async function chatAction(page, title, action) {
+  const escapedTitlePrefix = title.slice(0, 18).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  await page.getByRole('button', { name: new RegExp(`^${action} ${escapedTitlePrefix}`) }).click();
+}
+
+async function chooseDiffSource(page, source) {
+  await page.getByRole('button', { name: /Change files changed source/ }).click();
+  const sheet = page.getByTestId('diff-source-overlay-sheet');
+  await expect(sheet).toBeVisible();
+  expect((await sheet.boundingBox()).height).toBeLessThan(400);
+  await page.getByTestId('diff-source-overlay').getByText(source, { exact: true }).click();
+  const overlay = page.getByTestId('diff-source-overlay');
+  if (await overlay.isVisible().catch(() => false)) await overlay.getByRole('button', { name: 'Close', exact: true }).first().click();
+}
+
 function spawnV2Server(port, scenario = 'happy-path') {
   return spawn(process.execPath, ['tests/fake-opencode/server-v2.mjs'], {
     cwd: process.cwd(),
@@ -76,15 +106,15 @@ async function clickWithRetry(locator) {
   return false;
 }
 
-// The Connection card can be collapsed; reopen it only when its content is not
-// visible so repeated visits to Settings do not toggle it shut. Each tap is
-// verified, because the settings screen can re-render while the tab settles.
+// Settings categories open in the shared overlay. Close the previous category
+// before opening a different one.
 async function ensureConnectionSection(page) {
   const connectionHeader = page.getByRole('button', { name: /^Connection/ });
   const addButton = page.getByTestId('connection-add-button');
   // Wait for the screen itself; tapping a header before it mounts is what lets
   // a click land on the neighbouring accordion.
   await connectionHeader.waitFor({ state: 'visible', timeout: 15_000 });
+  if (!await addButton.isVisible().catch(() => false)) await closeSettingsOverlay(page);
 
   for (let attempt = 0; attempt < 4; attempt += 1) {
     if (await addButton.isVisible().catch(() => false)) {
@@ -169,12 +199,13 @@ async function expectConnectedTo(page, host) {
 }
 
 async function connectToServer(page, url) {
-  await page.getByRole('tab', { name: 'Settings' }).click();
+  await goToTab(page, 'Settings');
   await ensureConnectionSection(page);
   await setActiveServerUrl(page, url);
   await reconnectActiveConnection(page);
-  await expect(page.getByTestId('connection-status-label')).toHaveText('Connected', { timeout: 15_000 });
-  await page.getByRole('tab', { name: 'Chat' }).click();
+  await expect(page.getByRole('button', { name: /^Connection\. Connected/ })).toBeVisible({ timeout: 15_000 });
+  await closeSettingsOverlay(page);
+  await goToTab(page, 'Chat');
   await expect(page.getByPlaceholder('Ask anything...')).toBeVisible({ timeout: 15_000 });
 }
 
@@ -215,6 +246,7 @@ async function ensureAiSection(page) {
   const aiHeader = page.getByRole('button', { name: /^AI & providers/ });
   const addProvider = page.getByTestId('settings-add-provider-button');
   await aiHeader.waitFor({ state: 'visible', timeout: 15_000 });
+  if (!await addProvider.isVisible().catch(() => false)) await closeSettingsOverlay(page);
 
   for (let attempt = 0; attempt < 4; attempt += 1) {
     if (await addProvider.isVisible().catch(() => false)) {
@@ -264,10 +296,9 @@ test('happy path keeps the main chat flow stable', async ({ page, request }) => 
   await expect(page.getByText('1 files changed, +6 / -1', { exact: true })).toBeVisible();
   await page.getByText('app/(tabs)/index.tsx', { exact: true }).click();
   await expect(page.getByText(/export default function ChatLandingScreen/)).toBeVisible();
-  await page.getByRole('tab', { name: 'Workspace' }).click();
-  await expect(page.getByRole('button', { name: 'Chats', exact: true })).toBeVisible();
-  await expect(page.getByText('Stabilize the chat flow', { exact: true }).last()).toBeVisible();
-  await expect(page.getByText('idle', { exact: true }).first()).toBeVisible();
+  await goToTab(page, 'Workspace');
+  await expect(page.getByRole('tab', { name: 'Workspace' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByText('Stabilize the chat flow', { exact: true })).toHaveCount(0);
   await page.getByText('Files', { exact: true }).click();
   await expect(page.getByText('2 changed files', { exact: true })).toBeVisible();
 });
@@ -300,15 +331,15 @@ test('files changed switches between turn, uncommitted, and branch diffs', async
   await expect(page.getByText('app/(tabs)/index.tsx', { exact: true })).toBeVisible();
 
   // No working-tree edits were saved in this scenario.
-  await page.getByText('Uncommitted', { exact: true }).click();
+  await chooseDiffSource(page, 'Uncommitted');
   await expect(page.getByText('No uncommitted changes.', { exact: true })).toBeVisible();
 
   // Committed-on-branch fixture from the fake server.
-  await page.getByText('Branch', { exact: true }).click();
+  await chooseDiffSource(page, 'Branch');
   await expect(page.getByText('Changes vs default branch', { exact: true })).toBeVisible();
   await expect(page.getByText('README.md', { exact: true })).toBeVisible();
 
-  await page.getByText('Turn', { exact: true }).click();
+  await chooseDiffSource(page, 'Turn');
   await expect(page.getByText('app/(tabs)/index.tsx', { exact: true })).toBeVisible();
 });
 
@@ -335,24 +366,59 @@ test('assistant questions unblock the agent flow', async ({ page, request }) => 
   await expect(page.getByText(/selected Minimal/).first()).toBeVisible({ timeout: 20_000 });
 });
 
+test('multi-step questions keep drafts across dismissal and submit conditional custom answers', async ({ page, request }) => {
+  await resetScenario(request, 'question-multi');
+  await openReadyChat(page);
+  await sendPrompt(page, 'Ask several implementation questions');
+
+  await expect(page.getByText('Which implementation should be used?', { exact: true })).toBeVisible({ timeout: 15_000 });
+  await page.getByText('Expanded', { exact: true }).click();
+  await page.getByRole('button', { name: 'Next' }).click();
+  await expect(page.getByText('Which areas should change?', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Chat', exact: true }).click();
+  await page.getByRole('button', { name: 'Return to chat' }).click();
+  await expect(page.getByText('Answer needed')).toBeVisible();
+  await page.getByRole('button', { name: 'Open', exact: true }).click();
+  await expect(page.getByText('Which areas should change?', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Next' }).click();
+  await expect(page.getByText('Why choose the expanded approach?', { exact: true })).toBeVisible();
+  await page.getByRole('dialog').getByRole('textbox').fill('Needed for both screens');
+  await page.getByRole('button', { name: 'Back' }).click();
+  await expect(page.getByRole('button', { name: 'Chat', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Next' }).click();
+  await expect(page.getByRole('dialog').getByRole('textbox')).toHaveValue('Needed for both screens');
+  await page.getByRole('button', { name: 'Submit answer' }).click();
+  await expect(page.getByText(/selected Expanded, Chat, Needed for both screens/).first()).toBeVisible({ timeout: 20_000 });
+});
+
+test('question submission failure keeps the answer and allows retry', async ({ page, request }) => {
+  await resetScenario(request, 'question-failure');
+  await openReadyChat(page);
+  await sendPrompt(page, 'Ask a question that fails once');
+  await expect(page.getByText('Which implementation should be used?', { exact: true })).toBeVisible({ timeout: 15_000 });
+  await page.getByText('Minimal', { exact: true }).click();
+  await page.getByRole('button', { name: 'Submit answer' }).click();
+  await expect(page.getByRole('dialog').getByText(/503 Service Unavailable/)).toBeVisible();
+  await page.getByRole('button', { name: 'Submit answer' }).click();
+  await expect(page.getByText(/Finished: selected Minimal/).first()).toBeVisible({ timeout: 20_000 });
+});
+
 test('sessions can be renamed and require confirmation before deletion', async ({ page, request }) => {
   await resetScenario(request, 'happy-path');
   await openReadyChat(page);
 
   await sendPrompt(page, 'Create a session to rename');
   await expect(page.getByText(/Finished:/).first()).toBeVisible({ timeout: 20_000 });
-  await page.getByRole('tab', { name: 'Workspace' }).click();
-  await page.getByLabel(/Actions for/).first().click();
-  await page.getByRole('menuitem', { name: 'Rename' }).click();
-  await page.getByTestId('workspace-session-title-input').fill('Renamed from Playwright');
+  await openChatLibrary(page);
+  await chatAction(page, 'Create a session to rename', 'Rename');
+  await page.getByTestId('chat-library-title-input').fill('Renamed from Playwright');
   await page.getByText('Save', { exact: true }).click();
   await expect(page.getByText('Renamed from Playwright', { exact: true }).first()).toBeVisible();
 
   await page.reload({ waitUntil: 'domcontentloaded' });
-  await page.getByRole('tab', { name: 'Workspace' }).click();
+  await openChatLibrary(page);
   page.once('dialog', (dialog) => void dialog.accept());
-  await page.getByLabel('Actions for Renamed from Playwright').click();
-  await page.getByRole('menuitem', { name: 'Delete' }).click();
+  await chatAction(page, 'Renamed from Playwright', 'Delete');
   await expect(page.getByText('Renamed from Playwright', { exact: true }).nth(1)).not.toBeVisible();
 });
 
@@ -364,11 +430,45 @@ test('commands execute through the primary chat action', async ({ page, request 
   await expect(page.getByText('Command /review src completed.', { exact: true }).first()).toBeVisible({ timeout: 15_000 });
 });
 
+test('Chat and Workspace use the same workspace picker', async ({ page, request }) => {
+  await resetScenario(request, 'happy-path');
+  await openReadyChat(page);
+
+  await goToTab(page, 'Workspace');
+  const workspaceDropdown = page.getByRole('button', { name: 'Change workspace' });
+  await expect(workspaceDropdown).toContainText('demo-project');
+  await expect(workspaceDropdown).toContainText('/workspace/demo-project');
+  await expect(page.getByTestId('workspace-sync-button')).toBeVisible();
+  await workspaceDropdown.click();
+  await expect(page.getByTestId('workspace-picker')).toBeVisible();
+  await page.getByTestId('workspace-picker').getByRole('button', { name: 'Select secondary-project' }).click();
+  await expect(page.getByText('secondary-project', { exact: true }).first()).toBeVisible();
+
+  await goToTab(page, 'Chat');
+  await openChatLibrary(page);
+  await page.getByRole('button', { name: 'Change workspace' }).click();
+  await expect(page.getByTestId('chat-workspace-picker')).toBeVisible();
+  await page.getByTestId('chat-workspace-picker').getByRole('button', { name: 'Select demo-project' }).click();
+  await goToTab(page, 'Workspace');
+  await expect(page.getByText('demo-project', { exact: true }).first()).toBeVisible();
+
+  await workspaceDropdown.click();
+  await page.getByTestId('workspace-add-button').click();
+  await page.getByTestId('workspace-add-path').fill('/outside/new-project');
+  await page.getByTestId('workspace-add-submit').click();
+  await expect(page.getByText('OpenCode could not open that directory. Check the server path.')).toBeVisible();
+  await page.getByTestId('workspace-add-path').fill('/workspace/new-project');
+  await page.getByTestId('workspace-add-submit').click();
+  await expect(workspaceDropdown).toContainText('new-project');
+  await workspaceDropdown.click();
+  await expect(page.getByRole('button', { name: 'Select new-project' })).toBeVisible();
+});
+
 test('workspace file search opens deterministic file content', async ({ page, request }) => {
   await resetScenario(request, 'happy-path');
   await openReadyChat(page);
 
-  await page.getByRole('tab', { name: 'Workspace' }).click();
+  await goToTab(page, 'Workspace');
   await page.getByText('Files', { exact: true }).click();
   await page.getByTestId('workspace-file-search').fill('demo');
   await page.getByText('Search', { exact: true }).click();
@@ -380,7 +480,7 @@ test('workspace file search opens deterministic file content', async ({ page, re
 test('workspace files save through a conflict-checked VCS patch', async ({ page, request }) => {
   await resetScenario(request, 'happy-path');
   await openReadyChat(page);
-  await page.getByRole('tab', { name: 'Workspace' }).click();
+  await goToTab(page, 'Workspace');
   await page.getByText('Files', { exact: true }).click();
   await page.getByTestId('workspace-file-search').fill('demo');
   await page.getByText('Search', { exact: true }).click();
@@ -396,25 +496,25 @@ test('sessions archive and restore without deletion', async ({ page, request }) 
   await openReadyChat(page);
   await sendPrompt(page, 'Archive this session safely');
   await expect(page.getByText(/Finished:/).first()).toBeVisible({ timeout: 20_000 });
-  await page.getByRole('tab', { name: 'Workspace' }).click();
-  await page.getByLabel(/Actions for/).first().click();
-  await page.getByRole('menuitem', { name: 'Archive' }).click();
-  await page.getByLabel('Show archived chats').click();
+  await openChatLibrary(page);
+  await chatAction(page, 'Archive this session safely', 'Archive');
+  await page.getByRole('button', { name: 'Archived', exact: true }).click();
+  await expect(page.getByRole('switch', { name: 'Hide subagent chats' })).toBeVisible();
   await expect(page.getByText('Archive this session safely', { exact: true }).last()).toBeVisible();
-  await page.getByLabel(/Restore Archive this session safely/).click();
+  await chatAction(page, 'Archive this session safely', 'Restore');
   await expect(page.getByText('No archived chats.', { exact: true })).toBeVisible();
 });
 
 test('worktrees and MCP servers can be created', async ({ page, request }) => {
   await resetScenario(request, 'happy-path');
   await openReadyChat(page);
-  await page.getByRole('tab', { name: 'Workspace' }).click();
-  await page.getByText('Tools', { exact: true }).click();
+  await goToTab(page, 'Workspace');
+  await page.getByRole('tab', { name: 'Worktrees' }).click();
   await page.getByTestId('workspace-worktree-name').fill('mobile-test');
   await page.getByTestId('workspace-worktree-create').click();
   await expect(page.getByText('mobile-test', { exact: true })).toBeVisible();
 
-  await page.getByRole('tab', { name: 'Settings' }).click();
+  await goToTab(page, 'Settings');
   await page.getByText('Advanced', { exact: true }).click();
   await page.getByText('Remote', { exact: true }).click();
   await page.getByTestId('settings-mcp-name').fill('web-tools');
@@ -426,20 +526,27 @@ test('worktrees and MCP servers can be created', async ({ page, request }) => {
 test('terminal streams input and output over the PTY websocket', async ({ page, request }) => {
   await resetScenario(request, 'happy-path');
   await openReadyChat(page);
-  await page.getByRole('tab', { name: 'Terminal' }).click();
+  await goToTab(page, 'Terminal');
+  await page.getByTestId('terminal-selector').click();
+  await expect(page.getByTestId('terminal-picker-sheet')).toBeVisible();
+  await page.getByTestId('terminal-picker').getByRole('button', { name: 'Close', exact: true }).click();
   await page.getByTestId('terminal-create-button').click();
   await page.getByTestId('terminal-line-input').fill('echo web');
   await page.getByRole('button', { name: 'Send command' }).click();
   await expect(page.getByTestId('terminal-output')).toContainText('ran: echo web');
+  await page.getByTestId('terminal-selector').click();
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByRole('button', { name: /^Close Terminal,/ }).click();
+  await expect(page.getByText('No terminals yet. Use + to create one.')).toBeVisible();
 });
 
 test('settings can configure an additional provider against the fake server', async ({ page, request }) => {
   await resetScenario(request, 'happy-path');
   await openReadyChat(page);
 
-  await page.getByRole('tab', { name: 'Settings' }).click();
+  await goToTab(page, 'Settings');
   await ensureAiSection(page);
-  await expect(page.getByText('AI defaults')).toBeVisible();
+  await expect(page.getByText('Configured providers')).toBeVisible();
   await page.getByTestId('settings-add-provider-button').click();
   await expect(page.getByRole('button', { name: 'OpenRouter', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'OpenRouter', exact: true }).click();
@@ -454,7 +561,7 @@ test('chat model picker searches and groups models by provider', async ({ page, 
   await resetScenario(request, 'happy-path');
   await openReadyChat(page);
 
-  await page.getByRole('tab', { name: 'Settings' }).click();
+  await goToTab(page, 'Settings');
   await ensureAiSection(page);
   await page.getByTestId('settings-add-provider-button').click();
   await page.getByRole('button', { name: 'OpenRouter', exact: true }).click();
@@ -464,7 +571,7 @@ test('chat model picker searches and groups models by provider', async ({ page, 
   await page.getByRole('button', { name: 'OpenRouter 0 of 1 selected' }).click();
   await page.getByText('Auto', { exact: true }).click();
 
-  await page.getByRole('tab', { name: 'Chat' }).click();
+  await goToTab(page, 'Chat');
   await page.getByTestId('chat-model-picker-trigger').click();
   const modelPicker = page.getByTestId('chat-model-picker');
   await expect(modelPicker.getByText('OpenAI', { exact: true })).toBeVisible();
@@ -571,7 +678,7 @@ test('settings explain root-vs-api mismatches and reconnect through a prefixed A
     await waitForServer(request, `http://127.0.0.1:${port}/api/path`);
     await openReadyChat(page);
 
-    await page.getByRole('tab', { name: 'Settings' }).click();
+    await goToTab(page, 'Settings');
     await ensureConnectionSection(page);
 
     await setActiveServerUrl(page, `http://127.0.0.1:${port}`);
@@ -581,7 +688,7 @@ test('settings explain root-vs-api mismatches and reconnect through a prefixed A
 
     await setActiveServerUrl(page, `http://127.0.0.1:${port}/api`);
     await reconnectActiveConnection(page);
-    await expect(page.getByTestId('connection-status-label')).toHaveText('Connected', { timeout: 15_000 });
+    await expect(page.getByRole('button', { name: /^Connection\. Connected/ })).toBeVisible({ timeout: 15_000 });
     await ensureConnectionSection(page);
     await expect(page.getByText(new RegExp(`Connected to http://127.0.0.1:${port}/api`))).toBeVisible();
   } finally {
@@ -593,7 +700,7 @@ test('settings do not suggest a duplicated /api base when the API prefix is alre
   await resetScenario(request, 'happy-path');
   await openReadyChat(page);
 
-  await page.getByRole('tab', { name: 'Settings' }).click();
+  await goToTab(page, 'Settings');
   await ensureConnectionSection(page);
 
   await setActiveServerUrl(page, 'http://127.0.0.1:44096/api');
@@ -623,7 +730,7 @@ test('a 1.x server exposing /api compatibility routes still connects as 1.x', as
     await sendPrompt(page, 'Confirm 1.x stays on 1.x');
     await expect(page.getByText(/Finished:/).first()).toBeVisible({ timeout: 30_000 });
 
-    await page.getByRole('tab', { name: 'Settings' }).click();
+    await goToTab(page, 'Settings');
     await ensureConnectionSection(page);
     await expect(page.getByText(new RegExp(`Connected to http://127\\.0\\.0\\.1:${port} \\(OpenCode 1\\.x\\)`))).toBeVisible({ timeout: 15_000 });
   } finally {
@@ -648,6 +755,9 @@ test('connects to an OpenCode 2 server and completes a prompt', async ({ page, r
     // adapter and measure the latest model call instead of "Unavailable".
     // Fake V2 usage: 1200 in + 800 cache read + 100 cache write + 240 out.
     await page.getByLabel('Show session usage details').click();
+    const usageSheet = page.getByTestId('session-usage-overlay-sheet');
+    await expect(usageSheet).toBeVisible();
+    expect((await usageSheet.boundingBox()).height).toBeLessThan(500);
     await expect(page.getByText('Context utilization', { exact: true })).toBeVisible();
     await expect(page.getByLabel('2 percent context utilization')).toBeVisible();
     await expect(page.getByText('2.3K of 128K input tokens', { exact: true })).toBeVisible();
@@ -662,22 +772,41 @@ test('connects to an OpenCode 2 server and completes a prompt', async ({ page, r
 
     // V2 has no server-owned todo endpoint; the plan is derived from the
     // transcript's `todowrite` tool part.
-    await expect(page.getByText('Plan', { exact: true })).toBeVisible();
-    await expect(page.getByText('2 of 2 tasks completed')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Open progress. 2 of 2 tasks completed' })).toBeVisible();
 
     // Unsupported V2 actions are hidden rather than failing at tap time.
     await expect(page.getByText('Ask permission', { exact: true })).toHaveCount(0);
-    await page.getByRole('tab', { name: 'Workspace' }).click();
-    await expect(page.getByLabel('Show archived chats')).toHaveCount(0);
-    await page.getByLabel(/Actions for/).first().click();
-    await expect(page.getByRole('menuitem', { name: 'Rename' })).toBeVisible();
-    await expect(page.getByRole('menuitem', { name: 'Share' })).toHaveCount(0);
-    await expect(page.getByRole('menuitem', { name: 'Archive' })).toHaveCount(0);
-    await page.keyboard.press('Escape');
-    await page.getByRole('tab', { name: 'Settings' }).click();
+    await openChatLibrary(page);
+    await expect(page.getByRole('button', { name: 'Archived', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /Rename / }).first()).toBeVisible();
+    await expect(page.getByRole('button', { name: /Share / })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /Archive / })).toHaveCount(0);
+    await page.goto('/settings', { waitUntil: 'domcontentloaded' });
     await page.getByRole('button', { name: /^Advanced/ }).click();
     await expect(page.getByText(/LSP/)).toHaveCount(0);
     await expect(page.getByText(/Formatters/)).toHaveCount(0);
+  } finally {
+    server.kill('SIGTERM');
+  }
+});
+
+test('OpenCode 2 adds a server workspace from the shared picker', async ({ page, request }) => {
+  await resetScenario(request, 'happy-path');
+  const port = await getFreePort();
+  const server = spawnV2Server(port);
+  try {
+    await waitForServer(request, `http://127.0.0.1:${port}/api/info`);
+    await openReadyChat(page);
+    await connectToServer(page, `http://127.0.0.1:${port}`);
+    await openChatLibrary(page);
+    await page.getByRole('button', { name: 'Change workspace' }).click();
+    await page.getByTestId('workspace-add-button').click();
+    await page.getByTestId('workspace-add-path').fill('/workspace/v2-new-project');
+    await page.getByTestId('workspace-add-submit').click();
+    await expect(page.getByRole('button', { name: /^Open chats/ })).toContainText('v2-new-project');
+    await goToTab(page, 'Workspace');
+    await page.getByRole('button', { name: 'Change workspace' }).click();
+    await expect(page.getByRole('button', { name: 'Select v2-new-project' })).toBeVisible();
   } finally {
     server.kill('SIGTERM');
   }
@@ -728,11 +857,15 @@ test('OpenCode 2 terminal streams input and output over the PTY websocket', asyn
     await waitForServer(request, `http://127.0.0.1:${port}/api/info`);
     await openReadyChat(page);
     await connectToServer(page, `http://127.0.0.1:${port}`);
-    await page.getByRole('tab', { name: 'Terminal' }).click();
+    await goToTab(page, 'Terminal');
     await page.getByTestId('terminal-create-button').click();
     await page.getByTestId('terminal-line-input').fill('echo v2');
     await page.getByRole('button', { name: 'Send command' }).click();
     await expect(page.getByTestId('terminal-output')).toContainText('ran: echo v2');
+    await page.getByTestId('terminal-selector').click();
+    page.once('dialog', (dialog) => dialog.accept());
+    await page.getByRole('button', { name: /^Close Terminal,/ }).click();
+    await expect(page.getByText('No terminals yet. Use + to create one.')).toBeVisible();
   } finally {
     server.kill('SIGTERM');
   }
@@ -758,12 +891,12 @@ test('OpenCode 2 files changed reads location-scoped VCS diffs', async ({ page, 
       const url = decodeURIComponent(candidate.url());
       return url.includes('/api/vcs/diff') && url.includes('location[directory]');
     });
-    await page.getByText('Uncommitted', { exact: true }).click();
+    await chooseDiffSource(page, 'Uncommitted');
     await scopedVcsDiff;
     await expect(page.getByText('No uncommitted changes.', { exact: true })).toBeVisible();
 
     // Committed-on-branch fixture: only reachable through a scoped call.
-    await page.getByText('Branch', { exact: true }).click();
+    await chooseDiffSource(page, 'Branch');
     await expect(page.getByText('Changes vs default branch', { exact: true })).toBeVisible();
     await expect(page.getByText('README.md', { exact: true })).toBeVisible();
   } finally {
@@ -778,18 +911,15 @@ test('favorites open sessions in the current workspace', async ({ page, request 
   await sendPrompt(page, 'Favorite current workspace session');
   await expect(page.getByText(/Finished:/).first()).toBeVisible({ timeout: 20_000 });
 
-  await page.getByRole('tab', { name: 'Workspace' }).click();
-  await page.getByLabel('Actions for Favorite current workspace session').click();
-  await page.getByRole('menuitem', { name: 'Add to favorites' }).click();
-
-  const favoritesBar = page.getByTestId('workspace-favorites-bar');
-  await expect(favoritesBar).toBeVisible();
-  await expect(favoritesBar.getByText('Favorite current workspace session')).toBeVisible();
-
-  await page.getByLabel('New chat').click();
+  await openChatLibrary(page);
+  await chatAction(page, 'Favorite current workspace session', 'Favorite');
+  await expect(page.getByText('Favorites', { exact: true })).toBeVisible();
+  await page.getByTestId('chat-library').getByRole('button', { name: 'Close' }).click();
+  await expect(page.getByTestId('chat-library')).not.toBeVisible();
+  await page.locator('#root').getByRole('button', { name: 'New chat', exact: true }).click();
   await expect(page.getByText('Start a new task')).toBeVisible({ timeout: 15_000 });
-  await page.getByRole('tab', { name: 'Workspace' }).click();
-  await page.getByLabel('Open favorite Favorite current workspace session').click();
+  await openChatLibrary(page);
+  await page.getByTestId('chat-library').getByRole('button', { name: 'Open Favorite current workspace session' }).first().click();
 
   await expect(
     page.locator('text=/Finished: Favorite current workspace session/ >> visible=true').first(),
@@ -820,18 +950,15 @@ test('favorites switch projects and open cross-workspace sessions', async ({ pag
     page.locator('text=/Finished: Open me through a favorite/ >> visible=true').first(),
   ).toBeVisible({ timeout: 20_000 });
 
-  await page.getByRole('tab', { name: 'Workspace' }).click();
-  await page.getByLabel('Actions for Favorite Cross Workspace Session').click();
-  await page.getByRole('menuitem', { name: 'Add to favorites' }).click();
-  await expect(page.getByTestId('workspace-favorites-bar')).toBeVisible();
+  await openChatLibrary(page);
+  await chatAction(page, 'Favorite Cross Workspace Session', 'Favorite');
+  await expect(page.getByText('Favorites', { exact: true })).toBeVisible();
 
-  await page.getByText('secondary-project', { exact: true }).first().click();
-  await page.getByRole('menuitem', { name: 'demo-project' }).click();
-
-  const favoritesBar = page.getByTestId('workspace-favorites-bar');
-  await expect(favoritesBar).toBeVisible();
-  await expect(favoritesBar.getByText('secondary-project')).toBeVisible({ timeout: 15_000 });
-  await page.getByLabel('Open favorite Favorite Cross Workspace Session').click();
+  await page.getByRole('button', { name: 'Change workspace' }).click();
+  await page.getByTestId('chat-workspace-picker').getByRole('button', { name: 'Select demo-project' }).click();
+  await openChatLibrary(page);
+  await expect(page.getByText('secondary-project', { exact: true }).filter({ visible: true }).first()).toBeVisible({ timeout: 15_000 });
+  await page.getByTestId('chat-library').getByRole('button', { name: 'Open Favorite Cross Workspace Session' }).first().click();
 
   await expect(
     page.locator('text=/Finished: Open me through a favorite/ >> visible=true').first(),
@@ -845,15 +972,14 @@ test('favorites report sessions that are missing', async ({ page, request }) => 
   await sendPrompt(page, 'Favorite vanishing session');
   await expect(page.getByText(/Finished:/).first()).toBeVisible({ timeout: 20_000 });
 
-  await page.getByRole('tab', { name: 'Workspace' }).click();
-  await page.getByLabel('Actions for Favorite vanishing session').click();
-  await page.getByRole('menuitem', { name: 'Add to favorites' }).click();
-  await expect(page.getByTestId('workspace-favorites-bar')).toBeVisible();
+  await openChatLibrary(page);
+  await chatAction(page, 'Favorite vanishing session', 'Favorite');
+  await expect(page.getByText('Favorites', { exact: true })).toBeVisible();
 
   const deleteResponse = await request.delete('http://127.0.0.1:44096/session/session-1');
   expect(deleteResponse.ok()).toBeTruthy();
 
-  await page.getByLabel('Open favorite Favorite vanishing session').click();
+  await page.getByTestId('chat-library').getByRole('button', { name: 'Open Favorite vanishing session' }).first().click();
   await expect(
     page.getByText(/could not open|not found|failed/i).first(),
   ).toBeVisible({ timeout: 15_000 });
@@ -884,20 +1010,19 @@ test('rapid favorite taps across workspaces settle on the last target', async ({
   await expect(
     page.locator('text=/Finished: Secondary rapid tap target/ >> visible=true').first(),
   ).toBeVisible({ timeout: 20_000 });
-  await page.getByRole('tab', { name: 'Workspace' }).click();
-  await page.getByLabel('Actions for Rapid Tap Secondary').click();
-  await page.getByRole('menuitem', { name: 'Add to favorites' }).click();
+  await openChatLibrary(page);
+  await chatAction(page, 'Rapid Tap Secondary', 'Favorite');
 
-  await page.getByText('secondary-project', { exact: true }).first().click();
-  await page.getByRole('menuitem', { name: 'demo-project' }).click();
-  await page.getByLabel('Actions for Primary rapid tap target').click();
-  await page.getByRole('menuitem', { name: 'Add to favorites' }).click();
-  await expect(page.getByTestId('workspace-favorites-bar')).toBeVisible();
+  await page.getByRole('button', { name: 'Change workspace' }).click();
+  await page.getByTestId('chat-workspace-picker').getByRole('button', { name: 'Select demo-project' }).click();
+  await openChatLibrary(page);
+  await chatAction(page, 'Primary rapid tap target', 'Favorite');
+  await expect(page.getByText('Favorites', { exact: true })).toBeVisible();
 
   // Dispatch both presses back to back so the second lands before the first
-  // navigation moves the app off the workspace tab.
-  await page.getByLabel('Open favorite Rapid Tap Secondary').dispatchEvent('click');
-  await page.getByLabel('Open favorite Primary rapid tap target').dispatchEvent('click');
+  // navigation closes the library.
+  await page.getByTestId('chat-library').getByRole('button', { name: 'Open Rapid Tap Secondary' }).first().dispatchEvent('click');
+  await page.getByTestId('chat-library').getByRole('button', { name: 'Open Primary rapid tap target' }).first().dispatchEvent('click');
 
   await expect(
     page.locator('text=/Finished: Primary rapid tap target/ >> visible=true').first(),
@@ -917,7 +1042,7 @@ test('saved connections keep sessions, caches, and model preferences separate', 
   await sendPrompt(page, 'Server A session');
   await expect(page.getByText(/Finished: Server A session/).first()).toBeVisible({ timeout: 20_000 });
 
-  await page.getByRole('tab', { name: 'Settings' }).click();
+  await goToTab(page, 'Settings');
   await addConnection(page, { name: 'Server A', url: 'http://127.0.0.1:44096' });
   await expectConnectedTo(page, '44096');
 
@@ -929,7 +1054,7 @@ test('saved connections keep sessions, caches, and model preferences separate', 
   await expect(page.getByText('Configure OpenRouter')).not.toBeVisible({ timeout: 15_000 });
   await page.getByRole('button', { name: 'OpenRouter 0 of 1 selected' }).click();
   await page.getByText('Auto', { exact: true }).click();
-  await page.getByRole('tab', { name: 'Chat' }).click();
+  await goToTab(page, 'Chat');
   await page.getByTestId('chat-model-picker-trigger').click();
   await page.getByTestId('chat-model-picker').getByRole('button', { name: /^Auto / }).click();
   await expect(page.getByTestId('chat-model-picker-trigger')).toContainText('OpenRouter · Auto');
@@ -940,35 +1065,36 @@ test('saved connections keep sessions, caches, and model preferences separate', 
   const serverB = spawnV1Server(port);
   try {
     await waitForServer(request, `http://127.0.0.1:${port}/path`);
-    await page.getByRole('tab', { name: 'Settings' }).click();
+    await goToTab(page, 'Settings');
     await addConnection(page, { name: 'Server B', url: `http://127.0.0.1:${port}` });
     await expectConnectedTo(page, String(port));
 
-    await page.getByRole('tab', { name: 'Chat' }).click();
+    await goToTab(page, 'Chat');
     await expect(page.getByTestId('chat-model-picker-trigger')).toContainText('OpenAI · GPT-4.1 mini', { timeout: 15_000 });
     await sendPrompt(page, 'Server B session');
     await expect(page.getByText(/Finished: Server B session/).first()).toBeVisible({ timeout: 20_000 });
 
     // Switching to A restores A's model preference and A's own session list;
     // B's session must never appear while connected to A.
-    await page.getByRole('tab', { name: 'Settings' }).click();
+    await goToTab(page, 'Settings');
     await connectToSavedConnection(page, 'Server A');
     await expectConnectedTo(page, '44096');
-    await page.getByRole('tab', { name: 'Chat' }).click();
+    await goToTab(page, 'Chat');
     await expect(page.getByTestId('chat-model-picker-trigger')).toContainText('OpenRouter · Auto', { timeout: 15_000 });
-    await page.getByRole('tab', { name: 'Workspace' }).click();
-    await expect(page.getByText('Server A session', { exact: true }).first()).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText('Server B session', { exact: true })).not.toBeVisible();
+    await openChatLibrary(page);
+    await expect(page.getByTestId('chat-library').getByRole('button', { name: 'Open Server A session' }).first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('chat-library').getByRole('button', { name: 'Open Server B session' })).toHaveCount(0);
+    await page.getByTestId('chat-library').getByRole('button', { name: 'Close' }).click();
 
     // Switching back to B restores B's default model and B's own sessions.
-    await page.getByRole('tab', { name: 'Settings' }).click();
+    await goToTab(page, 'Settings');
     await connectToSavedConnection(page, 'Server B');
     await expectConnectedTo(page, String(port));
-    await page.getByRole('tab', { name: 'Chat' }).click();
+    await goToTab(page, 'Chat');
     await expect(page.getByTestId('chat-model-picker-trigger')).toContainText('OpenAI · GPT-4.1 mini', { timeout: 15_000 });
-    await page.getByRole('tab', { name: 'Workspace' }).click();
-    await expect(page.getByText('Server B session', { exact: true }).first()).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText('Server A session', { exact: true })).not.toBeVisible();
+    await openChatLibrary(page);
+    await expect(page.getByTestId('chat-library').getByRole('button', { name: 'Open Server B session' }).first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('chat-library').getByRole('button', { name: 'Open Server A session' })).toHaveCount(0);
   } finally {
     serverB.kill('SIGTERM');
   }

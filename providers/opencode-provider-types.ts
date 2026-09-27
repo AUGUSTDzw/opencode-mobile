@@ -137,6 +137,7 @@ export type OpencodeContextValue = {
   activeProjectPath?: string;
   activeProject?: OpencodeProject;
   selectProject: (path: string) => void;
+  addWorkspace: (directory: string) => Promise<string>;
   openSessionInProject: (projectPath: string, sessionId: string, connectionScope?: string) => Promise<void>;
   serverProjects: Project[];
   currentProjectPath?: string;

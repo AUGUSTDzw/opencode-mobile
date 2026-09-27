@@ -1,5 +1,6 @@
-import { Tabs } from 'expo-router';
+import { Tabs, usePathname } from 'expo-router';
 import React from 'react';
+import { Platform, Text, type ColorValue } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HapticTab } from '@/components/haptic-tab';
@@ -9,7 +10,15 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const routerPathname = usePathname();
+  const pathname = Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.pathname : routerPathname;
   const insets = useSafeAreaInsets();
+  const palette = Colors[colorScheme ?? 'light'];
+  const selected = (route: string) => route === '/' ? pathname === '/' || pathname.startsWith('/session/') : pathname.startsWith(route);
+  const iconColor = (route: string, color: ColorValue) => Platform.OS === 'web' ? selected(route) ? palette.tint : palette.tabIconDefault : color;
+  const label = (route: string, value: string) => function TabLabel({ color }: { color: ColorValue }) {
+    return <Text style={{ color: Platform.OS === 'web' ? selected(route) ? palette.tint : palette.tabIconDefault : color, fontSize: 12, fontWeight: '600' }}>{value}</Text>;
+  };
 
   return (
     <Tabs
@@ -29,35 +38,41 @@ export default function TabLayout() {
           fontWeight: '600',
         },
         headerShown: false,
-        tabBarButton: HapticTab,
       }}>
       <Tabs.Screen
         name="index"
         options={{
           title: 'OpenCode Mobile',
-          tabBarLabel: 'Chat',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="message.fill" color={color} />,
+          tabBarLabel: label('/', 'Chat'),
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="message.fill" color={iconColor('/', color)} />,
+          tabBarButton: (props) => <HapticTab {...props} route="/" />,
         }}
       />
       <Tabs.Screen
         name="terminal"
         options={{
           title: 'Terminal',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="terminal.fill" color={color} />,
+          tabBarLabel: label('/terminal', 'Terminal'),
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="terminal.fill" color={iconColor('/terminal', color)} />,
+          tabBarButton: (props) => <HapticTab {...props} route="/terminal" />,
         }}
       />
       <Tabs.Screen
         name="workspace"
         options={{
           title: 'Workspace',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="folder.fill" color={color} />,
+          tabBarLabel: label('/workspace', 'Workspace'),
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="folder.fill" color={iconColor('/workspace', color)} />,
+          tabBarButton: (props) => <HapticTab {...props} route="/workspace" />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           title: 'Settings',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="gearshape.fill" color={color} />,
+          tabBarLabel: label('/settings', 'Settings'),
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="gearshape.fill" color={iconColor('/settings', color)} />,
+          tabBarButton: (props) => <HapticTab {...props} route="/settings" />,
         }}
       />
     </Tabs>

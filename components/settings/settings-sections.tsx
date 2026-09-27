@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, Switch as NativeSwitch, Text as NativeText, View } from 'react-native';
 import {
   Button,
-  Card,
   Checkbox,
   Chip,
   HelperText,
@@ -48,15 +47,13 @@ export function DiagnosticsSection({
   if (lspAvailable) subsystemParts.push(`LSP ${lspCount ?? 'n/a'}`);
   if (formatterAvailable) subsystemParts.push(`Formatters ${formatterCount ?? 'n/a'}`);
   return (
-    <Card mode="contained" style={[styles.card, { backgroundColor: palette.surface }]}>
-      <Card.Content style={styles.section}>
+    <View style={styles.section}>
         <Text variant="titleLarge" style={[styles.title, { color: palette.text }]}>Server diagnostics</Text>
         <List.Item title="Server" description={health ? `OpenCode ${health.version}` : 'Health endpoint unavailable'} right={() => <Chip compact>{health?.healthy ? 'Healthy' : 'Unknown'}</Chip>} />
         <List.Item title="Realtime updates" description={eventStreamStatus === 'connected' ? 'Global event stream connected' : 'Polling fallback active'} right={() => <Chip compact>{eventStreamStatus}</Chip>} />
         <List.Item title="Subsystems" description={subsystemParts.join(' • ')} />
         <Button mode="outlined" onPress={onRefresh}>Refresh diagnostics</Button>
-      </Card.Content>
-    </Card>
+    </View>
   );
 }
 
@@ -67,42 +64,11 @@ type ConnectionSectionProps = {
 
 export function ConnectionSection({ connection, palette }: ConnectionSectionProps) {
   return (
-    <Card mode="contained" style={[styles.card, { backgroundColor: palette.surface }]}>
-      <Card.Content style={styles.section}>
-        <Text variant="titleLarge" style={[styles.title, { color: palette.text }]}>Connection</Text>
-        <View style={[styles.connectionStatusCard, { backgroundColor: palette.background, borderColor: palette.border }]}>
-          <View style={styles.connectionStatusHeader}>
-            <View style={styles.connectionStatusRow}>
-              <View
-                style={[
-                  styles.connectionStatusDot,
-                  {
-                    backgroundColor:
-                      connection.status === 'connected'
-                        ? palette.success
-                        : connection.status === 'error'
-                          ? palette.danger
-                          : connection.status === 'connecting'
-                            ? palette.warning
-                            : palette.icon,
-                  },
-                ]}
-              />
-              <Text testID="connection-status-label" variant="labelLarge" style={{ color: palette.text }}>
-                {connection.status.charAt(0).toUpperCase() + connection.status.slice(1)}
-              </Text>
-            </View>
-            <Text variant="bodySmall" style={{ color: palette.muted }}>
-              Last checked {connection.checkedAt ? formatTimestamp(connection.checkedAt) : 'not yet'}
-            </Text>
-          </View>
-          <Text variant="bodyMedium" style={{ color: palette.muted }}>
-            {connection.message}
-          </Text>
-        </View>
+    <View style={styles.section}>
+        <Text variant="bodyMedium" style={{ color: palette.muted }}>{connection.message}</Text>
+        {connection.checkedAt ? <Text variant="bodySmall" style={{ color: palette.muted }}>Last checked {formatTimestamp(connection.checkedAt)}</Text> : null}
         <ConnectionProfiles palette={palette} />
-      </Card.Content>
-    </Card>
+    </View>
   );
 }
 
@@ -143,9 +109,7 @@ export function AiDefaultsSection({
   const unconfiguredProviders = availableProviders.filter((provider) => !provider.configured);
 
   return (
-    <Card mode="contained" style={[styles.card, { backgroundColor: palette.surface }]}>
-      <Card.Content style={styles.section}>
-        <Text variant="titleLarge" style={[styles.title, { color: palette.text }]}>AI defaults</Text>
+    <View style={styles.section}>
         <Text variant="bodyMedium" style={{ color: palette.muted }}>
           Choose which configured models appear in chat. The last model you pick in chat stays selected for new chats.
         </Text>
@@ -233,8 +197,7 @@ export function AiDefaultsSection({
           </List.AccordionGroup>
         </List.Section>
         {configuredModels.length === 0 ? <HelperText type="info">No models found for your configured providers.</HelperText> : null}
-      </Card.Content>
-    </Card>
+    </View>
   );
 }
 
@@ -274,9 +237,7 @@ export function NotificationsSection({
   const notificationSummary = `${notificationsEnabled ? 'Notifications enabled' : 'Notifications off'}${backgroundStatusLabel === 'Checking' ? '' : ` • Background ${backgroundStatusLabel.toLowerCase()}`}`;
 
   return (
-    <Card mode="contained" style={[styles.card, { backgroundColor: palette.surface }]}>
-      <Card.Content style={styles.section}>
-        <Text variant="titleLarge" style={[styles.title, { color: palette.text }]}>Notifications</Text>
+    <View style={styles.section}>
         <View style={[styles.connectionStatusCard, { backgroundColor: palette.background, borderColor: palette.border }]}>
           <View style={styles.connectionStatusHeader}>
             <View style={styles.connectionStatusRow}>
@@ -324,8 +285,7 @@ export function NotificationsSection({
         <Button mode="text" loading={isRefreshingNotificationStatus} onPress={onRefreshStatus}>
           Refresh status
         </Button>
-      </Card.Content>
-    </Card>
+    </View>
   );
 }
 
@@ -373,9 +333,7 @@ export function VoiceSection({
   ];
 
   return (
-    <Card mode="contained" style={[styles.card, { backgroundColor: palette.surface }]}> 
-      <Card.Content style={styles.section}>
-        <Text variant="titleLarge" style={[styles.title, { color: palette.text }]}>Voice</Text>
+    <View style={styles.section}>
         <List.Section style={styles.infoListSection}>
           <SettingSwitchRow
             description="Prefer local speech recognition and avoid cloud fallback when possible."
@@ -439,35 +397,7 @@ export function VoiceSection({
         <HelperText type="info">
           Android can periodically check running sessions in the background and post a completion notification. Background speech and continuous microphone capture are not supported.
         </HelperText>
-      </Card.Content>
-    </Card>
-  );
-}
-
-export function ChatsSection({
-  chatPreferences,
-  palette,
-  updateChatPreferences,
-}: {
-  chatPreferences: ChatPreferences;
-  palette: Palette;
-  updateChatPreferences: (patch: Partial<ChatPreferences>) => void;
-}) {
-  return (
-    <Card mode="contained" style={[styles.card, { backgroundColor: palette.surface }]}>
-      <Card.Content style={styles.section}>
-        <Text variant="titleLarge" style={[styles.title, { color: palette.text }]}>Chats</Text>
-        <List.Section style={styles.infoListSection}>
-          <SettingSwitchRow
-            description="Hide sessions started by subagents in the workspace chat list. They stay open and still run to completion."
-            onValueChange={(value) => updateChatPreferences({ hideSubagentChats: value })}
-            palette={palette}
-            title="Hide subagent chats"
-            value={chatPreferences.hideSubagentChats}
-          />
-        </List.Section>
-      </Card.Content>
-    </Card>
+    </View>
   );
 }
 
@@ -608,7 +538,7 @@ function SettingSelectField<T extends string>({
 
 const styles = StyleSheet.create({
   card: { borderRadius: 16 },
-  section: { gap: 14 },
+  section: { gap: 14, paddingBottom: 8 },
   title: { fontWeight: '600' },
   connectionStatusCard: { borderRadius: 14, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 12 },
   numericSlider: { gap: 8 },

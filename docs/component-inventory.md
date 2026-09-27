@@ -21,7 +21,7 @@ The goal is to make it possible to rebuild the UI tree without having to redisco
 - `draft`
 - `attachments`
 - `activeTab`
-- `sessionMenuVisible`
+- `chatLibraryVisible`
 - `isUpdatingAutoApprove`
 - `isCreatingSession`
 - `isStoppingSession`
@@ -47,6 +47,7 @@ The goal is to make it possible to rebuild the UI tree without having to redisco
 ### Main child components
 
 - `ChatHeader`
+- `ChatLibrary`
 - `ChatContent`
 - `ChatComposer`
 - `Snackbar`
@@ -57,7 +58,7 @@ The goal is to make it possible to rebuild the UI tree without having to redisco
 
 - render transcript area and changes area
 - render empty states, connection issues, running indicators, and pending interactions
-- render server-owned tasks in a collapsible chat overlay
+- render server-owned tasks in a compact progress view that opens the shared overlay
 
 ### Prop contract
 
@@ -175,7 +176,7 @@ type ChatComposerProps = {
 ### Responsibility
 
 - top app bar
-- session picker sheet
+- active session and workspace title that opens the Chats overlay
 - compact current-session usage summary and usage breakdown sheet
 - mounting point for conversation overlay
 
@@ -187,25 +188,40 @@ type ChatHeaderProps = {
   conversation: { active: boolean; latestHeardText?: string; phase: ConversationPhase }
   insetsTop: number
   isCreatingSession: boolean
-  onCloseMenu: () => void
   onConfirmStopConversation: () => void
   onCreateSession: () => void
-  onOpenSession: (sessionId: string) => void
-  onOpenSessionMenu: () => void
+  onOpenLibrary: () => void
   onToggleConversationMode: () => void
   palette: Palette
   selectedSession?: Session
-  sessionMenuVisible: boolean
-  sessions: Session[]
-  currentSessionId?: string
+  activeProjectLabel?: string
 }
 ```
+
+## `components/chat/chat-library.tsx`
+
+- Chats overlay with search, favorites, archived sessions, and swipe-left session actions
+- keeps the Hide subagents switch alongside the Active and Archived filters
+- header action opening the shared workspace picker overlay
+- uses provider actions for switching workspaces, opening chats, and persistence
+- owns only local search, section, swipe row, rename, and feedback state
+
+## `components/ui/overlay-sheet.tsx`
+
+- shared overlay presentation for Chats, workspace selection, progress, diff source selection, session usage, terminal selection, and Settings categories; short overlays fit their content
+
+## `components/ui/workspace-picker.tsx`
+
+- shared Chat workspace button and project picker overlay also used by Workspace's existing dropdown
+- lets the user enter a directory on the OpenCode server; the provider resolves and selects it
+- owns no domain state or persistence
 
 ## `components/chat/chat-cards.tsx`
 
 ### Exported components
 
 - `PendingInteractionsCard`
+- `QuestionFlow`
 - `SessionDiffCard`
 - `DiffCard`
 - `TranscriptMessage`
@@ -214,9 +230,13 @@ type ChatHeaderProps = {
 
 Responsibility:
 
-- render session-scoped permission and question cards in a continuation-blocked card
-- collect single, multiple, or custom question answers locally before submission
-- render V2 form field types (boolean switch, numeric input, external link), honor `required`/`when`/`default`, and show a pending state while a reply is in flight
+- render session-scoped permission actions in the floating continuation area
+
+### `QuestionFlow`
+
+- full-screen step-by-step questions; preserve local drafts across dismissal
+- collect single, multiple, or custom answers and submit on the last step
+- render V2 form field types, conditions, defaults, and retry errors
 
 ### `SessionDiffCard`
 
@@ -317,7 +337,7 @@ Current values used by the UI:
 
 This is important to parity because the chat layout is intentionally dense and highly composed, especially around:
 
-- session picker sheet
+- chat library
 - message bubble geometry
 - composer dock
 - conversation banner
@@ -329,17 +349,18 @@ This is important to parity because the chat layout is intentionally dense and h
 
 ### Responsibility
 
-- wire project selection and active/archived session lifecycle actions to the provider
+- wire project selection to the provider
 - render file search plus conflict-checked text editing and full-file patch save
 - render experimental worktree create/list/reset/remove controls
 - keep confirmations, rename/edit inputs, file query, and worktree forms local to the screen
 
 ### Presentation
 
-- uses the same safe-area app header as Chat and Terminal, with an active-project selector and icon actions
-- separates content into `Chats`, `Files`, and `Tools` views instead of showing every workspace feature at once
-- orders chats with the current chat first, then non-idle chats, then recent idle chats
-- exposes archived chats as a Chats view toggle and destructive/session actions through an accessible overflow menu
+- keeps its active-project title, path, and dropdown trigger in the header; the dropdown opens the shared workspace picker overlay
+- the shared picker can add a server directory as a workspace
+- keeps separate project sync and workspace refresh actions
+- separates files and worktrees with the same top tabs as Chat, without an enclosing panel border; chat lifecycle actions live in the Chat library
+- opens file viewing and editing in a focused full-screen surface
 
 ## `app/(tabs)/settings.tsx`
 
@@ -352,17 +373,18 @@ This is important to parity because the chat layout is intentionally dense and h
 
 ### Presentation
 
-- shows one expandable settings category at a time
+- shows compact settings rows in one group and opens one category at a time
 - uses the same safe-area app header and title treatment as Chat and Terminal
-- keeps Connection open until the server is connected, then opens AI and provider setup
-- groups MCP servers and diagnostics under the collapsed `Advanced` category
+- groups MCP servers and diagnostics under the `Advanced` category
+- shows compact category summaries and renders one category at a time in the shared overlay
+- opens connection and provider forms in keyboard-safe full-screen surfaces
 
 ## `app/(tabs)/terminal.tsx`
 
 ### Responsibility
 
 - fourth tab and thin controller over provider-owned PTY state
-- render a compact dropdown-style PTY selector with plus, refresh, and close actions
+- render a content-sized PTY selector overlay; each terminal opens on tap and reveals Close on swipe
 - create default-shell PTYs, select/reconnect existing PTYs, and send newline-terminated input
 - auto-scroll provider-capped output; it is not a VT terminal emulator
 

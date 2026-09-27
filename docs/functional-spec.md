@@ -34,7 +34,7 @@ Behavior:
 
 ### 2. Pick a Workspace
 
-The Workspace tab lists projects returned by the server.
+Chat has a workspace button in its chat library. Workspace keeps its project-name dropdown in the header. Both open the same anchored project picker for projects returned by the server.
 
 Behavior:
 
@@ -44,6 +44,7 @@ Behavior:
 - selecting a project clears the current session selection
 - the provider later rehydrates or creates the appropriate session for that project
 - the current server project may be labeled `Current`; the selected app project may be labeled `Active`
+- Add workspace accepts a directory on the OpenCode server, resolves its project, refreshes the catalog, and selects it; an invalid directory stays in the form with an error
 
 ### 3. Open or Create a Chat Session
 
@@ -60,9 +61,8 @@ A stale deep-link target that does not match any session returns a not-found err
 
 Manual behavior:
 
-- user can create a new session from the Workspace tab
 - user can create a new session from the Chat header
-- user can switch sessions from the Chat header session sheet
+- user can open the Chats overlay from the Chat title to search, switch, favorite, archive, and manage sessions; its header opens a second overlay to change workspace
 
 ### 3b. Open a Session via Deep Link
 
@@ -110,7 +110,7 @@ The Chat screen shows:
 
 - transcript messages
 - inline running status text while OpenCode is active
-- pending permission and question requests if OpenCode is blocked waiting for the user
+- floating permission actions or a full-screen question flow if OpenCode is blocked waiting for the user
 - a changes tab with current file diffs
 - todos when provided by the server
 
@@ -119,7 +119,8 @@ Behavior details:
 - only user messages and assistant messages with text or errors appear in the main transcript
 - reasoning and tool activity are summarized and attached to assistant messages as metadata chips
 - a status line like `OpenCode is ...` is shown while running and not blocked on user input
-- if the assistant is blocked on a permission or question, a waiting card and inline interaction render
+- a small floating progress view shows the current step and completed count; tapping it opens a content-sized overlay with the task list; pending permission actions replace it while blocked
+- a pending question opens a full-screen answer flow immediately; dismissal leaves an `Answer needed` card above the composer and does not reject the request
 
 ### 6. Resolve Pending Interactions
 
@@ -136,16 +137,16 @@ Permission behavior:
 - replies use `/permission/{requestID}/reply`
 - the replied request is removed locally and that session's messages are refreshed
 
-Question cards render each question's choices, optional custom answer, submit action, and rejection action. Answers preserve question order and support multiple selections. V2 forms additionally render field types (`boolean` as a switch, `number`/`integer` with a numeric keyboard, `external` as an open-link action), respect `required` and `when` conditions, prefill `default` values, and show the form `title`. Submit and reject actions expose a pending state so a request cannot be answered twice. V2 MCP elicitation forms owned by the server's `global` sentinel are surfaced with the active chat rather than dropped.
+The full-screen question flow shows one visible question at a time with Back and Next, then submits on the last step. Drafts survive dismissal and reopening. It preserves question order, multiple selections, custom answers, defaults, and conditional visibility. V2 forms additionally render field types (`boolean` as a switch, `number`/`integer` with a numeric keyboard, `external` as an open-link action), respect `required` and `when` conditions, and show the form `title`. A failed submission keeps the answers for retry. V2 MCP elicitation forms owned by the server's `global` sentinel are surfaced with the active chat rather than dropped.
 
 ### 7. Inspect File Changes
 
-The `Files Changed` tab can read several diff sources from the OpenCode API, selected with a scope control.
+The `Files Changed` tab can read several diff sources from the OpenCode API. A single source button opens the shared overlay to choose the scope and, when applicable, the turn.
 
 Behavior:
 
 - scopes: `Turn` (per-user-message snapshot diff), `Uncommitted` (VCS working tree), `Branch` (VCS diff against the default branch)
-- `Turn` is the default and shows the latest user turn; a turn picker appears when more than one user turn has a recorded diff, allowing an earlier turn to be inspected
+- `Turn` is the default and shows the latest user turn; the source overlay lists earlier turns when more than one user turn has a recorded diff
 - `Uncommitted` and `Branch` call `vcs.diff` with modes `git`/`working` and `branch` respectively and are workspace-scoped, not session-scoped: V1 scopes with the `directory` query parameter, V2 with `location[directory]`
 - top card shows the active scope title, line totals, and current status
 - `{ file, patch, additions, deletions }` diff objects are rendered as expandable line previews
@@ -153,11 +154,10 @@ Behavior:
 - per-scope empty states: `No file changes yet.`, `No uncommitted changes.`, `No changes against the default branch.`
 - pull-to-refresh reloads the active scope; VCS scopes have no SSE event and are refreshed on demand (scope change, pull-to-refresh, or a workspace file save while a VCS scope is active)
 
-### 8. Manage Sessions in the Workspace Tab
+### 8. Manage Sessions in the Chat Library
 
-The Workspace tab provides lifecycle operations:
+The Chats overlay opened from the Chat title provides lifecycle operations through swipe-left row actions:
 
-- refresh workspace catalog and sessions
 - open a session
 - create a new session
 - rename a session
@@ -168,8 +168,11 @@ The Workspace tab provides lifecycle operations:
 
 Session list behavior:
 
-- each session row shows title, preview/subtitle, relative updated time, and status
+- search filters the active, favorite, or archived list
+- favorites remain accessible across workspaces; choosing one switches to its project
+- each session row shows title, preview/subtitle, and status
 - active session rows are visually emphasized
+- the `Hide subagent chats` switch sits beside the Active and Archived filters in the library
 
 Additional session actions are available in Chat:
 
@@ -181,8 +184,9 @@ Additional session actions are available in Chat:
 
 The Workspace tab provides source inspection and text editing:
 
+- Files and Worktrees use the same top-tab style as Chat
 - search file paths by query
-- open returned files and display server-returned content
+- open returned files in a focused full-screen viewer/editor
 - show the number of changed files from file status
 - show the current VCS branch when available
 - edit the selected text file and save the complete replacement as a VCS patch
@@ -195,7 +199,7 @@ The Workspace tab can list, create, reset, and remove worktrees. Creation accept
 
 ### 11. Use The Terminal Tab
 
-The fourth tab uses a compact terminal selector. The plus action creates a PTY with the server default shell (which falls back to bash on the fake server); the selector opens the existing terminals, and the X action closes the selected terminal. Users send newline-terminated input to the selected terminal.
+The fourth tab uses a content-sized terminal selector overlay. The plus action creates a PTY with the server default shell (which falls back to bash on the fake server); tapping a row opens it, and swiping left reveals its Close action. Rows show a short terminal ID to distinguish terminals with the same title and command. Users send newline-terminated input to the selected terminal.
 
 The provider requests a short-lived PTY connect ticket and opens a project-scoped `ws:`/`wss:` connection. The UI is a line console, not a terminal emulator: it strips common ANSI CSI sequences, does not implement VT cursor behavior, and keeps the latest 100,000 output characters.
 
@@ -219,7 +223,7 @@ When a session has no display transcript yet, the user sees:
 
 ## Composer Behavior
 
-Server-owned tasks appear collapsed by default in an overlay over the chat area. Expanding the overlay shows a height-limited, scrollable list without resizing the composer.
+Server-owned tasks appear in a compact floating progress view. Tapping it opens a content-sized, scrollable overlay without resizing the composer.
 
 The composer includes:
 
@@ -231,6 +235,8 @@ The composer includes:
 - slash-command suggestions when the draft starts with `/` and has no space
 - attachment chips
 - text input
+
+Agent, model, reasoning, and auto-approve use the original four visible controls. The outer composer button adds an attachment when the draft is empty, sends when it has content, and stops a running session.
 - primary and secondary action buttons
 
 Primary action rules:
@@ -306,14 +312,13 @@ Behavior:
 
 - each connection is a collapsible row; expanding shows its server URL and username, and reveals Connect, Edit, and Delete for that connection
 - the active row shows an `Active` (or `Connecting`) badge; the active connection always has a row, titled `Current connection` while it has not been saved as a profile yet
-- `Add connection` opens a dialog for name, server URL, username, and password; the primary action is `Save & connect`, which stores the profile (password in SecureStore, metadata in AsyncStorage) and switches to it
-- `Edit` opens the same dialog for that connection: for a saved connection it updates the stored profile (and the live settings when it is active), for the current unsaved connection it updates the live settings only
+- `Add connection` opens a scrollable full-screen form for name, server URL, username, and password; the keyboard-safe primary action is `Save & connect`, which stores the profile (password in SecureStore, metadata in AsyncStorage) and switches to it
+- `Edit` opens the same form for that connection: for a saved connection it updates the stored profile (and the live settings when it is active), for the current unsaved connection it updates the live settings only
 - editing the active connection never reconnects on its own; the row's Reconnect action does that, so an in-flight session is not dropped
 - the active connection cannot be deleted; other connections offer Delete with a confirmation
 - selecting Connect on another connection switches through `switchConnection()`, which persists the outgoing profile's model selection, restores the target profile's selection, clears all server-derived state, and reconnects with the target credentials
 - values are persisted locally; passwords stay in SecureStore while name, URL, and username live in AsyncStorage
-- status card shows current state and last checked timestamp
-- the Connection card starts expanded, since saved connections are the main reason to open it
+- Settings shows short category summaries in one compact group; tapping Connection opens a content-sized overlay with the server message, last checked timestamp, and saved connection rows
 
 ### AI Defaults Section
 
@@ -343,6 +348,7 @@ Behavior:
 - provider auth metadata comes from the server
 - if the server returns no auth methods for a non-known-OAuth provider, the app falls back to a generic API-key flow
 - if OAuth is selected, the app requests an authorization URL and opens the browser
+- provider setup uses a scrollable full-screen form with a keyboard-safe action footer
 - code-based OAuth displays a callback dialog and submits the entered authorization code before enabling the provider
 - automatic OAuth enables/reconnects after the browser returns without a code dialog
 - if API auth is selected, auth values are normalized and sent to `client.auth.set`

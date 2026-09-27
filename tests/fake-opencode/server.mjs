@@ -14,11 +14,11 @@ import {
   vcsPayload,
 } from './fixtures.mjs';
 import { createSessionHelpers } from './session-helpers.mjs';
-import { createStateStore, getNow } from './state.mjs';
+import { createStateStore, getNow, resolveProject } from './state.mjs';
 
 const port = Number.parseInt(process.env.FAKE_OPENCODE_PORT || '4096', 10);
 const scenarioName = process.env.FAKE_OPENCODE_SCENARIO || 'happy-path';
-const supportedScenarios = new Set(['happy-path', 'permission', 'question', 'stream-disconnect']);
+const supportedScenarios = new Set(['happy-path', 'permission', 'question', 'question-multi', 'question-failure', 'stream-disconnect']);
 const configuredBasePath = (process.env.FAKE_OPENCODE_BASE_PATH || '').trim();
 const basePath = configuredBasePath
   ? `/${configuredBasePath.replace(/^\/+/, '').replace(/\/+$/, '')}`
@@ -194,7 +194,9 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === 'GET' && pathname === '/project/current') {
-      sendJson(res, 200, state.project);
+      const project = resolveProject(state, requestUrl.searchParams.get('directory'));
+      if (!project) { badRequest(res, 'Directory is outside the server workspace.'); return; }
+      sendJson(res, 200, project);
       return;
     }
 
@@ -918,6 +920,11 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && /^\/question\/[^/]+\/(reply|reject)$/.test(pathname)) {
       const [, , questionId, action] = pathname.split('/');
       const request = state.pendingQuestions.find((entry) => entry.id === questionId);
+      if (state.scenario === 'question-failure' && action === 'reply' && !state.questionReplyFailed) {
+        state.questionReplyFailed = true;
+        sendJson(res, 503, { error: 'Temporary question failure' });
+        return;
+      }
       const body = action === 'reply' ? await readJson(req) : undefined;
       if (!request || (action === 'reply' && !Array.isArray(body?.answers))) {
         sendJson(res, 400, { error: 'Invalid question response' });

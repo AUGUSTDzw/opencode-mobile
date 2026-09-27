@@ -27,7 +27,7 @@ export default function ChatLandingScreen() {
     void ensureActiveSession();
   }, [activeProject, connection.status, currentSessionId, ensureActiveSession, isBootstrappingChat, isHydrated]);
 
-  if (currentSessionId) {
+  if (currentSessionId || (isHydrated && activeProject && connection.status === 'connected')) {
     return <ChatView />;
   }
 

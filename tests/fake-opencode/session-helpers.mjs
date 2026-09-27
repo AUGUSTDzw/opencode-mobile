@@ -153,6 +153,7 @@ export function createSessionHelpers({ getNow, getState, emitEvent }) {
       sessionID: sessionId,
       questions: [{
         header: 'Approach',
+        key: 'approach',
         question: 'Which implementation should be used?',
         options: [
           { label: 'Minimal', description: 'Make the smallest safe change.' },
@@ -160,7 +161,13 @@ export function createSessionHelpers({ getNow, getState, emitEvent }) {
         ],
         multiple: false,
         custom: true,
-      }],
+      }, ...(state.scenario === 'question-multi' ? [{
+        header: 'Areas', key: 'areas', question: 'Which areas should change?', type: 'multiselect', multiple: true,
+        options: [{ label: 'Chat', value: 'chat' }, { label: 'Settings', value: 'settings' }], custom: true,
+      }, {
+        header: 'Reason', key: 'reason', question: 'Why choose the expanded approach?', type: 'string',
+        options: [], custom: true, required: true, when: [{ key: 'approach', op: 'eq', value: 'Expanded' }],
+      }] : [])],
     };
     state.pendingQuestions = [request];
     emitEvent({ type: 'question.asked', properties: request });
@@ -185,7 +192,7 @@ export function createSessionHelpers({ getNow, getState, emitEvent }) {
       return;
     }
 
-    if (state.scenario === 'question') {
+    if (state.scenario === 'question' || state.scenario === 'question-multi' || state.scenario === 'question-failure') {
       createQuestionRequest(sessionId);
       return;
     }

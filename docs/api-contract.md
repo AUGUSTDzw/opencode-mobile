@@ -71,6 +71,7 @@ The catalog client loads these requests concurrently:
 - `path.get()`
 - `project.list()`
 - `project.current()`
+- adding a workspace resolves `project.current()` with that server directory (`directory` on V1, `location[directory]` on V2), then refreshes `project.list()`; the resolved worktree is selected
 
 `path.get()` must return a `directory`. Projects are deduplicated by `worktree`; the current project is included even if omitted from the project list.
 

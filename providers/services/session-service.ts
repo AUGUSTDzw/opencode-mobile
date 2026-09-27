@@ -40,6 +40,10 @@ export async function loadWorkspaceCatalog(catalogClient: OpencodeClient) {
   };
 }
 
+export async function resolveWorkspace(client: OpencodeClient) {
+  return requireData((await client.project.current()).data, 'current project request');
+}
+
 export async function listSessions(client: OpencodeClient) {
   const [sessionsResponse, statusesResponse] = await Promise.all([client.session.list(), client.session.status()]);
 

@@ -1,12 +1,12 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Easing, RefreshControl, ScrollView, View } from 'react-native';
+import { Animated, Easing, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { ActivityIndicator, Button, Card, IconButton, ProgressBar, Text, TouchableRipple } from 'react-native-paper';
 
 import { Colors } from '@/constants/theme';
-import { ControlButton } from '@/components/chat/chat-controls';
-import { DiffCard, PendingInteractionsCard, SessionDiffCard, TranscriptMessage } from '@/components/chat/chat-cards';
+import { OverlaySheet } from '@/components/ui/overlay-sheet';
+import { DiffCard, PendingInteractionsCard, QuestionFlow, SessionDiffCard, TranscriptMessage } from '@/components/chat/chat-cards';
 import type { TranscriptEntry } from '@/lib/opencode/format';
 import type { FileDiff, Session, SessionStatus, Todo } from '@/lib/opencode/types';
 import type { DiffScope, DiffTurn } from '@/providers/opencode-provider-types';
@@ -157,11 +157,14 @@ export function ChatContent({
   speakingMessageId,
   status,
 }: ChatContentProps) {
-  const [todosExpanded, setTodosExpanded] = useState(false);
+  const [progressVisible, setProgressVisible] = useState(false);
+  const [diffSourcesVisible, setDiffSourcesVisible] = useState(false);
+  const [dismissedQuestionId, setDismissedQuestionId] = useState<string>();
   const transcriptRef = useRef<FlashListRef<TranscriptEntry>>(null);
   const shouldPositionInitialTranscriptRef = useRef(false);
   const previousTranscriptRef = useRef({ sessionId: currentSessionId, length: displayTranscript.length });
   const completedTodoCount = currentTodos.filter((todo) => todo.status === 'completed').length;
+  const currentQuestion = currentPendingQuestions[0];
   const isTurnScope = currentDiffScope === 'turn';
   const isLatestTurn = diffTurns.length === 0 || selectedDiffMessageId === diffTurns[diffTurns.length - 1]?.id;
   const scopeTitle = currentDiffScope === 'uncommitted'
@@ -198,7 +201,7 @@ export function ChatContent({
           style={styles.scroll}
           contentContainerStyle={[
             styles.content,
-            currentTodos.length > 0 ? { paddingBottom: todosExpanded ? 320 : 76 } : null,
+            currentTodos.length > 0 || pendingInteractions > 0 ? { paddingBottom: 110 } : null,
           ]}
           extraData={extraData}
           keyboardDismissMode="on-drag"
@@ -262,35 +265,11 @@ export function ChatContent({
           )}
           ListFooterComponent={(
             <View style={styles.transcriptFooter}>
-              {pendingInteractions > 0 ? (
-                <PendingInteractionsCard
-                  permissions={currentPendingPermissions}
-                  questions={currentPendingQuestions}
-                  onPermissionReply={onReplyToPermission}
-                  onQuestionReject={onRejectQuestion}
-                  onQuestionReply={onReplyToQuestion}
-                />
-              ) : null}
-
               {activeSession?.revert ? (
                 <Card mode="contained" style={[styles.noticeCard, { backgroundColor: palette.surface }]}>
                   <Card.Content>
                     <Text variant="titleMedium" style={{ color: palette.text }}>Session is reverted</Text>
                     <Button mode="outlined" onPress={onUnrevert}>Restore reverted work</Button>
-                  </Card.Content>
-                </Card>
-              ) : null}
-
-              {awaitingUserInput ? (
-                <Card mode="contained" style={[styles.noticeCard, { backgroundColor: palette.surface }]}>
-                  <Card.Content style={styles.waitingNoticeContent}>
-                    <View style={styles.waitingNoticeHeader}>
-                      <MaterialCommunityIcons name="alert-circle-outline" size={18} color={palette.warning} />
-                      <Text variant="titleMedium" style={{ color: palette.text }}>Waiting for your input</Text>
-                    </View>
-                    <Text style={{ color: palette.muted }}>
-                      OpenCode is blocked on {pendingInteractions === 1 ? 'a response' : `${pendingInteractions} responses`} below.
-                    </Text>
                   </Card.Content>
                 </Card>
               ) : null}
@@ -336,30 +315,9 @@ export function ChatContent({
             </Card.Content>
           </Card>
 
-          <View style={styles.diffScopeRow}>
-            {DIFF_SCOPE_OPTIONS.map((option) => (
-              <ControlButton
-                key={option.value}
-                grow
-                active={currentDiffScope === option.value}
-                onPress={() => onSelectDiffScope(option.value)}>
-                {option.label}
-              </ControlButton>
-            ))}
-          </View>
-
-          {isTurnScope && diffTurns.length > 1 ? (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.diffTurnRow}>
-              {diffTurns.map((turn) => (
-                <ControlButton
-                  key={turn.id}
-                  active={selectedDiffMessageId === turn.id}
-                  onPress={() => onSelectDiffMessage(turn.id)}>
-                  {turn.label}
-                </ControlButton>
-              ))}
-            </ScrollView>
-          ) : null}
+          <Button mode="outlined" icon="swap-horizontal" onPress={() => setDiffSourcesVisible(true)} accessibilityLabel={`Change files changed source. ${DIFF_SCOPE_OPTIONS.find((option) => option.value === currentDiffScope)?.label || 'Turn'}`}>
+            {`Showing ${DIFF_SCOPE_OPTIONS.find((option) => option.value === currentDiffScope)?.label || 'Turn'}${isTurnScope && diffTurns.length > 1 ? ` · ${diffTurns.find((turn) => turn.id === selectedDiffMessageId)?.label || 'Latest turn'}` : ''}`}
+          </Button>
 
           {currentDiffs.length === 0 && !(showDiffDetails && diffDetails.length > 0) ? (
             <Card mode="contained" style={[styles.sectionCard, { backgroundColor: palette.surface }]}>
@@ -389,45 +347,60 @@ export function ChatContent({
         </ScrollView>
       )}
 
-      {activeTab === 'session' && currentTodos.length > 0 ? (
+      <OverlaySheet visible={activeTab !== 'session' && diffSourcesVisible} testID="diff-source-overlay" title="Files changed source" fitContent onClose={() => setDiffSourcesVisible(false)}>
+        {DIFF_SCOPE_OPTIONS.map((option) => <Pressable key={option.value} accessibilityRole="button" onPress={() => { onSelectDiffScope(option.value); if (option.value !== 'turn' || diffTurns.length <= 1) setDiffSourcesVisible(false); }} style={[styles.sessionPickerItemRow, { borderWidth: 1, borderRadius: 16, borderColor: currentDiffScope === option.value ? palette.tint : palette.border }]}>
+          <MaterialCommunityIcons name={currentDiffScope === option.value ? 'check-circle' : 'circle-outline'} size={20} color={currentDiffScope === option.value ? palette.tint : palette.muted} />
+          <Text style={{ color: palette.text }}>{option.label}</Text>
+        </Pressable>)}
+        {currentDiffScope === 'turn' && diffTurns.length > 1 ? <>
+          <Text variant="labelLarge" style={{ color: palette.muted }}>Turn</Text>
+          {diffTurns.map((turn) => <Pressable key={turn.id} accessibilityRole="button" onPress={() => { onSelectDiffMessage(turn.id); setDiffSourcesVisible(false); }} style={[styles.sessionPickerItemRow, { borderWidth: 1, borderRadius: 16, borderColor: selectedDiffMessageId === turn.id ? palette.tint : palette.border }]}>
+            <MaterialCommunityIcons name={selectedDiffMessageId === turn.id ? 'check-circle' : 'circle-outline'} size={20} color={selectedDiffMessageId === turn.id ? palette.tint : palette.muted} />
+            <Text style={{ color: palette.text }}>{turn.label}</Text>
+          </Pressable>)}
+        </> : null}
+      </OverlaySheet>
+
+      {currentQuestion ? (
+        <QuestionFlow
+          key={currentQuestion.id}
+          request={currentQuestion}
+          visible={dismissedQuestionId !== currentQuestion.id}
+          onDismiss={() => setDismissedQuestionId(currentQuestion.id)}
+          onReject={() => onRejectQuestion(currentQuestion.id)}
+          onReply={(answers) => onReplyToQuestion(currentQuestion.id, answers)}
+        />
+      ) : null}
+
+      {activeTab === 'session' && currentPendingPermissions.length > 0 && !currentQuestion ? (
+        <View style={styles.todoOverlay}>
+          <PendingInteractionsCard permissions={currentPendingPermissions} onPermissionReply={onReplyToPermission} />
+        </View>
+      ) : null}
+      {activeTab === 'session' && currentQuestion && dismissedQuestionId === currentQuestion.id ? (
         <Card mode="elevated" style={[styles.todoOverlay, { backgroundColor: palette.surface, borderColor: palette.border }]}>
-          <Card.Content style={styles.todoHeaderContent}>
-            <View style={styles.todoHeader}>
-              <View style={styles.todoSummary}>
-                <Text variant="labelLarge" style={{ color: palette.text }}>Plan</Text>
-                <Text variant="bodySmall" style={{ color: palette.muted }}>
-                  {`${completedTodoCount} of ${currentTodos.length} tasks completed`}
-                </Text>
-              </View>
-              <IconButton
-                accessibilityLabel={todosExpanded ? 'Collapse plan' : 'Expand plan'}
-                icon={todosExpanded ? 'chevron-down' : 'chevron-up'}
-                size={20}
-                style={styles.todoToggleButton}
-                onPress={() => setTodosExpanded((expanded) => !expanded)}
-              />
+          <Card.Content style={styles.todoHeader}>
+            <View style={styles.todoSummary}>
+              <Text variant="labelLarge" style={{ color: palette.text }}>Answer needed</Text>
+              <Text variant="bodySmall" style={{ color: palette.muted }}>{currentQuestion.title || 'OpenCode is waiting for your answer'}</Text>
             </View>
-            <ProgressBar
-              progress={completedTodoCount / currentTodos.length}
-              color={palette.tint}
-              style={styles.todoProgress}
-            />
+            <Button onPress={() => setDismissedQuestionId(undefined)}>Open</Button>
           </Card.Content>
-          {todosExpanded ? (
-            <ScrollView style={styles.todoListScroll} contentContainerStyle={styles.todoList} nestedScrollEnabled>
-              {currentTodos.map((todo, index) => (
-                <View key={`${todo.content}-${index}`} style={styles.todoItemRow}>
-                  <IconButton icon={todo.status === 'completed' ? 'check-circle' : todo.status === 'in_progress' ? 'progress-clock' : 'circle-outline'} size={20} disabled style={styles.todoStatusIcon} />
-                  <View style={styles.todoTextWrap}>
-                    <Text variant="bodyMedium" style={{ color: palette.text }}>{todo.content || 'Untitled task'}</Text>
-                    {todo.priority ? <Text variant="bodySmall" style={{ color: palette.muted }}>{todo.priority}</Text> : null}
-                  </View>
-                </View>
-              ))}
-            </ScrollView>
-          ) : null}
         </Card>
       ) : null}
+      {activeTab === 'session' && !currentQuestion && currentPendingPermissions.length === 0 && currentTodos.length > 0 ? <Pressable accessibilityRole="button" accessibilityLabel={`Open progress. ${completedTodoCount} of ${currentTodos.length} tasks completed`} onPress={() => setProgressVisible(true)} style={[styles.todoOverlay, { backgroundColor: palette.surface, borderColor: palette.border, padding: 12, gap: 8 }]}>
+        <View style={styles.todoHeader}>
+          <View style={styles.todoSummary}><Text variant="labelLarge" style={{ color: palette.text }}>Progress · {completedTodoCount}/{currentTodos.length}</Text><Text numberOfLines={1} variant="bodySmall" style={{ color: palette.muted }}>{currentTodos.find((todo) => todo.status === 'in_progress')?.content || (completedTodoCount === currentTodos.length ? 'All tasks completed' : 'Open to see all steps')}</Text></View>
+          <MaterialCommunityIcons name="arrow-expand" size={18} color={palette.muted} />
+        </View>
+        <ProgressBar progress={completedTodoCount / currentTodos.length} color={palette.tint} style={styles.todoProgress} />
+      </Pressable> : null}
+      <OverlaySheet visible={activeTab === 'session' && !currentQuestion && currentPendingPermissions.length === 0 && progressVisible} testID="progress-overlay" title="Progress" fitContent onClose={() => setProgressVisible(false)}>
+        {currentTodos.map((todo, index) => <View key={`${todo.content}-${index}`} style={styles.todoItemRow}>
+          <IconButton icon={todo.status === 'completed' ? 'check-circle' : todo.status === 'in_progress' ? 'progress-clock' : 'circle-outline'} size={20} disabled style={styles.todoStatusIcon} />
+          <View style={styles.todoTextWrap}><Text variant="bodyMedium" style={{ color: palette.text }}>{todo.content || 'Untitled task'}</Text>{todo.priority ? <Text variant="bodySmall" style={{ color: palette.muted }}>{todo.priority}</Text> : null}</View>
+        </View>)}
+      </OverlaySheet>
     </View>
   );
 }

@@ -1,7 +1,8 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { memo, useMemo, useState } from 'react';
-import { Linking, ScrollView, StyleSheet, View } from 'react-native';
-import { Button, Card, Chip, Divider, IconButton, List, Surface, Switch, Text, TouchableRipple } from 'react-native-paper';
+import { KeyboardAvoidingView, Linking, Modal, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { Appbar, Button, Card, Chip, Divider, IconButton, List, Surface, Switch, Text, TouchableRipple } from 'react-native-paper';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TextInput } from '@/components/ui/text-input';
 
@@ -24,16 +25,10 @@ function getPermissionTitle(request: PendingPermissionRequest) {
 
 export function PendingInteractionsCard({
   onPermissionReply,
-  onQuestionReject,
-  onQuestionReply,
   permissions,
-  questions,
 }: {
   onPermissionReply: (requestId: string, reply: 'once' | 'always' | 'reject') => Promise<void>;
-  onQuestionReject: (requestId: string) => Promise<void>;
-  onQuestionReply: (requestId: string, answers: PendingQuestionAnswer[]) => Promise<void>;
   permissions: PendingPermissionRequest[];
-  questions: PendingQuestionRequest[];
 }) {
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
@@ -55,30 +50,29 @@ export function PendingInteractionsCard({
             onReply={(reply) => onPermissionReply(request.id, reply)}
           />
         ))}
-        {questions.map((request) => (
-          <QuestionRequestCard
-            key={request.id}
-            request={request}
-            onReject={() => onQuestionReject(request.id)}
-            onReply={(answers) => onQuestionReply(request.id, answers)}
-          />
-        ))}
       </Card.Content>
     </Card>
   );
 }
 
-function QuestionRequestCard({
+export function QuestionFlow({
   onReject,
   onReply,
+  onDismiss,
   request,
+  visible,
 }: {
   onReject: () => Promise<void>;
   onReply: (answers: PendingQuestionAnswer[]) => Promise<void>;
+  onDismiss: () => void;
   request: PendingQuestionRequest;
+  visible: boolean;
 }) {
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
+  const insets = useSafeAreaInsets();
+  const [step, setStep] = useState(0);
+  const [error, setError] = useState<string>();
   const [submitting, setSubmitting] = useState<'reply' | 'reject' | undefined>(undefined);
   const [answers, setAnswers] = useState<string[][]>(() => request.questions.map((prompt) => {
     if (prompt.type === 'boolean') {
@@ -133,13 +127,20 @@ function QuestionRequestCard({
     const required = prompt.required ?? prompt.type === undefined;
     return !required || resolvedAnswers[index].length > 0;
   });
+  const visibleIndexes = request.questions.map((_, index) => index).filter((index) => isPromptVisible(request.questions[index], index));
+  const currentStep = Math.min(step, Math.max(visibleIndexes.length - 1, 0));
+  const currentIndex = visibleIndexes[currentStep];
+  const currentPrompt = currentIndex === undefined ? undefined : request.questions[currentIndex];
+  const currentRequired = currentPrompt ? (currentPrompt.required ?? currentPrompt.type === undefined) : false;
+  const canAdvance = !currentRequired || currentIndex === undefined || resolvedAnswers[currentIndex].length > 0;
 
   const handleReply = () => {
     if (submitting) {
       return;
     }
     setSubmitting('reply');
-    void onReply(resolvedAnswers).catch(() => undefined).finally(() => setSubmitting(undefined));
+    setError(undefined);
+    void onReply(resolvedAnswers).catch((reason) => setError(reason instanceof Error ? reason.message : 'Could not submit answer.')).finally(() => setSubmitting(undefined));
   };
 
   const handleReject = () => {
@@ -147,16 +148,23 @@ function QuestionRequestCard({
       return;
     }
     setSubmitting('reject');
-    void onReject().catch(() => undefined).finally(() => setSubmitting(undefined));
+    setError(undefined);
+    void onReject().catch((reason) => setError(reason instanceof Error ? reason.message : 'Could not reject question.')).finally(() => setSubmitting(undefined));
   };
 
   return (
-    <Card mode="contained" style={[styles.requestCard, { backgroundColor: palette.background }]}>
-      <Card.Content style={styles.requestCardContent}>
-        <Text variant="labelLarge" style={{ color: palette.warning }}>Assistant question</Text>
+    <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onDismiss}>
+      <KeyboardAvoidingView style={{ flex: 1, backgroundColor: palette.background }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <Appbar.Header statusBarHeight={0} style={{ backgroundColor: palette.surface, paddingTop: insets.top, height: 64 + insets.top }}>
+          <Appbar.BackAction accessibilityLabel="Return to chat" onPress={onDismiss} />
+          <Appbar.Content title="Assistant question" subtitle={`${currentStep + 1} of ${visibleIndexes.length}`} />
+        </Appbar.Header>
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 20, gap: 18 }}>
+        <Text variant="labelLarge" style={{ color: palette.warning }}>OpenCode is waiting for your answer</Text>
+        <Text variant="bodySmall" style={{ color: palette.muted }}>{`Question ${currentStep + 1} of ${visibleIndexes.length}`}</Text>
         {request.title ? <Text variant="bodySmall" style={{ color: palette.muted }}>{request.title}</Text> : null}
         {request.questions.map((prompt, questionIndex) => {
-          if (!isPromptVisible(prompt, questionIndex)) {
+          if (questionIndex !== currentIndex) {
             return null;
           }
 
@@ -237,25 +245,21 @@ function QuestionRequestCard({
             </View>
           );
         })}
-        <View style={styles.requestActionsRow}>
-          <Button
+        {error ? <Text style={{ color: palette.danger }}>{error}</Text> : null}
+        </ScrollView>
+        <View style={[styles.questionFooter, { backgroundColor: palette.surface, borderTopColor: palette.border, paddingBottom: Math.max(insets.bottom, 12) }]}>
+          <Button mode="outlined" disabled={currentStep === 0 || Boolean(submitting)} onPress={() => setStep((value) => Math.max(0, value - 1))}>Back</Button>
+          {currentStep < visibleIndexes.length - 1 ? <Button mode="contained" disabled={!canAdvance || Boolean(submitting)} onPress={() => setStep((value) => value + 1)}>Next</Button> : <Button
             mode="contained"
             disabled={!canSubmit || Boolean(submitting)}
             loading={submitting === 'reply'}
             onPress={handleReply}>
             Submit answer
-          </Button>
-          <Button
-            mode="text"
-            textColor={palette.danger}
-            disabled={Boolean(submitting)}
-            loading={submitting === 'reject'}
-            onPress={handleReject}>
-            Reject
-          </Button>
+          </Button>}
+          <Button mode="text" textColor={palette.danger} disabled={Boolean(submitting)} loading={submitting === 'reject'} onPress={handleReject}>Reject</Button>
         </View>
-      </Card.Content>
-    </Card>
+      </KeyboardAvoidingView>
+    </Modal>
   );
 }
 
@@ -543,6 +547,7 @@ const styles = StyleSheet.create({
   requestCardCompact: { borderRadius: 14 },
   requestCardContent: { gap: 10 },
   requestActionsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  questionFooter: { borderTopWidth: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'flex-end', paddingHorizontal: 16, paddingTop: 12 },
   questionBlock: { gap: 8 },
   questionBooleanRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   questionOptions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },

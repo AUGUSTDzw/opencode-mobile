@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChatComposer } from '@/components/chat/chat-composer';
 import { ChatContent } from '@/components/chat/chat-content';
 import { ChatHeader } from '@/components/chat/chat-header';
+import { ChatLibrary } from '@/components/chat/chat-library';
 import { TopTab } from '@/components/chat/chat-controls';
 import { styles } from '@/components/chat/chat-view-styles';
 import { Colors } from '@/constants/theme';
@@ -25,6 +26,7 @@ export function ChatView() {
   const insets = useSafeAreaInsets();
   const {
     activeSession,
+    activeProject,
     currentMessages,
     availableAgents,
     availableModels,
@@ -161,7 +163,6 @@ export function ChatView() {
       `Attachments: ${lastSentAttachmentsRef.current.map((attachment) => attachment.filename || attachment.mime || 'unnamed').join(', ') || 'none'}`,
     ].join('\n');
   }, [chatPreferences.modelId, currentSessionId, promptError?.occurredAt, sendErrorMessage, settings.serverUrl]);
-  const visibleSessions = sessions;
 
   useEffect(() => {
     draftRef.current = draft;
@@ -459,27 +460,19 @@ export function ChatView() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}>
         <ChatHeader
+          activeProjectLabel={activeProject?.label}
           connectionStatus={connection.status}
           conversation={conversation}
           contextLimit={contextModel?.contextLimit}
           contextTokens={contextTokens}
-          currentSessionId={currentSessionId}
-          isUsageLoading={isRefreshingMessages}
           insetsTop={insets.top}
           isCreatingSession={isCreatingSession}
-          onCloseMenu={() => setSessionMenuVisible(false)}
           onConfirmStopConversation={handleConfirmStopConversation}
           onCreateSession={() => void handleNewSession()}
-          onOpenSession={(sessionId) => {
-            setSessionMenuVisible(false);
-            void openSession(sessionId);
-          }}
           onOpenSessionMenu={() => setSessionMenuVisible(true)}
           onToggleConversationMode={() => void toggleConversationMode()}
           palette={palette}
           selectedSession={selectedSession}
-          sessionMenuVisible={sessionMenuVisible}
-          sessions={visibleSessions}
           latestAssistantTurnUsage={latestAssistantTurnUsage}
           usage={currentUsage}
         />
@@ -515,9 +508,9 @@ export function ChatView() {
           onSelectDiffScope={setDiffScope}
           onSelectDiffMessage={selectDiffMessage}
           selectedDiffMessageId={selectedDiffMessageId}
-          onRejectQuestion={(requestId) => rejectQuestion(requestId).catch((error) => { setSendFeedback(error instanceof Error ? error.message : 'Could not reject the question.'); })}
+          onRejectQuestion={(requestId) => rejectQuestion(requestId).catch((error) => { setSendFeedback(error instanceof Error ? error.message : 'Could not reject the question.'); throw error; })}
           onReplyToPermission={(requestId, reply) => replyToPermission(requestId, reply).catch((error) => { setSendFeedback(error instanceof Error ? error.message : 'Could not reply to the permission request.'); })}
-          onReplyToQuestion={(requestId, answers) => replyToQuestion(requestId, answers).catch((error) => { setSendFeedback(error instanceof Error ? error.message : 'Could not answer the question.'); })}
+          onReplyToQuestion={(requestId, answers) => replyToQuestion(requestId, answers).catch((error) => { setSendFeedback(error instanceof Error ? error.message : 'Could not answer the question.'); throw error; })}
           onForkMessage={(messageId) => {
             if (!currentSessionId) return;
             void forkSession(currentSessionId, messageId).catch((error) => setSendFeedback(error instanceof Error ? error.message : 'Could not fork session.'));
@@ -611,6 +604,8 @@ export function ChatView() {
           visibleModels={visibleModels}
         />
       </KeyboardAvoidingView>
+
+      <ChatLibrary visible={sessionMenuVisible} onClose={() => setSessionMenuVisible(false)} />
 
       <Snackbar visible={Boolean(copiedMessageId)} onDismiss={() => setCopiedMessageId(undefined)} duration={1800}>
         {copiedMessageId === '__send-error__' ? 'Error details copied' : 'Message copied to clipboard'}

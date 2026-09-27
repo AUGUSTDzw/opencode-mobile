@@ -147,6 +147,7 @@ import {
   unshareSession as svcUnshareSession,
   updateSessionTitle as svcUpdateSessionTitle,
   restoreSession as svcRestoreSession,
+  resolveWorkspace as svcResolveWorkspace,
 } from '@/providers/services/session-service';
 import { loadDiagnostics, type Diagnostics } from '@/providers/services/diagnostics-service';
 import {
@@ -1352,6 +1353,24 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
     setActiveProjectPath(normalizedPath);
     clearProjectState();
   }, [clearProjectState]);
+
+  const addWorkspace = useCallback(async (directory: string) => {
+    const path = directory.trim();
+    if (!path) throw new Error('Enter a directory on the OpenCode server.');
+    const connectionAtStart = connectionScopeRef.current;
+    const scopedClient = buildClient({ ...settingsRef.current, directory: path }, serverContract);
+    const project = await svcResolveWorkspace(scopedClient).catch((reason: unknown) => {
+      if (reason instanceof Error && /\b(400|404)\b/.test(reason.message)) {
+        throw new Error('OpenCode could not open that directory. Check the server path.');
+      }
+      throw reason;
+    });
+    if (connectionScopeRef.current !== connectionAtStart) throw new Error('The connection changed while adding the workspace.');
+    if (!project.worktree) throw new Error('OpenCode did not return a workspace path.');
+    await loadWorkspaceCatalog(true);
+    selectProject(project.worktree);
+    return project.worktree;
+  }, [loadWorkspaceCatalog, selectProject, serverContract]);
 
 
 
@@ -3070,6 +3089,7 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
       activeProjectPath,
       activeProject,
       selectProject,
+      addWorkspace,
       openSessionInProject,
       serverProjects,
       currentProjectPath,
@@ -3263,6 +3283,7 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
       replyToQuestion,
       rejectQuestion,
       selectProject,
+      addWorkspace,
       openSessionInProject,
       setAutoApprove,
       sendPrompt,
