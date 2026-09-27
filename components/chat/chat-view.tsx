@@ -14,6 +14,7 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { type TranscriptEntry } from '@/lib/opencode/format';
 import { getTranscriptActivityLabel, isTranscriptDisplayMessage } from '@/lib/opencode/transcript';
+import { getLatestContextTokens } from '@/lib/opencode/usage';
 import { speakText, stopSpeaking } from '@/lib/voice/speech-output';
 import { useSpeechInput } from '@/lib/voice/use-speech-input';
 import { useOpencode } from '@/providers/opencode-provider';
@@ -24,6 +25,7 @@ export function ChatView() {
   const insets = useSafeAreaInsets();
   const {
     activeSession,
+    currentMessages,
     availableAgents,
     availableModels,
     chatPreferences,
@@ -135,6 +137,7 @@ export function ChatView() {
     () => sessions.find((session) => session.id === currentSessionId) || activeSession,
     [activeSession, currentSessionId, sessions],
   );
+  const contextTokens = useMemo(() => getLatestContextTokens(currentMessages) ?? 0, [currentMessages]);
   const contextModel = useMemo(
     () => availableModels.find((model) => model.providerID === selectedSession?.model?.providerID && model.modelID === selectedSession?.model?.id),
     [availableModels, selectedSession?.model?.id, selectedSession?.model?.providerID],
@@ -459,7 +462,7 @@ export function ChatView() {
           connectionStatus={connection.status}
           conversation={conversation}
           contextLimit={contextModel?.contextLimit}
-          contextTokens={selectedSession?.tokens?.input}
+          contextTokens={contextTokens}
           currentSessionId={currentSessionId}
           isUsageLoading={isRefreshingMessages}
           insetsTop={insets.top}

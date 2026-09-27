@@ -94,6 +94,9 @@ function sessionToV1(session: V2Session): Record<string, unknown> {
     parentID: session.parentID,
     revert: session.revert,
     share: undefined,
+    model: session.model,
+    tokens: session.tokens,
+    cost: session.cost,
   };
 }
 
