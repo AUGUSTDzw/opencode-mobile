@@ -146,7 +146,7 @@ Behavior:
 
 - scopes: `Turn` (per-user-message snapshot diff), `Uncommitted` (VCS working tree), `Branch` (VCS diff against the default branch)
 - `Turn` is the default and shows the latest user turn; a turn picker appears when more than one user turn has a recorded diff, allowing an earlier turn to be inspected
-- `Uncommitted` and `Branch` call `vcs.diff` with modes `git`/`working` and `branch` respectively and are workspace-scoped, not session-scoped
+- `Uncommitted` and `Branch` call `vcs.diff` with modes `git`/`working` and `branch` respectively and are workspace-scoped, not session-scoped: V1 scopes with the `directory` query parameter, V2 with `location[directory]`
 - top card shows the active scope title, line totals, and current status
 - `{ file, patch, additions, deletions }` diff objects are rendered as expandable line previews
 - if the turn message diff is empty, transcript patch details can still show filename-only entries

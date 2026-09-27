@@ -34,8 +34,10 @@ function location() {
   return { directory: state.project.worktree };
 }
 
-// The V2 adapter must scope form/permission lists to the active project
-// directory. Reject unscoped list calls so the client-side scoping is covered.
+// The V2 adapter must scope form/permission lists and every VCS read to the
+// active project directory. The real server answers unscoped calls with its own
+// location's state (usually an empty diff), so reject them here and make the
+// client-side scoping observable instead of silently wrong.
 function requireLocation(requestUrl, res) {
   const directory = requestUrl.searchParams.get('location[directory]');
   if (!directory) {
@@ -552,16 +554,19 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === 'GET' && pathname === '/api/vcs') {
+      if (!requireLocation(requestUrl, res)) return;
       sendJson(res, 200, { location: location(), data: { provider: 'git', branch: { current: 'main', default: 'main' } } });
       return;
     }
 
     if (req.method === 'GET' && pathname === '/api/vcs/status') {
+      if (!requireLocation(requestUrl, res)) return;
       sendJson(res, 200, { location: location(), data: [] });
       return;
     }
 
     if (req.method === 'GET' && pathname === '/api/vcs/diff') {
+      if (!requireLocation(requestUrl, res)) return;
       const mode = requestUrl.searchParams.get('mode');
       if (!['working', 'branch', 'committed'].includes(mode)) {
         sendJson(res, 400, { error: 'VCS diff requires mode' });

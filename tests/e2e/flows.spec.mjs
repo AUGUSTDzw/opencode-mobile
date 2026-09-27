@@ -738,6 +738,39 @@ test('OpenCode 2 terminal streams input and output over the PTY websocket', asyn
   }
 });
 
+test('OpenCode 2 files changed reads location-scoped VCS diffs', async ({ page, request }) => {
+  const port = await getFreePort();
+  const server = spawnV2Server(port);
+  try {
+    await resetScenario(request, 'happy-path');
+    await waitForServer(request, `http://127.0.0.1:${port}/api/info`);
+    await openReadyChat(page);
+    await connectToServer(page, `http://127.0.0.1:${port}`);
+    await sendPrompt(page, 'Check the OpenCode 2 file changes');
+    await expect(page.getByText(/Finished:/).first()).toBeVisible({ timeout: 30_000 });
+
+    await page.getByRole('tab', { name: /Files Changed/ }).click();
+    await expect(page.getByText('Latest turn diff', { exact: true })).toBeVisible();
+
+    // V2 answers unscoped VCS calls for the server's own directory, so the
+    // request must carry location[directory] for the workspace diff to show.
+    const scopedVcsDiff = page.waitForRequest((candidate) => {
+      const url = decodeURIComponent(candidate.url());
+      return url.includes('/api/vcs/diff') && url.includes('location[directory]');
+    });
+    await page.getByText('Uncommitted', { exact: true }).click();
+    await scopedVcsDiff;
+    await expect(page.getByText('No uncommitted changes.', { exact: true })).toBeVisible();
+
+    // Committed-on-branch fixture: only reachable through a scoped call.
+    await page.getByText('Branch', { exact: true }).click();
+    await expect(page.getByText('Changes vs default branch', { exact: true })).toBeVisible();
+    await expect(page.getByText('README.md', { exact: true })).toBeVisible();
+  } finally {
+    server.kill('SIGTERM');
+  }
+});
+
 test('favorites open sessions in the current workspace', async ({ page, request }) => {
   await resetScenario(request, 'happy-path');
   await openReadyChat(page);

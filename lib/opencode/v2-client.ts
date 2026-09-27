@@ -540,6 +540,10 @@ function buildV2Raw(settings: OpencodeConnectionSettings): { client: Record<stri
   const { base, pathPrefix } = resolveV2Base(settings);
   const headers = getRequestHeaders(settings);
   const directory = settings.directory.trim() || undefined;
+  // Every V2 endpoint that reads repository state is location-scoped. Without
+  // `location[directory]` the server falls back to its own working directory
+  // and reports another repository's VCS state (usually an empty diff).
+  const vcsLocation: { location?: { directory?: string } } = directory ? { location: { directory } } : {};
   const api = OpenCode.make({
     baseUrl: base.origin,
     headers,
@@ -799,22 +803,22 @@ function buildV2Raw(settings: OpencodeConnectionSettings): { client: Record<stri
     },
     vcs: {
       get: async () => {
-        const response = await api.vcs.get();
+        const response = await api.vcs.get(vcsLocation);
         return ok({ branch: response.data?.branch?.current, default_branch: response.data?.branch?.default });
       },
       status: async () => {
-        const response = await api.vcs.status();
+        const response = await api.vcs.status(vcsLocation);
         return ok(response.data);
       },
       diff: async (parameters: { mode?: string; context?: number }) => {
         // V1 speaks `git`; V2 speaks `working`. The adapter is the translation point.
         const mode = parameters?.mode === 'branch' ? 'branch' : 'working';
-        const response = await api.vcs.diff({ mode, ...(parameters?.context !== undefined ? { context: parameters.context } : {}) });
+        const response = await api.vcs.diff({ ...vcsLocation, mode, ...(parameters?.context !== undefined ? { context: parameters.context } : {}) });
         return ok(response.data);
       },
       diff2: {
         raw: async () => {
-          const response = await api.vcs.diff({ mode: 'working' });
+          const response = await api.vcs.diff({ ...vcsLocation, mode: 'working' });
           return ok((response.data ?? []).map((diff) => diff.patch).join('\n'));
         },
       },
