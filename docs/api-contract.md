@@ -96,6 +96,8 @@ Provider models are flattened to app options. Capability discovery uses the curr
 
 `capabilities.attachment` controls whether the composer may send files. Enabled entries in `capabilities.input` define the accepted input modalities. Legacy top-level capability fields are not supported.
 
+On V2, `modelToV1()` maps `capabilities.tools` and `capabilities.input`, and derives `capabilities.reasoning` from the model's provider compatibility fields and variants/settings because V2 has no explicit reasoning flag. Every entry in `Model.Info.cost` is mapped: the untiered entry becomes the base price and entries with a `tier` become `cost.tiers`, so tiered pricing estimates match V1 behavior.
+
 ## Provider Authentication
 
 ### Credential Write
@@ -150,6 +152,9 @@ Fields consumed by the UI include:
 - `time.created` and `time.updated`
 - `share.url`
 - `revert`
+- `model`, `tokens`, and `cost` for the usage sheet's context utilization
+
+The V2 adapter maps `model`, `tokens`, and `cost` from `Session.Info` in `sessionToV1()`. Context utilization is the latest completed `step-finish`'s prompt plus its reply (`input + cache.read + cache.write + output`), not cumulative session totals, and all-zero placeholder steps are skipped while an assistant message is still in flight. The V2 adapter emits one `step-finish` part per assistant message, so "latest step" means "latest model call" on both contracts. V2 `Session.Info` has no `summary` field, so the session picker subtitle shows the no-file-changes fallback on V2 until a server-side summary exists.
 
 ### Create, Rename, And Delete
 
@@ -195,7 +200,7 @@ The app reads:
 - `session.diff({ sessionID, messageID })`
 - `session.todo({ sessionID })`
 
-The Files Changed surface has three diff scopes. The `turn` scope shows a single user message's diff: the app loads the session messages, selects the latest user message (or a user-selected earlier turn), and supplies its ID to the message-scoped diff endpoint. The `uncommitted` and `branch` scopes call `vcs.diff({ mode })` with `git` on V1 / `working` on V2, and `branch` respectively. The V2 adapter translates the VCS mode (`git` -> `working`, `branch` -> `branch`) and forwards `messageID` on `session.diff`; V2 also accepts a `committed` VCS mode that the shared two-scope UI does not expose. Diff responses use the current `{ file, patch, additions, deletions, status }` shape directly. When no structured turn diff is available, transcript patch parts can still supply filename-only entries; current workspace file state is not treated as session history. Missing response data is a contract error rather than an empty result. Todos are server-owned on V1; the UI renders their `status` and never sends a todo mutation. V2 has no todo endpoint, so the adapter derives the same `Todo[]` from the latest `todowrite` tool part in the transcript (`deriveTodosFromMessages` in `lib/opencode/format.ts`).
+The Files Changed surface has three diff scopes. The `turn` scope shows a single user message's diff: the app loads the session messages, selects the latest user message (or a user-selected earlier turn), and supplies its ID to the message-scoped diff endpoint. The `uncommitted` and `branch` scopes call `vcs.diff({ mode })` with `git` on V1 / `working` on V2, and `branch` respectively. The V2 adapter translates the VCS mode (`git` -> `working`, `branch` -> `branch`) and forwards `messageID` on `session.diff`; V2 also accepts a `committed` VCS mode that the shared two-scope UI does not expose. Diff responses use the current `{ file, patch, additions, deletions, status }` shape directly. When no structured turn diff is available, transcript patch parts can still supply filename-only entries; current workspace file state is not treated as session history. Missing response data is a contract error rather than an empty result. Todos are server-owned on V1; the UI renders their `status` and never sends a todo mutation. V2 has no todo endpoint, so the adapter derives the same `Todo[]` from the latest `todowrite` tool part in the transcript (`deriveTodosFromMessages` in `lib/opencode/format.ts`). On V2 the adapter ignores the V1 `before` cursor because V2 uses opaque cursors; it requests messages in ascending order and pages forward until the server stops returning a cursor, capped at 20 pages of 200 messages (4,000 messages) per request to bound memory in React Native. Sessions longer than that return only the newest 4,000 messages.
 
 ### Prompt And Attachments
 
@@ -205,6 +210,8 @@ Prompt submission uses `session.promptAsync()` with:
 - selected `{ providerID, modelID }`
 - optional generated `system` instructions
 - text and file `parts`
+
+The optional `system` instructions are built from chat preferences (`buildSystemPrompt`: reasoning level, response scope, next actions). V1 sends them as the prompt `system` field. V2 prompt input has no `system` field, so the adapter writes the same text to a session-scoped instruction entry (`opencode-mobile.chat-preferences`) with `PUT /api/experimental/session/{sessionID}/instructions/entries/{key}` and removes it when the preferences are empty. The server announces instruction changes at the next step boundary. If a V2 server does not expose the experimental endpoint, the adapter logs nothing and still sends the prompt.
 
 Before send:
 

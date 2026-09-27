@@ -9,12 +9,11 @@ import {
   type PendingQuestionRequest,
   type ScopedOpencodeClient,
 } from './client';
+import { modelToV1, projectToV1, sessionToV1 } from './v2-mappers';
 
 type V2Api = ReturnType<typeof OpenCode.make>;
 
-type V2Session = Awaited<ReturnType<V2Api['session']['list']>>['data'][number];
 type V2Message = Awaited<ReturnType<V2Api['message']['list']>>['data'][number];
-type V2Project = Awaited<ReturnType<V2Api['project']['list']>>[number];
 type V2Diff = Awaited<ReturnType<V2Api['session']['diff']>>[number];
 type V2Permission = Awaited<ReturnType<V2Api['permission']['request']['list']>>['data'][number];
 type V2Form = Awaited<ReturnType<V2Api['form']['list']>>['data'][number];
@@ -45,8 +44,6 @@ type AdapterContext = {
   formSession: Map<string, V2Form>;
 };
 
-const INPUT_MODALITIES = ['text', 'audio', 'image', 'video', 'pdf'] as const;
-
 function stringField(value: unknown, fallback = ''): string {
   return typeof value === 'string' ? value : fallback;
 }
@@ -75,51 +72,6 @@ function resolveV2Base(settings: OpencodeConnectionSettings) {
   const base = getServerBase(settings.serverUrl);
   const pathPrefix = base.pathPrefix.replace(/\/api$/, '');
   return { base, pathPrefix };
-}
-
-function projectToV1(project: V2Project): Record<string, unknown> {
-  return {
-    id: project.id,
-    worktree: project.canonical,
-    vcs: project.vcs,
-    time: { created: project.time.created, initialized: project.time.updated },
-  };
-}
-
-function sessionToV1(session: V2Session): Record<string, unknown> {
-  return {
-    id: session.id,
-    title: session.title ?? '',
-    time: { created: session.time.created, updated: session.time.updated },
-    parentID: session.parentID,
-    revert: session.revert,
-    share: undefined,
-    model: session.model,
-    tokens: session.tokens,
-    cost: session.cost,
-  };
-}
-
-function modelToV1(model: V2Model): Record<string, unknown> {
-  const cost = model.cost?.[0];
-  return {
-    id: model.modelID,
-    name: model.name,
-    providerID: model.providerID,
-    capabilities: {
-      reasoning: false,
-      attachment: model.capabilities.input.some((modality) => modality !== 'text'),
-      input: Object.fromEntries(INPUT_MODALITIES.map((modality) => [modality, model.capabilities.input.includes(modality)])),
-      toolcall: model.capabilities.tools,
-    },
-    limit: { context: model.limit.context, output: model.limit.output },
-    cost: {
-      input: cost?.input ?? 0,
-      output: cost?.output ?? 0,
-      cache: { read: cost?.cache?.read ?? 0, write: cost?.cache?.write ?? 0 },
-    },
-    status: model.status,
-  };
 }
 
 function toolContentToText(content: unknown): string {
@@ -565,6 +517,25 @@ async function fetchAllMessages(api: V2Api, sessionID: string): Promise<V2Messag
   return messages;
 }
 
+// V2 prompt input has no `system` field. The equivalent is a durable,
+// session-scoped instruction entry, applied at the next step boundary.
+const PREFERENCES_INSTRUCTION_KEY = 'opencode-mobile.chat-preferences';
+
+async function syncSessionInstructions(api: V2Api, sessionID: string, system: unknown) {
+  if (!sessionID) return;
+  const value = typeof system === 'string' ? system.trim() : '';
+  try {
+    if (value) {
+      await api.session.instructions.entry.put({ sessionID, key: PREFERENCES_INSTRUCTION_KEY, value });
+    } else {
+      await api.session.instructions.entry.remove({ sessionID, key: PREFERENCES_INSTRUCTION_KEY });
+    }
+  } catch {
+    // Instruction entries are an experimental V2 surface. A V2 server that
+    // does not expose them must still accept the prompt.
+  }
+}
+
 function buildV2Raw(settings: OpencodeConnectionSettings): { client: Record<string, unknown>; ctx: AdapterContext } {
   const { base, pathPrefix } = resolveV2Base(settings);
   const headers = getRequestHeaders(settings);
@@ -709,6 +680,7 @@ function buildV2Raw(settings: OpencodeConnectionSettings): { client: Record<stri
             const record = part as Record<string, unknown>;
             return { uri: stringField(record.url), name: stringField(record.filename, 'Attachment') };
           });
+        await syncSessionInstructions(api, sessionID, parameters.system);
         await api.session.prompt({ sessionID, text, ...(files.length > 0 ? { files } : {}) });
         return ok(undefined);
       },

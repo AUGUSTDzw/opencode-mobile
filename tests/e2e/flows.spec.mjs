@@ -467,6 +467,22 @@ test('connects to an OpenCode 2 server and completes a prompt', async ({ page, r
     await expect(page.getByText(/Finished:/).first()).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText(/Flow stayed stable against the fake OpenCode server/).first()).toBeVisible();
 
+    // Context utilization must carry session.model/tokens through the V2
+    // adapter and measure the latest model call instead of "Unavailable".
+    // Fake V2 usage: 1200 in + 800 cache read + 100 cache write + 240 out.
+    await page.getByLabel('Show session usage details').click();
+    await expect(page.getByText('Context utilization', { exact: true })).toBeVisible();
+    await expect(page.getByLabel('2 percent context utilization')).toBeVisible();
+    await expect(page.getByText('2.3K of 128K input tokens', { exact: true })).toBeVisible();
+    await expect(page.getByText('OpenCode did not provide a context limit for this model.')).toHaveCount(0);
+    await page.getByText('Close', { exact: true }).click();
+
+    // V2 prompts have no `system` field, so chat preferences must land in a
+    // session instruction entry instead of being dropped.
+    const instructions = await (await request.get(`http://127.0.0.1:${port}/__control/instructions`)).json();
+    const preferenceValues = Object.values(instructions.data).flatMap((entries) => Object.values(entries));
+    expect(preferenceValues.some((value) => typeof value === 'string' && value.includes('Keep responses tightly scoped'))).toBe(true);
+
     // V2 has no server-owned todo endpoint; the plan is derived from the
     // transcript's `todowrite` tool part.
     await expect(page.getByText('Plan', { exact: true })).toBeVisible();
