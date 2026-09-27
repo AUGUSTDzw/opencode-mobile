@@ -17,7 +17,6 @@ import { renderProviderIcon } from '@/components/ui/provider-icon';
 import { Colors, Fonts } from '@/constants/theme';
 import { formatTimestamp } from '@/lib/opencode/format';
 import type { NotificationDebugStatus } from '@/lib/notifications';
-import type { OpencodeConnectionSettings } from '@/lib/opencode/client';
 import type { SpeechVoiceOption } from '@/lib/voice/speech-output';
 import type { WorkingSoundVariant } from '@/lib/voice/working-sound';
 import type { ChatPreferences, ModelOption, ProviderOption, ResponseScope } from '@/providers/opencode-provider';
@@ -63,14 +62,10 @@ export function DiagnosticsSection({
 
 type ConnectionSectionProps = {
   connection: { status: 'idle' | 'connecting' | 'connected' | 'error'; message: string; checkedAt?: number };
-  isConnecting: boolean;
-  onReconnect: () => void;
   palette: Palette;
-  settings: OpencodeConnectionSettings;
-  updateSettings: (patch: Partial<OpencodeConnectionSettings>) => void;
 };
 
-export function ConnectionSection({ connection, isConnecting, onReconnect, palette, settings, updateSettings }: ConnectionSectionProps) {
+export function ConnectionSection({ connection, palette }: ConnectionSectionProps) {
   return (
     <Card mode="contained" style={[styles.card, { backgroundColor: palette.surface }]}>
       <Card.Content style={styles.section}>
@@ -93,7 +88,7 @@ export function ConnectionSection({ connection, isConnecting, onReconnect, palet
                   },
                 ]}
               />
-              <Text variant="labelLarge" style={{ color: palette.text }}>
+              <Text testID="connection-status-label" variant="labelLarge" style={{ color: palette.text }}>
                 {connection.status.charAt(0).toUpperCase() + connection.status.slice(1)}
               </Text>
             </View>
@@ -106,38 +101,6 @@ export function ConnectionSection({ connection, isConnecting, onReconnect, palet
           </Text>
         </View>
         <ConnectionProfiles palette={palette} />
-        <TextInput
-          mode="outlined"
-          label="Server URL"
-          testID="settings-server-url-input"
-          value={settings.serverUrl}
-          onChangeText={(value) => updateSettings({ serverUrl: value })}
-          autoCapitalize="none"
-          autoCorrect={false}
-          placeholder="http://192.168.1.10:4096"
-        />
-        <TextInput
-          mode="outlined"
-          label="Username"
-          testID="settings-username-input"
-          value={settings.username}
-          onChangeText={(value) => updateSettings({ username: value })}
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-        <TextInput
-          mode="outlined"
-          label="Password"
-          testID="settings-password-input"
-          value={settings.password}
-          onChangeText={(value) => updateSettings({ password: value })}
-          secureTextEntry
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-        <Button testID="settings-reconnect-button" mode="contained" loading={isConnecting} onPress={onReconnect}>
-          Reconnect
-        </Button>
       </Card.Content>
     </Card>
   );

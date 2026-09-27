@@ -356,9 +356,8 @@ Responsibilities:
 
 Responsibilities:
 
-- edit connection settings
-- save named connection profiles, switch between them, and delete them; switching persists the outgoing profile's model selection, restores the target profile's selection, and reconnects with that profile's credentials
-- reconnect manually
+- configure the active connection (server URL, username, password) from its row and reconnect manually; editing applies only after Reconnect
+- add, edit, and delete named connection profiles, and switch between them from the connection list; switching persists the outgoing profile's model selection, restores the target profile's selection, and reconnects with that profile's credentials
 - inspect server health, realtime status, LSP, and formatter counts
 - add local or remote MCP servers; connect, disconnect, enable, disable, and complete remote OAuth
 - configure providers

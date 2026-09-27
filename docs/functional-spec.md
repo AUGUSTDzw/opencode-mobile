@@ -300,17 +300,20 @@ If summarization fails, the session simply remains untitled.
 
 ### Connection Section
 
-Allows editing server URL, username, and password, and saving the current values
-as a named connection profile.
+Lists the connections the user has saved plus the connection currently in use.
 
 Behavior:
 
-- values are persisted locally; each saved profile's password is stored in SecureStore while its name, URL, and username live in AsyncStorage
-- saved profiles render as chips above the fields; tapping a chip switches to that connection and reconnects, and long-pressing offers deletion
-- switching persists the outgoing profile's model selection, restores the target profile's selection, clears all server-derived state, and reconnects with the target credentials
-- reconnect button explicitly re-runs connection flow
-- editing connection values clears server-scoped state but does not reconnect until the button is pressed
+- each connection is a collapsible row; expanding shows its server URL and username, and reveals Connect, Edit, and Delete for that connection
+- the active row shows an `Active` (or `Connecting`) badge; the active connection always has a row, titled `Current connection` while it has not been saved as a profile yet
+- `Add connection` opens a dialog for name, server URL, username, and password; the primary action is `Save & connect`, which stores the profile (password in SecureStore, metadata in AsyncStorage) and switches to it
+- `Edit` opens the same dialog for that connection: for a saved connection it updates the stored profile (and the live settings when it is active), for the current unsaved connection it updates the live settings only
+- editing the active connection never reconnects on its own; the row's Reconnect action does that, so an in-flight session is not dropped
+- the active connection cannot be deleted; other connections offer Delete with a confirmation
+- selecting Connect on another connection switches through `switchConnection()`, which persists the outgoing profile's model selection, restores the target profile's selection, clears all server-derived state, and reconnects with the target credentials
+- values are persisted locally; passwords stay in SecureStore while name, URL, and username live in AsyncStorage
 - status card shows current state and last checked timestamp
+- the Connection card starts expanded, since saved connections are the main reason to open it
 
 ### AI Defaults Section
 

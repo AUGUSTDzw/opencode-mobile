@@ -382,25 +382,40 @@ This is important to parity because the chat layout is intentionally dense and h
 
 Responsibility:
 
-- edit server URL, username, password
 - show connection state card
 - show the current connection message or error hint from provider state
-- render the saved-connection chips (`ConnectionProfiles`)
-- trigger reconnect
+- render the saved-connection list (`ConnectionProfiles`)
+
+The server URL/username/password fields are no longer a standalone form; they
+live inside the connection rows (current connection row) or the add/edit
+dialog, so there is a single place to configure a connection.
 
 ## `components/settings/connection-profiles.tsx`
 
 ### Responsibility
 
-- load saved connection profiles from AsyncStorage and show one chip per profile
-- mark the active profile by comparing `getConnectionScope()` of the profile and the current settings
-- switch profiles through `switchConnection()` (which persists the outgoing profile's model selection, restores the target's, and reconnects)
-- save or update the current URL/username/password as a named profile and store the password in SecureStore
-- delete a profile and its SecureStore password after confirmation
+- list saved connections as collapsible rows with name, host, and an Active/Connecting badge
+- expand a row to see its server URL and username and to reach Connect, Edit, and Delete
+- always render a `Current connection` row when the active connection has not been saved as a profile, so the live connection stays editable
+- switch to a saved connection through `switchConnection()` (which persists the outgoing profile's model selection, restores the target's, and reconnects)
+- add a connection through `Add connection` (saves metadata to AsyncStorage, password to SecureStore, and connects)
+- edit a connection through the same dialog; editing the active connection applies to the live settings but waits for Reconnect, so an in-flight session is never dropped
+- delete a saved connection and its SecureStore password, except the active one
+- mark the active row by comparing `getConnectionScope()` of the profile and the current settings
 
-The component owns only local dialog/loading state; profile persistence and
-credential handling live in `lib/connection-profiles.ts`, and switching lives in
-the provider.
+The component owns only local state (expanded row, dialog, switching row); profile persistence and credential handling live in `lib/connection-profiles.ts`, and switching/reconnecting live in the provider.
+
+## `components/settings/connection-profile-dialog.tsx`
+
+### Responsibility
+
+- collect name, server URL, username, and password for one connection
+- validate the name and URL before submit, surface the error inline, and disable submit while saving
+- own its form state for the lifetime of one dialog instance (mounted only while open)
+
+Submit is a callback: the list component decides whether the values are added
+as a profile plus connected, or applied to the existing profile/current
+connection.
 
 ### `AiDefaultsSection`
 

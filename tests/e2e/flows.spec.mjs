@@ -56,63 +56,176 @@ function spawnV1Server(port, scenario = 'happy-path') {
   });
 }
 
-// The Connection card can be collapsed; reopen it only when its inputs are not
-// visible so repeated visits to Settings do not toggle it shut.
+// The settings screen re-renders its Connection subtree after a tab switch, so
+// a click can fail on a moving target. Prefer Playwright's normal actionability
+// checks, which wait for stability and verify the hit target (a forced click
+// can land on the neighbouring accordion header instead); fall back to a forced
+// click only when the target never settles. Callers always verify the effect
+// of the tap rather than assuming it landed.
+async function clickWithRetry(locator) {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    if (await locator.click({ timeout: 2500 }).then(() => true).catch(() => false)) {
+      return true;
+    }
+  }
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    if (await locator.click({ timeout: 2500, force: true }).then(() => true).catch(() => false)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// The Connection card can be collapsed; reopen it only when its content is not
+// visible so repeated visits to Settings do not toggle it shut. Each tap is
+// verified, because the settings screen can re-render while the tab settles.
 async function ensureConnectionSection(page) {
-  const serverUrlInput = page.getByTestId('settings-server-url-input');
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    if (await serverUrlInput.isVisible().catch(() => false)) {
+  const connectionHeader = page.getByRole('button', { name: /^Connection/ });
+  const addButton = page.getByTestId('connection-add-button');
+  // Wait for the screen itself; tapping a header before it mounts is what lets
+  // a click land on the neighbouring accordion.
+  await connectionHeader.waitFor({ state: 'visible', timeout: 15_000 });
+
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    if (await addButton.isVisible().catch(() => false)) {
       return;
     }
-    await page.getByRole('button', { name: /^Connection/ }).click();
-    await page.waitForTimeout(250);
+    await clickWithRetry(connectionHeader);
+    if (await addButton.waitFor({ state: 'visible', timeout: 1500 }).then(() => true).catch(() => false)) {
+      return;
+    }
   }
-  await expect(serverUrlInput).toBeVisible();
+  await expect(addButton).toBeVisible({ timeout: 10_000 });
 }
 
-async function saveConnectionProfile(page, name) {
-  await page.getByTestId('connection-profile-save').click();
-  await page.getByTestId('connection-profile-name-input').fill(name);
-  await page.getByTestId('connection-profile-save-confirm').click();
-  await expect(page.getByTestId('connection-profile-save')).toContainText('Update');
+// The active connection is always a row, titled "Current connection" while it
+// has not been saved as a profile. Expand it to reach Edit and Reconnect.
+async function openCurrentConnectionRow(page) {
+  await ensureConnectionSection(page);
+  const edit = page.getByTestId('connection-edit-current');
+  const row = page.getByTestId('connection-row-current');
+  await row.waitFor({ state: 'attached', timeout: 15_000 }).catch(() => undefined);
+  if ((await row.count()) === 0) {
+    await expect(edit).toBeVisible({ timeout: 10_000 });
+    return;
+  }
+
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    if (await edit.isVisible().catch(() => false)) {
+      return;
+    }
+    await clickWithRetry(row);
+    if (await edit.waitFor({ state: 'visible', timeout: 1500 }).then(() => true).catch(() => false)) {
+      return;
+    }
+  }
+  await expect(edit).toBeVisible({ timeout: 10_000 });
 }
 
-// The Connection card is an animated accordion that can re-render while a tab
-// becomes visible, so switching retries until the connection message proves
-// the provider is talking to the expected server.
-async function switchToSavedConnection(page, name, port) {
-  // The connection card message names the server the provider is actually
-  // connected to. The accordion can collapse while the switch reconnects, so
-  // each pass re-opens it, checks the message, and taps the chip until the
-  // target message is present. Tapping the already-active profile is a no-op.
-  const connectedMessage = page.getByText(new RegExp(`Connected to http://127\\.0\\.0\\.1:${port}`));
-  const deadline = Date.now() + 30_000;
+// Opens the add/edit connection dialog and verifies it actually opened; the
+// Connection subtree can still be animating when the trigger is tapped.
+async function openConnectionDialog(page, trigger, openedLocator) {
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    await clickWithRetry(trigger);
+    if (await openedLocator.waitFor({ state: 'visible', timeout: 2000 }).then(() => true).catch(() => false)) {
+      return;
+    }
+  }
+  await expect(openedLocator).toBeVisible({ timeout: 10_000 });
+}
+
+// Editing the active connection applies to the live settings but deliberately
+// waits for Reconnect, so these are two explicit steps.
+async function setActiveServerUrl(page, url) {
+  await openCurrentConnectionRow(page);
+  await openConnectionDialog(page, page.getByTestId('connection-edit-current'), page.getByTestId('connection-profile-url-input'));
+  await page.getByTestId('connection-profile-url-input').fill(url);
+  await clickWithRetry(page.getByTestId('connection-profile-save-confirm'));
+  await expect(page.getByTestId('connection-profile-url-input')).not.toBeVisible({ timeout: 10_000 });
+}
+
+async function reconnectActiveConnection(page) {
+  await openCurrentConnectionRow(page);
+  await clickWithRetry(page.getByTestId('connection-reconnect'));
+}
+
+// The status card only renders inside the expanded Connection card, and the
+// card can re-render while a tab becomes visible, so keep re-opening it until
+// the message names the expected server.
+async function expectConnectedTo(page, host) {
+  const message = page.getByText(new RegExp(`Connected to http://127\\.0\\.0\\.1:${host}`));
+  const deadline = Date.now() + 25_000;
 
   while (Date.now() < deadline) {
     await ensureConnectionSection(page);
-    if (await connectedMessage.count() > 0) {
-      await expect(connectedMessage.first()).toBeVisible();
+    if ((await message.count()) > 0) {
+      await expect(message.first()).toBeVisible();
       return;
-    }
-
-    const chip = page.getByText(name, { exact: true }).first();
-    if (await chip.count() > 0) {
-      await chip.click({ timeout: 3000, force: true }).catch(() => undefined);
     }
     await page.waitForTimeout(250);
   }
 
-  await expect(connectedMessage.first()).toBeVisible();
+  await expect(message.first()).toBeVisible();
 }
 
 async function connectToServer(page, url) {
   await page.getByRole('tab', { name: 'Settings' }).click();
-  await page.getByRole('button', { name: /^Connection/ }).click();
-  await page.getByTestId('settings-server-url-input').fill(url);
-  await page.getByTestId('settings-reconnect-button').click();
-  await expect(page.getByText('Connected', { exact: true })).toBeVisible({ timeout: 15_000 });
+  await ensureConnectionSection(page);
+  await setActiveServerUrl(page, url);
+  await reconnectActiveConnection(page);
+  await expect(page.getByTestId('connection-status-label')).toHaveText('Connected', { timeout: 15_000 });
   await page.getByRole('tab', { name: 'Chat' }).click();
   await expect(page.getByPlaceholder('Ask anything...')).toBeVisible({ timeout: 15_000 });
+}
+
+// "Add connection" saves and connects in one step.
+async function addConnection(page, { name, url }) {
+  await ensureConnectionSection(page);
+  await openConnectionDialog(page, page.getByTestId('connection-add-button'), page.getByTestId('connection-profile-name-input'));
+  await page.getByTestId('connection-profile-name-input').fill(name);
+  await page.getByTestId('connection-profile-url-input').fill(url);
+  await clickWithRetry(page.getByTestId('connection-profile-save-confirm'));
+  await expect(page.getByTestId('connection-profile-url-input')).not.toBeVisible({ timeout: 10_000 });
+}
+
+// Only one row is expanded at a time, so the visible Connect action belongs to
+// the row the test just expanded.
+async function connectToSavedConnection(page, name) {
+  await ensureConnectionSection(page);
+  const connect = page.getByRole('button', { name: 'Connect', exact: true });
+  const header = page.locator('[data-testid^="connection-row-"]').filter({ hasText: name }).first();
+
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    if (await connect.isVisible().catch(() => false)) {
+      break;
+    }
+    await clickWithRetry(header);
+    if (await connect.waitFor({ state: 'visible', timeout: 1500 }).then(() => true).catch(() => false)) {
+      break;
+    }
+  }
+
+  await expect(connect).toBeVisible({ timeout: 10_000 });
+  await clickWithRetry(connect);
+}
+
+// The Connection card starts expanded, so reach the AI defaults card
+// explicitly before configuring providers.
+async function ensureAiSection(page) {
+  const aiHeader = page.getByRole('button', { name: /^AI & providers/ });
+  const addProvider = page.getByTestId('settings-add-provider-button');
+  await aiHeader.waitFor({ state: 'visible', timeout: 15_000 });
+
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    if (await addProvider.isVisible().catch(() => false)) {
+      return;
+    }
+    await clickWithRetry(aiHeader);
+    if (await addProvider.waitFor({ state: 'visible', timeout: 1500 }).then(() => true).catch(() => false)) {
+      return;
+    }
+  }
+  await expect(addProvider).toBeVisible({ timeout: 10_000 });
 }
 
 async function sendPrompt(page, prompt) {
@@ -325,6 +438,7 @@ test('settings can configure an additional provider against the fake server', as
   await openReadyChat(page);
 
   await page.getByRole('tab', { name: 'Settings' }).click();
+  await ensureAiSection(page);
   await expect(page.getByText('AI defaults')).toBeVisible();
   await page.getByTestId('settings-add-provider-button').click();
   await expect(page.getByRole('button', { name: 'OpenRouter', exact: true })).toBeVisible();
@@ -341,6 +455,7 @@ test('chat model picker searches and groups models by provider', async ({ page, 
   await openReadyChat(page);
 
   await page.getByRole('tab', { name: 'Settings' }).click();
+  await ensureAiSection(page);
   await page.getByTestId('settings-add-provider-button').click();
   await page.getByRole('button', { name: 'OpenRouter', exact: true }).click();
   await page.getByPlaceholder('Paste your API key').fill('sk-test-openrouter');
@@ -457,17 +572,17 @@ test('settings explain root-vs-api mismatches and reconnect through a prefixed A
     await openReadyChat(page);
 
     await page.getByRole('tab', { name: 'Settings' }).click();
-    await page.getByRole('button', { name: /^Connection/ }).click();
+    await ensureConnectionSection(page);
 
-    await page.getByTestId('settings-server-url-input').fill(`http://127.0.0.1:${port}`);
-    await page.getByTestId('settings-reconnect-button').click();
+    await setActiveServerUrl(page, `http://127.0.0.1:${port}`);
+    await reconnectActiveConnection(page);
     await expect(page.getByText(new RegExp(`OpenCode endpoint not found at http://127.0.0.1:${port}`)).first()).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText(new RegExp(`http://127.0.0.1:${port}/api`)).first()).toBeVisible();
 
-    await page.getByTestId('settings-server-url-input').fill(`http://127.0.0.1:${port}/api`);
-    await page.getByTestId('settings-reconnect-button').click();
-    await expect(page.getByText('Connected', { exact: true })).toBeVisible({ timeout: 15_000 });
-    await page.getByRole('button', { name: /^Connection/ }).click();
+    await setActiveServerUrl(page, `http://127.0.0.1:${port}/api`);
+    await reconnectActiveConnection(page);
+    await expect(page.getByTestId('connection-status-label')).toHaveText('Connected', { timeout: 15_000 });
+    await ensureConnectionSection(page);
     await expect(page.getByText(new RegExp(`Connected to http://127.0.0.1:${port}/api`))).toBeVisible();
   } finally {
     server.kill('SIGTERM');
@@ -479,10 +594,10 @@ test('settings do not suggest a duplicated /api base when the API prefix is alre
   await openReadyChat(page);
 
   await page.getByRole('tab', { name: 'Settings' }).click();
-  await page.getByRole('button', { name: /^Connection/ }).click();
+  await ensureConnectionSection(page);
 
-  await page.getByTestId('settings-server-url-input').fill('http://127.0.0.1:44096/api');
-  await page.getByTestId('settings-reconnect-button').click();
+  await setActiveServerUrl(page, 'http://127.0.0.1:44096/api');
+  await reconnectActiveConnection(page);
   await expect(page.getByText(/OpenCode endpoint not found at http:\/\/127\.0\.0\.1:44096\/api\b/).first()).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText(/OpenCode 1\.x and 2\.x servers/).first()).toBeVisible();
   await expect(page.getByText(/http:\/\/127\.0\.0\.1:44096\/api\/api/)).toHaveCount(0);
@@ -509,8 +624,8 @@ test('a 1.x server exposing /api compatibility routes still connects as 1.x', as
     await expect(page.getByText(/Finished:/).first()).toBeVisible({ timeout: 30_000 });
 
     await page.getByRole('tab', { name: 'Settings' }).click();
-    await page.getByRole('button', { name: /^Connection/ }).click();
-    await expect(page.getByText(new RegExp(`Connected to http://127\\.0\\.0\\.1:${port} \\(OpenCode 1\\.x\\)`))).toBeVisible();
+    await ensureConnectionSection(page);
+    await expect(page.getByText(new RegExp(`Connected to http://127\\.0\\.0\\.1:${port} \\(OpenCode 1\\.x\\)`))).toBeVisible({ timeout: 15_000 });
   } finally {
     server.kill('SIGTERM');
   }
@@ -763,13 +878,17 @@ test('saved connections keep sessions, caches, and model preferences separate', 
   await resetScenario(request, 'happy-path');
   await openReadyChat(page);
 
-  // Connection A is the default happy-path server. Give it a session and a
-  // non-default model preference.
+  // Connection A is the default happy-path server. Give it a session, then
+  // save it as a named connection and give it a non-default model preference.
   await connectToServer(page, 'http://127.0.0.1:44096');
   await sendPrompt(page, 'Server A session');
   await expect(page.getByText(/Finished: Server A session/).first()).toBeVisible({ timeout: 20_000 });
 
   await page.getByRole('tab', { name: 'Settings' }).click();
+  await addConnection(page, { name: 'Server A', url: 'http://127.0.0.1:44096' });
+  await expectConnectedTo(page, '44096');
+
+  await ensureAiSection(page);
   await page.getByTestId('settings-add-provider-button').click();
   await page.getByRole('button', { name: 'OpenRouter', exact: true }).click();
   await page.getByPlaceholder('Paste your API key').fill('sk-test-openrouter');
@@ -782,43 +901,38 @@ test('saved connections keep sessions, caches, and model preferences separate', 
   await page.getByTestId('chat-model-picker').getByRole('button', { name: /^Auto / }).click();
   await expect(page.getByTestId('chat-model-picker-trigger')).toContainText('OpenRouter · Auto');
 
-  await page.getByRole('tab', { name: 'Settings' }).click();
-  await ensureConnectionSection(page);
-  await saveConnectionProfile(page, 'Server A');
-
   // Connection B is a separate process with separate server state but the same
   // project paths, which is the cache-isolation case.
   const port = await getFreePort();
   const serverB = spawnV1Server(port);
   try {
     await waitForServer(request, `http://127.0.0.1:${port}/path`);
-    await ensureConnectionSection(page);
-    await page.getByTestId('settings-server-url-input').fill(`http://127.0.0.1:${port}`);
-    await page.getByTestId('settings-reconnect-button').click();
-    await expect(page.getByText('Connected', { exact: true })).toBeVisible({ timeout: 15_000 });
-    await ensureConnectionSection(page);
-    await saveConnectionProfile(page, 'Server B');
+    await page.getByRole('tab', { name: 'Settings' }).click();
+    await addConnection(page, { name: 'Server B', url: `http://127.0.0.1:${port}` });
+    await expectConnectedTo(page, String(port));
 
     await page.getByRole('tab', { name: 'Chat' }).click();
-    await expect(page.getByTestId('chat-model-picker-trigger')).toContainText('OpenAI · GPT-4.1 mini');
+    await expect(page.getByTestId('chat-model-picker-trigger')).toContainText('OpenAI · GPT-4.1 mini', { timeout: 15_000 });
     await sendPrompt(page, 'Server B session');
     await expect(page.getByText(/Finished: Server B session/).first()).toBeVisible({ timeout: 20_000 });
 
     // Switching to A restores A's model preference and A's own session list;
     // B's session must never appear while connected to A.
     await page.getByRole('tab', { name: 'Settings' }).click();
-    await switchToSavedConnection(page, 'Server A', 44096);
+    await connectToSavedConnection(page, 'Server A');
+    await expectConnectedTo(page, '44096');
     await page.getByRole('tab', { name: 'Chat' }).click();
-    await expect(page.getByTestId('chat-model-picker-trigger')).toContainText('OpenRouter · Auto');
+    await expect(page.getByTestId('chat-model-picker-trigger')).toContainText('OpenRouter · Auto', { timeout: 15_000 });
     await page.getByRole('tab', { name: 'Workspace' }).click();
     await expect(page.getByText('Server A session', { exact: true }).first()).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText('Server B session', { exact: true })).not.toBeVisible();
 
     // Switching back to B restores B's default model and B's own sessions.
     await page.getByRole('tab', { name: 'Settings' }).click();
-    await switchToSavedConnection(page, 'Server B', port);
+    await connectToSavedConnection(page, 'Server B');
+    await expectConnectedTo(page, String(port));
     await page.getByRole('tab', { name: 'Chat' }).click();
-    await expect(page.getByTestId('chat-model-picker-trigger')).toContainText('OpenAI · GPT-4.1 mini');
+    await expect(page.getByTestId('chat-model-picker-trigger')).toContainText('OpenAI · GPT-4.1 mini', { timeout: 15_000 });
     await page.getByRole('tab', { name: 'Workspace' }).click();
     await expect(page.getByText('Server B session', { exact: true }).first()).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText('Server A session', { exact: true })).not.toBeVisible();

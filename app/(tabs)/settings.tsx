@@ -71,14 +71,14 @@ export default function SettingsScreen() {
     refreshDiagnostics,
     refreshMcpServers,
     serverCapabilities,
-    settings,
     setMcpServerEnabled,
     startMcpOAuth,
     updateChatPreferences,
-    updateSettings,
   } = useOpencode();
   const [isConnecting, setIsConnecting] = useState(false);
-  const [expandedSection, setExpandedSection] = useState(() => connection.status === 'connected' ? 'ai' : 'connection');
+  // Saved connections are the main reason to open this screen, so the
+  // Connection card starts open; the other cards are one tap away.
+  const [expandedSection, setExpandedSection] = useState<string>('connection');
   const [selectedProviderId, setSelectedProviderId] = useState<string>();
   const [selectedMethodIndex, setSelectedMethodIndex] = useState(0);
   const [authValues, setAuthValues] = useState<Record<string, string>>({});
@@ -240,10 +240,10 @@ export default function SettingsScreen() {
     void refreshSpeechVoices();
   }, []);
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- default the expanded section when the connection state settles.
-    setExpandedSection(connection.status === 'connected' ? 'ai' : 'connection');
-  }, [connection.status]);
+  // The expanded card is intentionally user-controlled: it always starts on
+  // Connection (saved connections are the main reason to open this screen) and
+  // is not reset when the connection status changes, which used to collapse
+  // whatever card the user had open.
 
   const selectedSpeechVoiceLabel = useMemo(
     () => availableSpeechVoices.find((voice) => voice.id === chatPreferences.speechVoiceId)?.label || 'System default',
@@ -378,15 +378,11 @@ export default function SettingsScreen() {
         </View>
       </Appbar.Header>
       <ScrollView style={[styles.screen, { backgroundColor: palette.background }]} contentContainerStyle={styles.content}>
-        <List.AccordionGroup expandedId={expandedSection} onAccordionPress={(id) => setExpandedSection(expandedSection === String(id) ? '' : String(id))}>
+        <List.AccordionGroup expandedId={expandedSection} onAccordionPress={(id) => setExpandedSection((current) => (current === String(id) ? '' : String(id)))}>
           <List.Accordion id="connection" title="Connection" description={connection.status === 'connected' ? 'Connected' : connection.message} titleStyle={{ color: palette.text }} descriptionStyle={{ color: palette.muted }} style={[styles.category, { backgroundColor: palette.surface, borderColor: palette.border }]}>
             <ConnectionSection
               connection={connection}
-              isConnecting={isConnecting}
-              onReconnect={() => void handleConnect()}
               palette={palette}
-              settings={settings}
-              updateSettings={updateSettings}
             />
           </List.Accordion>
           <List.Accordion id="ai" title="AI & providers" description={`${configuredProviders.length} configured`} titleStyle={{ color: palette.text }} descriptionStyle={{ color: palette.muted }} style={[styles.category, { backgroundColor: palette.surface, borderColor: palette.border }]}>
