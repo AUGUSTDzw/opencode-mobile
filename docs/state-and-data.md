@@ -341,6 +341,7 @@ The app currently uses these logical server capabilities:
 - session diff
 - session todo
 - session prompt or promptAsync
+- session instruction entries (V2 mapping for the V1 prompt `system` field)
 - session abort
 - session summarize
 - command list and session command execution
