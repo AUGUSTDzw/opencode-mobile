@@ -114,6 +114,29 @@ test('files changed follows the latest user turn', async ({ page, request }) => 
   await expect(page.getByText('app/(tabs)/index.tsx', { exact: true })).not.toBeVisible();
 });
 
+test('files changed switches between turn, uncommitted, and branch diffs', async ({ page, request }) => {
+  await resetScenario(request, 'happy-path');
+  await openReadyChat(page);
+
+  await sendPrompt(page, 'Create a turn diff for scope switching');
+  await expect(page.getByText(/Finished:/).first()).toBeVisible({ timeout: 20_000 });
+  await page.getByText('1 Files Changed', { exact: true }).click();
+  await expect(page.getByText('Latest turn diff', { exact: true })).toBeVisible();
+  await expect(page.getByText('app/(tabs)/index.tsx', { exact: true })).toBeVisible();
+
+  // No working-tree edits were saved in this scenario.
+  await page.getByText('Uncommitted', { exact: true }).click();
+  await expect(page.getByText('No uncommitted changes.', { exact: true })).toBeVisible();
+
+  // Committed-on-branch fixture from the fake server.
+  await page.getByText('Branch', { exact: true }).click();
+  await expect(page.getByText('Changes vs default branch', { exact: true })).toBeVisible();
+  await expect(page.getByText('README.md', { exact: true })).toBeVisible();
+
+  await page.getByText('Turn', { exact: true }).click();
+  await expect(page.getByText('app/(tabs)/index.tsx', { exact: true })).toBeVisible();
+});
+
 test('permission requests unblock the agent flow', async ({ page, request }) => {
   await resetScenario(request, 'permission');
   await openReadyChat(page);

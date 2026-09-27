@@ -56,13 +56,13 @@ The generated `@opencode-ai/sdk/v2/client` surface is used for all OpenCode requ
 - session archive/restore and experimental archived-session listing
 - permission and question list/reply operations
 - global event streaming
-- file find/read/status, VCS information, and VCS patch apply
+- file find/read/status, VCS information/diff, and VCS patch apply
 - experimental worktree list/create/reset/remove
 - MCP status/add/connect/disconnect/OAuth and config-backed enable/disable
 - PTY shell/list/create/remove/connect-token plus WebSocket streaming
 - LSP and formatter status
 
-The service layer also exposes current SDK helpers for file listing, text/symbol search, VCS status/diff, and session children/init/shell. They are covered by the fake-server contract but are not currently wired to a user-facing provider action.
+The service layer also exposes current SDK helpers for file listing, text/symbol search, VCS status, and session children/init/shell. They are covered by the fake-server contract but are not currently wired to a user-facing provider action. The VCS diff and raw-diff helpers are wired through the Files Changed diff scopes.
 
 ## Workspace Discovery
 
@@ -195,7 +195,7 @@ The app reads:
 - `session.diff({ sessionID, messageID })`
 - `session.todo({ sessionID })`
 
-The Files Changed surface shows the latest user message's diff. The app loads the session messages, selects the latest user message, and supplies its ID to the message-scoped diff endpoint. Diff responses use the current `{ file, patch, additions, deletions, status }` shape directly. When no structured diff is available, transcript patch parts can still supply filename-only entries; current workspace file state is not treated as session history. Missing response data is a contract error rather than an empty result. Todos are server-owned on V1; the UI renders their `status` and never sends a todo mutation. V2 has no todo endpoint, so the adapter derives the same `Todo[]` from the latest `todowrite` tool part in the transcript (`deriveTodosFromMessages` in `lib/opencode/format.ts`).
+The Files Changed surface has three diff scopes. The `turn` scope shows a single user message's diff: the app loads the session messages, selects the latest user message (or a user-selected earlier turn), and supplies its ID to the message-scoped diff endpoint. The `uncommitted` and `branch` scopes call `vcs.diff({ mode })` with `git` on V1 / `working` on V2, and `branch` respectively. The V2 adapter translates the VCS mode (`git` -> `working`, `branch` -> `branch`) and forwards `messageID` on `session.diff`; V2 also accepts a `committed` VCS mode that the shared two-scope UI does not expose. Diff responses use the current `{ file, patch, additions, deletions, status }` shape directly. When no structured turn diff is available, transcript patch parts can still supply filename-only entries; current workspace file state is not treated as session history. Missing response data is a contract error rather than an empty result. Todos are server-owned on V1; the UI renders their `status` and never sends a todo mutation. V2 has no todo endpoint, so the adapter derives the same `Todo[]` from the latest `todowrite` tool part in the transcript (`deriveTodosFromMessages` in `lib/opencode/format.ts`).
 
 ### Prompt And Attachments
 

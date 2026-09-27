@@ -103,6 +103,18 @@ export type ConnectionState = {
   projectDirectory?: string;
 };
 
+// Which diff source the Files Changed surface reads from. `turn` is the
+// per-user-message snapshot diff; the VCS scopes come from the workspace
+// working tree and are not tied to the current session.
+export type DiffScope = 'turn' | 'uncommitted' | 'branch';
+
+// A selectable user turn that has a recorded snapshot diff.
+export type DiffTurn = {
+  id: string;
+  label: string;
+  preview?: string;
+};
+
 export type WorkspaceCatalog = {
   currentProjectPath?: string;
   serverRootPath?: string;
@@ -140,6 +152,12 @@ export type OpencodeContextValue = {
   currentUsage: SessionUsage;
   latestAssistantTurnUsage?: SessionUsage;
   currentDiffs: FileDiff[];
+  currentDiffScope: DiffScope;
+  setDiffScope: (scope: DiffScope) => void;
+  diffTurns: DiffTurn[];
+  selectedDiffMessageId?: string;
+  selectDiffMessage: (messageId: string) => void;
+  refreshDiffs: (silent?: boolean) => Promise<void>;
   currentTodos: Todo[];
   currentPendingPermissions: PendingPermissionRequest[];
   currentPendingQuestions: PendingQuestionRequest[];

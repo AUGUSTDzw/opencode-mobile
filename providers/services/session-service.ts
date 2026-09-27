@@ -87,14 +87,20 @@ export async function getSessionMessages(client: OpencodeClient, sessionId: stri
   return allMessages;
 }
 
-export async function getSessionDiff(client: OpencodeClient, sessionId: string) {
-  const messages = await getSessionMessages(client, sessionId);
-  const latestUserMessage = messages.slice().reverse().find(({ info }) => info.role === 'user');
-  if (!latestUserMessage) {
-    return [];
+export async function getSessionDiff(client: OpencodeClient, sessionId: string, messageId?: string) {
+  // Callers that already know which turn they want pass its id and skip the
+  // transcript scan; otherwise fall back to the latest user message.
+  let targetMessageId = messageId;
+  if (!targetMessageId) {
+    const messages = await getSessionMessages(client, sessionId);
+    const latestUserMessage = messages.slice().reverse().find(({ info }) => info.role === 'user');
+    if (!latestUserMessage) {
+      return [];
+    }
+    targetMessageId = latestUserMessage.info.id;
   }
 
-  const response = await client.session.diff({ sessionID: sessionId, messageID: latestUserMessage.info.id });
+  const response = await client.session.diff({ sessionID: sessionId, messageID: targetMessageId });
   return requireData(response.data, 'message diff request');
 }
 

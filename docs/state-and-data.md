@@ -68,10 +68,18 @@ Primary fields:
 
 These are keyed by session ID and held in memory.
 
+Diff scope state:
+
+- `diffScopeBySession` records the selected Files Changed scope (`turn`, `uncommitted`, `branch`) per session; it defaults to `turn`
+- `selectedDiffMessageBySession` records which user turn the `turn` scope is pinned to; it is cleared when a new prompt is sent
+- `vcsDiffsByScope` caches the workspace-scoped `uncommitted`/`branch` diffs, which are not keyed by session
+- `currentDiffs` resolves to the active scope's diff; VCS scopes have no SSE event, so they refresh on scope change, pull-to-refresh, or a workspace file save while active
+
 Important behavior:
 
 - data is fetched lazily when a session is opened or refreshed
 - message/diff/todo caches are updated by explicit refreshes, SSE events, and polling fallback
+- an incoming `session.diff` event only overwrites the turn diff when the surface is not pinned to an earlier turn
 - on V2 the server has no todo endpoint, so `currentTodos` falls back to the plan derived from the transcript's `todowrite` tool parts (`deriveTodosFromMessages`); V1 stays server-authoritative
 - permission and question entries are updated by SSE events, replies, and server list refreshes
 - current-session selectors only read the active or relevant session from these maps

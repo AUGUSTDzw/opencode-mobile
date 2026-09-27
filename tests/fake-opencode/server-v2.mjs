@@ -11,6 +11,10 @@ const scenarioName = process.env.FAKE_OPENCODE_SCENARIO || 'happy-path';
 const stateStore = createStateStore(scenarioName);
 let state = stateStore.getState();
 const v2Clients = new Set();
+// VCS diff fixtures. `working` mirrors uncommitted changes; `branch` is a
+// distinct committed fixture so the diff-scope surface is deterministic.
+const workingPatch = 'diff --git a/src/demo.ts b/src/demo.ts\n--- a/src/demo.ts\n+++ b/src/demo.ts\n@@ -1 +1 @@\n-export const demo = "OpenCode 1.18.3";\n+export const demo = "OpenCode SDK 1.18.3";\n';
+const branchPatch = 'diff --git a/README.md b/README.md\n--- a/README.md\n+++ b/README.md\n@@ -1,3 +1,4 @@\n # Demo project\n \n Deterministic fake OpenCode workspace.\n+Committed on this branch.\n';
 
 function sendJson(res, statusCode, payload) {
   res.writeHead(statusCode, {
@@ -383,9 +387,12 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'GET' && /^\/api\/session\/[^/]+\/diff$/.test(pathname)) {
       const sessionID = pathname.split('/')[3];
+      const messageID = requestUrl.searchParams.get('messageID');
       const userMessages = (state.messagesBySession[sessionID] || []).filter((record) => record.info.role === 'user');
-      const latest = userMessages[userMessages.length - 1];
-      sendJson(res, 200, { data: latest?.info?.summary?.diffs || [] });
+      const target = messageID
+        ? userMessages.find((record) => record.info.id === messageID)
+        : userMessages[userMessages.length - 1];
+      sendJson(res, 200, { data: target?.info?.summary?.diffs || [] });
       return;
     }
 
@@ -485,6 +492,25 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'GET' && pathname === '/api/vcs/status') {
       sendJson(res, 200, { location: location(), data: [] });
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/api/vcs/diff') {
+      const mode = requestUrl.searchParams.get('mode');
+      if (!['working', 'branch', 'committed'].includes(mode)) {
+        sendJson(res, 400, { error: 'VCS diff requires mode' });
+        return;
+      }
+      if (mode === 'branch') {
+        sendJson(res, 200, { location: location(), data: [{ file: 'README.md', patch: branchPatch, additions: 1, deletions: 0, status: 'modified' }] });
+        return;
+      }
+      sendJson(res, 200, {
+        location: location(),
+        data: state.files['src/demo.ts'].includes('SDK')
+          ? [{ file: 'src/demo.ts', patch: workingPatch, additions: 1, deletions: 1, status: 'modified' }]
+          : [],
+      });
       return;
     }
 

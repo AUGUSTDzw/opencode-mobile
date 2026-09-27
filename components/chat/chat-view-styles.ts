@@ -89,6 +89,8 @@ export const styles = StyleSheet.create({
   sendErrorContent: { gap: 8 },
   sendErrorActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 4 },
   diffListCardContent: { paddingHorizontal: 0, paddingVertical: 0 },
+  diffScopeRow: { flexDirection: 'row', gap: 8 },
+  diffTurnRow: { gap: 8, paddingRight: 12 },
   todoOverlay: { position: 'absolute', left: 12, right: 12, bottom: 12, zIndex: 2, borderRadius: 16, borderWidth: 1, overflow: 'hidden' },
   todoHeader: { minHeight: 48, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4 },
   todoHeaderContent: { gap: 4 },

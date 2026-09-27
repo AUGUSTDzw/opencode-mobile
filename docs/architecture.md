@@ -53,7 +53,7 @@ This file is the application's effective domain layer. It owns:
 - workspace catalog and active project selection
 - session lists and session status tracking
 - current session selection and data refresh
-- transcript, diff, and todo caches
+- transcript, diff (turn + VCS scopes), and todo caches
 - session-scoped permission and question queues refreshed by events and list APIs
 - provider/model/agent capability discovery
 - chat preference management
@@ -209,7 +209,7 @@ The provider fetches and caches:
 - workspace catalog
 - sessions and statuses
 - messages per session
-- diffs per session
+- diffs per session plus workspace VCS diffs (`uncommitted`/`branch`), selected by Files Changed scope
 - todos per session
 - pending permissions and questions by session, populated by events and refreshed from the server
 - providers, models, and agents
@@ -294,7 +294,7 @@ Responsibilities:
 
 - render session transcript
 - render pending permission and question interactions inline
-- render diff tab
+- render diff tab with turn/uncommitted/branch scopes and a turn picker
 - send prompts and attachments
 - suggest and execute server-provided slash commands
 - fork from or revert to a user message, and undo a session revert

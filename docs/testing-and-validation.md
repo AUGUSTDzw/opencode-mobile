@@ -82,7 +82,7 @@ Simulates a normal session run that completes and returns:
 - two completed todos
 - idle session status at the end
 
-Diff retrieval follows the real message-scoped contract: requests without `messageID` return an empty list, while a completed user message exposes its own diff.
+Diff retrieval follows the real message-scoped contract: requests without `messageID` return an empty list, while a completed user message exposes its own diff. VCS `mode=git` and `mode=branch` return distinct fixtures so the Files Changed diff scopes can be exercised; V2 exposes the same through `/api/vcs/diff` with `working`/`branch`.
 
 ### Permission Scenario
 

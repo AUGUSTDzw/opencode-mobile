@@ -128,6 +128,8 @@ try {
   const patch = 'diff --git a/src/demo.ts b/src/demo.ts\n--- a/src/demo.ts\n+++ b/src/demo.ts\n@@ -1 +1 @@\n-export const demo = "OpenCode 1.18.3";\n+export const demo = "OpenCode SDK 1.18.3";\n';
   assert((await request('/vcs/apply', json('POST', { patch }))).applied, 'VCS apply failed');
   assert((await request('/vcs/diff?mode=git'))[0].file === 'src/demo.ts', 'Expected structured VCS diff');
+  assert((await request('/vcs/diff?mode=branch'))[0].file === 'README.md', 'Expected branch-scoped VCS diff');
+  await assertStatus('/vcs/diff', 400);
   assert((await request('/vcs/diff/raw')) === patch, 'Expected raw VCS diff');
   await assertStatus('/vcs/apply', 400, json('POST', { patch }));
 

@@ -140,14 +140,18 @@ Question cards render each question's choices, optional custom answer, submit ac
 
 ### 7. Inspect File Changes
 
-The `Files Changed` tab shows the diff produced by the latest user turn in the current session.
+The `Files Changed` tab can read several diff sources from the OpenCode API, selected with a scope control.
 
 Behavior:
 
-- top card shows session subtitle and current status
-- current `{ file, patch, additions, deletions }` diff objects are rendered as expandable line previews
-- if the message diff is empty, transcript patch details can still show filename-only entries
-- if nothing has changed, the user sees `No file changes yet.`
+- scopes: `Turn` (per-user-message snapshot diff), `Uncommitted` (VCS working tree), `Branch` (VCS diff against the default branch)
+- `Turn` is the default and shows the latest user turn; a turn picker appears when more than one user turn has a recorded diff, allowing an earlier turn to be inspected
+- `Uncommitted` and `Branch` call `vcs.diff` with modes `git`/`working` and `branch` respectively and are workspace-scoped, not session-scoped
+- top card shows the active scope title, line totals, and current status
+- `{ file, patch, additions, deletions }` diff objects are rendered as expandable line previews
+- if the turn message diff is empty, transcript patch details can still show filename-only entries
+- per-scope empty states: `No file changes yet.`, `No uncommitted changes.`, `No changes against the default branch.`
+- pull-to-refresh reloads the active scope; VCS scopes have no SSE event and are refreshed on demand (scope change, pull-to-refresh, or a workspace file save while a VCS scope is active)
 
 ### 8. Manage Sessions in the Workspace Tab
 

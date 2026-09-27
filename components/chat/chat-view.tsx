@@ -35,24 +35,30 @@ export function ChatView() {
     clearConversationFeedback,
     clearPromptError,
     currentDiffs,
+    currentDiffScope,
     currentPendingPermissions,
     currentPendingQuestions,
     currentTodos,
     currentSessionId,
     currentTranscript,
     currentUsage,
+    diffTurns,
     ensureActiveSession,
     isRefreshingDiffs,
     isRefreshingMessages,
     latestAssistantTurnUsage,
     openSession,
     refreshCurrentSession,
+    refreshDiffs,
     replyToPermission,
     replyToQuestion,
     rejectQuestion,
     executeCommand,
     forkSession,
     revertSession,
+    selectDiffMessage,
+    setDiffScope,
+    selectedDiffMessageId,
     unrevertSession,
     sendPrompt,
     promptError,
@@ -100,7 +106,9 @@ export function ChatView() {
     () => currentTranscript.flatMap((entry) => entry.details.filter((detail) => detail.kind === 'patch')),
     [currentTranscript],
   );
-  const diffCount = currentDiffs.length || new Set(diffDetails.flatMap((detail) => detail.body.split('\n').filter(Boolean))).size;
+  const diffCount = currentDiffs.length || (currentDiffScope === 'turn'
+    ? new Set(diffDetails.flatMap((detail) => detail.body.split('\n').filter(Boolean))).size
+    : 0);
   const selectedAgentLabel = useMemo(
     () => availableAgents.find((agent) => agent.id === chatPreferences.mode)?.label || chatPreferences.mode,
     [availableAgents, chatPreferences.mode],
@@ -486,11 +494,13 @@ export function ChatView() {
           copiedMessageId={copiedMessageId}
           currentActivityLabel={currentActivityLabel}
           currentDiffs={currentDiffs}
+          currentDiffScope={currentDiffScope}
           currentPendingPermissions={currentPendingPermissions}
           currentPendingQuestions={currentPendingQuestions}
           currentTodos={currentTodos}
           diffCount={diffCount}
           diffDetails={diffDetails}
+          diffTurns={diffTurns}
           displayTranscript={displayTranscript}
           expandedDiffId={expandedDiffId}
           isRefreshingDiffs={isRefreshingDiffs}
@@ -498,6 +508,10 @@ export function ChatView() {
           onCopyMessage={(entry) => void handleCopyMessage(entry)}
           onExpandDiff={setExpandedDiffId}
           onRefresh={() => void refreshCurrentSession()}
+          onRefreshDiffs={() => void refreshDiffs()}
+          onSelectDiffScope={setDiffScope}
+          onSelectDiffMessage={selectDiffMessage}
+          selectedDiffMessageId={selectedDiffMessageId}
           onRejectQuestion={(requestId) => rejectQuestion(requestId).catch((error) => { setSendFeedback(error instanceof Error ? error.message : 'Could not reject the question.'); })}
           onReplyToPermission={(requestId, reply) => replyToPermission(requestId, reply).catch((error) => { setSendFeedback(error instanceof Error ? error.message : 'Could not reply to the permission request.'); })}
           onReplyToQuestion={(requestId, answers) => replyToQuestion(requestId, answers).catch((error) => { setSendFeedback(error instanceof Error ? error.message : 'Could not answer the question.'); })}

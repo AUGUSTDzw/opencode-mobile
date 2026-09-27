@@ -5,9 +5,11 @@ import { Animated, Easing, RefreshControl, ScrollView, View } from 'react-native
 import { ActivityIndicator, Button, Card, IconButton, ProgressBar, Text, TouchableRipple } from 'react-native-paper';
 
 import { Colors } from '@/constants/theme';
+import { ControlButton } from '@/components/chat/chat-controls';
 import { DiffCard, PendingInteractionsCard, SessionDiffCard, TranscriptMessage } from '@/components/chat/chat-cards';
 import type { TranscriptEntry } from '@/lib/opencode/format';
 import type { FileDiff, Session, SessionStatus, Todo } from '@/lib/opencode/types';
+import type { DiffScope, DiffTurn } from '@/providers/opencode-provider-types';
 import type { PendingPermissionRequest, PendingQuestionAnswer, PendingQuestionRequest } from '@/lib/opencode/client';
 
 import { styles } from '@/components/chat/chat-view-styles';
@@ -66,6 +68,12 @@ const MAINTAIN_VISIBLE_CONTENT_POSITION = {
 } as const;
 type DiffDetail = Extract<TranscriptEntry['details'][number], { kind: 'patch' }>;
 
+const DIFF_SCOPE_OPTIONS: { value: DiffScope; label: string }[] = [
+  { value: 'turn', label: 'Turn' },
+  { value: 'uncommitted', label: 'Uncommitted' },
+  { value: 'branch', label: 'Branch' },
+];
+
 type ChatContentProps = {
   activeSession?: Session;
   activeTab: 'session' | 'changes';
@@ -74,12 +82,14 @@ type ChatContentProps = {
   copiedMessageId?: string;
   currentActivityLabel?: string;
   currentDiffs: FileDiff[];
+  currentDiffScope: DiffScope;
   currentPendingPermissions: PendingPermissionRequest[];
   currentPendingQuestions: PendingQuestionRequest[];
   currentTodos: Todo[];
   currentSessionId?: string;
   diffCount: number;
   diffDetails: DiffDetail[];
+  diffTurns: DiffTurn[];
   displayTranscript: TranscriptEntry[];
   expandedDiffId?: string;
   isRefreshingDiffs: boolean;
@@ -90,6 +100,10 @@ type ChatContentProps = {
   onUnrevert: () => void;
   onExpandDiff: (id?: string) => void;
   onRefresh: () => void;
+  onRefreshDiffs: () => void;
+  onSelectDiffScope: (scope: DiffScope) => void;
+  onSelectDiffMessage: (messageId: string) => void;
+  selectedDiffMessageId?: string;
   onReplyToPermission: (requestId: string, reply: 'once' | 'always' | 'reject') => Promise<void>;
   onRejectQuestion: (requestId: string) => Promise<void>;
   onReplyToQuestion: (requestId: string, answers: PendingQuestionAnswer[]) => Promise<void>;
@@ -110,12 +124,14 @@ export function ChatContent({
   copiedMessageId,
   currentActivityLabel,
   currentDiffs,
+  currentDiffScope,
   currentPendingPermissions,
   currentPendingQuestions,
   currentTodos,
   currentSessionId,
   diffCount,
   diffDetails,
+  diffTurns,
   displayTranscript,
   expandedDiffId,
   isRefreshingDiffs,
@@ -126,6 +142,10 @@ export function ChatContent({
   onUnrevert,
   onExpandDiff,
   onRefresh,
+  onRefreshDiffs,
+  onSelectDiffScope,
+  onSelectDiffMessage,
+  selectedDiffMessageId,
   onRejectQuestion,
   onReplyToPermission,
   onReplyToQuestion,
@@ -142,6 +162,21 @@ export function ChatContent({
   const shouldPositionInitialTranscriptRef = useRef(false);
   const previousTranscriptRef = useRef({ sessionId: currentSessionId, length: displayTranscript.length });
   const completedTodoCount = currentTodos.filter((todo) => todo.status === 'completed').length;
+  const isTurnScope = currentDiffScope === 'turn';
+  const isLatestTurn = diffTurns.length === 0 || selectedDiffMessageId === diffTurns[diffTurns.length - 1]?.id;
+  const scopeTitle = currentDiffScope === 'uncommitted'
+    ? 'Uncommitted changes'
+    : currentDiffScope === 'branch'
+      ? 'Changes vs default branch'
+      : isLatestTurn
+        ? 'Latest turn diff'
+        : 'Selected turn diff';
+  const scopeEmptyMessage = currentDiffScope === 'uncommitted'
+    ? 'No uncommitted changes.'
+    : currentDiffScope === 'branch'
+      ? 'No changes against the default branch.'
+      : 'No file changes yet.';
+  const showDiffDetails = isTurnScope && currentDiffs.length === 0;
 
   useLayoutEffect(() => {
     const previous = previousTranscriptRef.current;
@@ -276,7 +311,7 @@ export function ChatContent({
           style={styles.scroll}
           contentContainerStyle={styles.content}
           keyboardDismissMode="on-drag"
-          refreshControl={<RefreshControl refreshing={isRefreshingDiffs} onRefresh={onRefresh} tintColor={palette.tint} />}>
+          refreshControl={<RefreshControl refreshing={isRefreshingDiffs} onRefresh={onRefreshDiffs} tintColor={palette.tint} />}>
           {connection.status === 'error' ? (
             <Card mode="contained" style={[styles.noticeCard, { backgroundColor: palette.surface }]}>
               <Card.Content>
@@ -290,7 +325,7 @@ export function ChatContent({
           <Card mode="contained" style={[styles.sectionCard, { backgroundColor: palette.surface }]}>
             <Card.Content style={styles.sectionHeaderCard}>
               <View>
-                <Text variant="titleMedium" style={{ color: palette.text }}>Latest turn diff</Text>
+                <Text variant="titleMedium" style={{ color: palette.text }}>{scopeTitle}</Text>
                 <Text variant="bodyMedium" style={{ color: palette.muted }}>
                   {currentDiffs.length > 0
                     ? `${diffCount} files changed, +${currentDiffs.reduce((total, diff) => total + diff.additions, 0)} / -${currentDiffs.reduce((total, diff) => total + diff.deletions, 0)}`
@@ -301,22 +336,47 @@ export function ChatContent({
             </Card.Content>
           </Card>
 
-          {currentDiffs.length === 0 && diffDetails.length === 0 ? (
+          <View style={styles.diffScopeRow}>
+            {DIFF_SCOPE_OPTIONS.map((option) => (
+              <ControlButton
+                key={option.value}
+                grow
+                active={currentDiffScope === option.value}
+                onPress={() => onSelectDiffScope(option.value)}>
+                {option.label}
+              </ControlButton>
+            ))}
+          </View>
+
+          {isTurnScope && diffTurns.length > 1 ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.diffTurnRow}>
+              {diffTurns.map((turn) => (
+                <ControlButton
+                  key={turn.id}
+                  active={selectedDiffMessageId === turn.id}
+                  onPress={() => onSelectDiffMessage(turn.id)}>
+                  {turn.label}
+                </ControlButton>
+              ))}
+            </ScrollView>
+          ) : null}
+
+          {currentDiffs.length === 0 && !(showDiffDetails && diffDetails.length > 0) ? (
             <Card mode="contained" style={[styles.sectionCard, { backgroundColor: palette.surface }]}>
               <Card.Content>
-                <Text variant="bodyMedium" style={{ color: palette.muted }}>No file changes yet.</Text>
+                <Text variant="bodyMedium" style={{ color: palette.muted }}>{scopeEmptyMessage}</Text>
               </Card.Content>
             </Card>
           ) : null}
 
-          {currentDiffs.length > 0 || diffDetails.length > 0 ? (
+          {currentDiffs.length > 0 || (showDiffDetails && diffDetails.length > 0) ? (
             <Card mode="contained" style={[styles.sectionCard, { backgroundColor: palette.surface }]}>
               <Card.Content style={styles.diffListCardContent}>
                 {currentDiffs.map((diff) => {
-                  const accordionId = `diff:${diff.file}`;
+                  const accordionId = `diff:${currentDiffScope}:${diff.file}`;
                   return <SessionDiffCard key={accordionId} diff={diff} expanded={expandedDiffId === accordionId} onPress={() => onExpandDiff(expandedDiffId === accordionId ? undefined : accordionId)} />;
                 })}
-                {currentDiffs.length === 0
+                {showDiffDetails
                   ? diffDetails.map((detail) => {
                       const accordionId = `detail:${detail.id}`;
                       return <DiffCard key={detail.id} detail={detail} expanded={expandedDiffId === accordionId} onPress={() => onExpandDiff(expandedDiffId === accordionId ? undefined : accordionId)} />;

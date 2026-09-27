@@ -70,11 +70,14 @@ type ChatContentProps = {
   copiedMessageId?: string
   currentActivityLabel?: string
   currentDiffs: FileDiff[]
+  currentDiffScope: DiffScope
   currentPendingPermissions: PendingPermissionRequest[]
   currentPendingQuestions: PendingQuestionRequest[]
   currentTodos: Todo[]
   currentSessionId?: string
+  diffCount: number
   diffDetails: DiffDetail[]
+  diffTurns: DiffTurn[]
   displayTranscript: TranscriptEntry[]
   expandedDiffId?: string
   isRefreshingDiffs: boolean
@@ -85,6 +88,10 @@ type ChatContentProps = {
   onUnrevert: () => void
   onExpandDiff: (id?: string) => void
   onRefresh: () => void
+  onRefreshDiffs: () => void
+  onSelectDiffScope: (scope: DiffScope) => void
+  onSelectDiffMessage: (messageId: string) => void
+  selectedDiffMessageId?: string
   onRejectQuestion: (requestId: string) => void
   onReplyToPermission: (requestId: string, reply: 'once' | 'always' | 'reject') => void
   onReplyToQuestion: (requestId: string, answers: string[][]) => void
@@ -102,7 +109,8 @@ type ChatContentProps = {
 
 - `session` tab shows transcript and pending cards
 - transcript messages use FlashList virtualization; it starts at the bottom, follows additions only from the bottom, and preserves the visible position otherwise
-- `changes` tab shows diff accordions
+- `changes` tab shows the active diff scope with a scope control, an optional turn picker, and diff accordions
+- `changes` tab scopes: `Turn` (per-turn snapshot diff, with a picker when multiple turns have diffs), `Uncommitted`, and `Branch` (VCS working tree / default-branch diffs)
 - displays starter prompts when there are no display transcript messages
 
 ## `components/chat/chat-composer.tsx`
@@ -214,7 +222,7 @@ Responsibility:
 
 Responsibility:
 
-- render the latest user turn's structured diff using a generated line-level preview
+- render a structured diff (`FileDiff`/`VcsFileDiff`) using a generated line-level preview; used for every Files Changed scope
 
 ### `DiffCard`
 

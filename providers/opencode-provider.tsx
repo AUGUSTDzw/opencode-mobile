@@ -104,6 +104,8 @@ import {
   type ChatPreferences,
   type ConnectionState,
   type ConversationPhase,
+  type DiffScope,
+  type DiffTurn,
   type FavoriteSession,
   type ModelOption,
   type OpencodeContextValue,
@@ -142,6 +144,7 @@ import {
   createWorktree as svcCreateWorktree,
   findFiles,
   getFileStatus,
+  getVcsDiff as svcGetVcsDiff,
   getVcsInfo,
   listWorktrees as svcListWorktrees,
   readFile,
@@ -172,6 +175,8 @@ export type {
   ConnectionState,
   ConversationPhase,
   ConversationState,
+  DiffScope,
+  DiffTurn,
   FavoriteSession,
   ModelOption,
   OpencodeContextValue,
@@ -199,6 +204,9 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
   const [currentSessionId, setCurrentSessionId] = useState<string>();
   const [messagesBySession, setMessagesBySession] = useState<Record<string, SessionMessageRecord[]>>({});
   const [diffsBySession, setDiffsBySession] = useState<Record<string, FileDiff[]>>({});
+  const [vcsDiffsByScope, setVcsDiffsByScope] = useState<Record<'uncommitted' | 'branch', FileDiff[]>>({ uncommitted: [], branch: [] });
+  const [diffScopeBySession, setDiffScopeBySession] = useState<Record<string, DiffScope>>({});
+  const [selectedDiffMessageBySession, setSelectedDiffMessageBySession] = useState<Record<string, string | undefined>>({});
   const [todosBySession, setTodosBySession] = useState<Record<string, Todo[]>>({});
   const [pendingPermissionsBySession, setPendingPermissionsBySession] = useState<Record<string, PendingPermissionRequest[]>>({});
   const [pendingQuestionsBySession, setPendingQuestionsBySession] = useState<Record<string, PendingQuestionRequest[]>>({});
@@ -274,6 +282,8 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
   const flushPendingConversationResultRef = useRef<() => void>(() => undefined);
   const sessionRefreshTimeoutsRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const sessionRefreshOptionsRef = useRef<Record<string, { messages?: boolean; diff?: boolean; todos?: boolean; sessions?: boolean }>>({});
+  const diffScopeBySessionRef = useRef<Record<string, DiffScope>>({});
+  const selectedDiffMessageBySessionRef = useRef<Record<string, string | undefined>>({});
   const terminalSocketRef = useRef<WebSocket | undefined>(undefined);
   const terminalCursorByIdRef = useRef<Record<string, string>>({});
   const terminalOpenGenerationRef = useRef(0);
@@ -281,6 +291,8 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
   activeProjectPathRef.current = activeProjectPath;
   connectionRef.current = connection;
   currentSessionIdRef.current = currentSessionId;
+  diffScopeBySessionRef.current = diffScopeBySession;
+  selectedDiffMessageBySessionRef.current = selectedDiffMessageBySession;
 
   const clearPendingConversationResult = useCallback(() => {
     pendingConversationTranscriptRef.current = undefined;
@@ -537,13 +549,14 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
   );
 
   const refreshSessionDiff = useCallback(
-    async (sessionId: string, silent = false) => {
+    async (sessionId: string, silent = false, messageId?: string) => {
       if (!silent) {
         setIsRefreshingDiffs(true);
       }
 
       try {
-        const data = await svcGetSessionDiff(client, sessionId);
+        const targetMessageId = messageId ?? selectedDiffMessageBySessionRef.current[sessionId];
+        const data = await svcGetSessionDiff(client, sessionId, targetMessageId);
         if (!isCurrentClient(client)) {
           return data;
         }
@@ -560,6 +573,74 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
       }
     },
     [client, isCurrentClient],
+  );
+
+  const refreshVcsDiff = useCallback(
+    async (scope: 'uncommitted' | 'branch', silent = false) => {
+      if (!silent) {
+        setIsRefreshingDiffs(true);
+      }
+
+      try {
+        const data = await svcGetVcsDiff(client, scope === 'branch' ? 'branch' : 'git');
+        if (!isCurrentClient(client)) {
+          return data;
+        }
+        setVcsDiffsByScope((current) => ({
+          ...current,
+          [scope]: data,
+        }));
+
+        return data;
+      } finally {
+        if (!silent) {
+          setIsRefreshingDiffs(false);
+        }
+      }
+    },
+    [client, isCurrentClient],
+  );
+
+  const setDiffScope = useCallback(
+    (scope: DiffScope) => {
+      const sessionId = currentSessionIdRef.current;
+      if (!sessionId) {
+        return;
+      }
+      setDiffScopeBySession((current) => ({ ...current, [sessionId]: scope }));
+      if (scope !== 'turn') {
+        void refreshVcsDiff(scope, true);
+      }
+    },
+    [refreshVcsDiff],
+  );
+
+  const selectDiffMessage = useCallback(
+    (messageId: string) => {
+      const sessionId = currentSessionIdRef.current;
+      if (!sessionId) {
+        return;
+      }
+      setSelectedDiffMessageBySession((current) => ({ ...current, [sessionId]: messageId }));
+      void refreshSessionDiff(sessionId, true, messageId);
+    },
+    [refreshSessionDiff],
+  );
+
+  const refreshDiffs = useCallback(
+    async (silent = false) => {
+      const sessionId = currentSessionIdRef.current;
+      if (!sessionId) {
+        return;
+      }
+      const scope = diffScopeBySessionRef.current[sessionId] ?? 'turn';
+      if (scope === 'turn') {
+        await refreshSessionDiff(sessionId, silent);
+      } else {
+        await refreshVcsDiff(scope, silent);
+      }
+    },
+    [refreshSessionDiff, refreshVcsDiff],
   );
 
   const refreshSessionTodos = useCallback(
@@ -677,8 +758,12 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
         }));
       }
       await Promise.all([refreshMessages(sessionId), refreshSessionDiff(sessionId, true), refreshSessionTodos(sessionId), refreshPendingInteractions()]);
+      const scope = diffScopeBySessionRef.current[sessionId];
+      if (scope && scope !== 'turn') {
+        void refreshVcsDiff(scope, true);
+      }
     },
-    [activeProjectPath, refreshMessages, refreshPendingInteractions, refreshSessionDiff, refreshSessionTodos],
+    [activeProjectPath, refreshMessages, refreshPendingInteractions, refreshSessionDiff, refreshSessionTodos, refreshVcsDiff],
   );
 
   const createSession = useCallback(
@@ -911,8 +996,14 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
     if (activeProjectPathRef.current === client.__opencode.directory) {
       setSelectedWorkspaceFile({ path, content: saved });
       await refreshServerFeatures();
+      // Keep an active VCS diff scope honest after a manual edit.
+      const activeSessionId = currentSessionIdRef.current;
+      const scope = activeSessionId ? diffScopeBySessionRef.current[activeSessionId] : undefined;
+      if (scope === 'uncommitted' || scope === 'branch') {
+        void refreshVcsDiff(scope, true);
+      }
     }
-  }, [client, refreshServerFeatures]);
+  }, [client, refreshServerFeatures, refreshVcsDiff]);
 
   const refreshWorktrees = useCallback(async () => {
     const next = await svcListWorktrees(client);
@@ -1816,6 +1907,8 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
         setTimeout(() => void refreshSessions(true).catch(() => undefined), 5000);
 
         setCurrentSessionId(sessionId);
+        // A new user turn supersedes any earlier turn the diff surface was pinned to.
+        setSelectedDiffMessageBySession((current) => ({ ...current, [sessionId]: undefined }));
         const nextSessions = await fetchSessions(true);
         await Promise.all([
           refreshMessages(sessionId, true),
@@ -2438,7 +2531,9 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
           return;
         case 'session.diff': {
           const sessionId = event.properties.sessionID;
-          if (event.properties.diff?.length > 0) {
+          // When the surface is pinned to an earlier turn, an incoming latest-turn
+          // diff must not overwrite it; refresh the selected turn instead.
+          if (event.properties.diff?.length > 0 && !selectedDiffMessageBySessionRef.current[sessionId]) {
             setDiffsBySession((current) => ({
               ...current,
               [sessionId]: event.properties.diff,
@@ -2732,10 +2827,42 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
     () => (currentSessionId ? messagesBySession[currentSessionId] || [] : []),
     [currentSessionId, messagesBySession],
   );
-  const currentDiffs = useMemo(
-    () => (currentSessionId ? diffsBySession[currentSessionId] || [] : []),
-    [currentSessionId, diffsBySession],
+  const currentDiffScope = useMemo<DiffScope>(
+    () => (currentSessionId ? diffScopeBySession[currentSessionId] ?? 'turn' : 'turn'),
+    [currentSessionId, diffScopeBySession],
   );
+  const currentDiffs = useMemo(
+    () => {
+      if (!currentSessionId) {
+        return [];
+      }
+      if (currentDiffScope === 'turn') {
+        return diffsBySession[currentSessionId] || [];
+      }
+      return vcsDiffsByScope[currentDiffScope] || [];
+    },
+    [currentDiffScope, currentSessionId, diffsBySession, vcsDiffsByScope],
+  );
+  const diffTurns = useMemo<DiffTurn[]>(() => {
+    const turns = currentMessages.filter(
+      (record) => record.info.role === 'user' && (record.info.summary?.diffs?.length ?? 0) > 0,
+    );
+    return turns.map((record, index) => {
+      const textPart = record.parts.find((part) => part.type === 'text');
+      const preview = textPart && textPart.type === 'text' ? textPart.text.replace(/\s+/g, ' ').trim() : '';
+      return { id: record.info.id, label: `Turn ${index + 1}`, preview: preview ? preview.slice(0, 80) : undefined };
+    });
+  }, [currentMessages]);
+  const selectedDiffMessageId = useMemo(() => {
+    if (!currentSessionId) {
+      return undefined;
+    }
+    const selected = selectedDiffMessageBySession[currentSessionId];
+    if (selected && diffTurns.some((turn) => turn.id === selected)) {
+      return selected;
+    }
+    return diffTurns[diffTurns.length - 1]?.id;
+  }, [currentSessionId, diffTurns, selectedDiffMessageBySession]);
   const currentTodos = useMemo(() => {
     if (!currentSessionId) {
       return [];
@@ -2813,6 +2940,12 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
       currentUsage,
       latestAssistantTurnUsage,
       currentDiffs,
+      currentDiffScope,
+      setDiffScope,
+      diffTurns,
+      selectedDiffMessageId,
+      selectDiffMessage,
+      refreshDiffs,
       currentTranscript,
       currentTodos,
       currentPendingPermissions,
@@ -2922,6 +3055,12 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
       providerAuthMethodsById,
       configuredProviders,
       currentDiffs,
+      currentDiffScope,
+      diffTurns,
+      selectedDiffMessageId,
+      setDiffScope,
+      selectDiffMessage,
+      refreshDiffs,
       createSession,
       deleteSession,
       renameSession,

@@ -628,8 +628,11 @@ function buildV2Raw(settings: OpencodeConnectionSettings): { client: Record<stri
         const messages = await fetchAllMessages(api, sessionID);
         return ok(messages.map((message) => messageToV1(message, sessionID)).filter(Boolean));
       },
-      diff: async (parameters: { sessionID: string }) => {
-        const diffs: V2Diff[] = await api.session.diff({ sessionID: parameters.sessionID });
+      diff: async (parameters: { sessionID: string; messageID?: string }) => {
+        const diffs: V2Diff[] = await api.session.diff({
+          sessionID: parameters.sessionID,
+          ...(parameters.messageID ? { messageID: parameters.messageID } : {}),
+        });
         return ok(diffs);
       },
       // OpenCode 2.x removed the server-owned todo endpoint. The plan is derived
@@ -829,6 +832,7 @@ function buildV2Raw(settings: OpencodeConnectionSettings): { client: Record<stri
         return ok(response.data);
       },
       diff: async (parameters: { mode?: string; context?: number }) => {
+        // V1 speaks `git`; V2 speaks `working`. The adapter is the translation point.
         const mode = parameters?.mode === 'branch' ? 'branch' : 'working';
         const response = await api.vcs.diff({ mode, ...(parameters?.context !== undefined ? { context: parameters.context } : {}) });
         return ok(response.data);

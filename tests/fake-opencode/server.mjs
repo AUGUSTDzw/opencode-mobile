@@ -32,6 +32,9 @@ const stateStore = createStateStore(scenarioName);
 let state = stateStore.getState();
 const applicablePatch = 'diff --git a/src/demo.ts b/src/demo.ts\n--- a/src/demo.ts\n+++ b/src/demo.ts\n@@ -1 +1 @@\n-export const demo = "OpenCode 1.18.3";\n+export const demo = "OpenCode SDK 1.18.3";\n';
 const editorPatch = '--- a/src/demo.ts\n+++ b/src/demo.ts\n@@ -1,1 +1,1 @@\n-export const demo = "OpenCode 1.18.3";\n+export const demo = "OpenCode SDK 1.18.3";\n';
+// Committed-on-branch fixture, distinct from the uncommitted `git` diff so the
+// scope surface can be exercised deterministically.
+const branchPatch = 'diff --git a/README.md b/README.md\n--- a/README.md\n+++ b/README.md\n@@ -1,3 +1,4 @@\n # Demo project\n \n Deterministic fake OpenCode workspace.\n+Committed on this branch.\n';
 
 function sendJson(res, statusCode, payload) {
   res.writeHead(statusCode, {
@@ -413,6 +416,10 @@ const server = http.createServer(async (req, res) => {
       const mode = requestUrl.searchParams.get('mode');
       if (!['git', 'branch'].includes(mode)) {
         badRequest(res, 'VCS diff requires mode');
+        return;
+      }
+      if (mode === 'branch') {
+        sendJson(res, 200, [{ file: 'README.md', patch: branchPatch, additions: 1, deletions: 0, status: 'modified' }]);
         return;
       }
       sendJson(res, 200, state.files['src/demo.ts'].includes('SDK')
