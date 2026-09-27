@@ -214,6 +214,18 @@ Run when relevant:
 - native or Android-risk changes:
   - `npm run build:development:android`
 
+### Before Push
+
+CI runs the `validate` job. It must be green, so run the same checks locally and do not push until they pass:
+
+```bash
+npm run test:ci:static
+npm run test:fake-server:self
+npm run test:e2e:web
+```
+
+A red e2e run is blocking. If a failure looks intermittent, rerun the failing test to confirm and harden it before pushing rather than pushing over a flaky check.
+
 ## Tests
 
 This repo validates behavior mainly with static checks and end-to-end flows.
@@ -239,5 +251,6 @@ A change is done when:
 - tests are added or updated for changed behavior
 - any `tests/e2e/` or `tests/fake-opencode/` changes have explicit human validation
 - documentation in `docs/` is updated when behavior, architecture, or contracts changed
+- the pre-push CI-equivalent checks pass (`test:ci:static`, `test:fake-server:self`, `test:e2e:web`)
 - validation matches the risk of the change
 - the final summary states what changed, what was verified, and any remaining risk
