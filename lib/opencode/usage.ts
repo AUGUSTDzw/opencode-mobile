@@ -116,7 +116,12 @@ export function getLatestContextTokens(messages: SessionMessageRecord[]) {
     if (info.role !== 'assistant') continue;
     for (let partIndex = parts.length - 1; partIndex >= 0; partIndex -= 1) {
       const part = parts[partIndex];
-      if (part.type === 'step-finish') return part.tokens.input + part.tokens.cache.read + part.tokens.cache.write + part.tokens.output;
+      if (part.type !== 'step-finish') continue;
+      const tokens = part.tokens.input + part.tokens.cache.read + part.tokens.cache.write + part.tokens.output;
+      // The V2 adapter emits a placeholder step-finish for in-flight assistant
+      // messages, so an all-zero step means "usage not reported yet", not an
+      // empty context. Keep the previous completed step visible instead.
+      if (tokens > 0) return tokens;
     }
   }
   return undefined;

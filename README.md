@@ -1,6 +1,6 @@
 # OpenCode Mobile
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-4-orange.svg?style=flat-square)](#contributors-)
+[![All Contributors](https://img.shields.io/badge/all_contributors-6-orange.svg?style=flat-square)](#contributors-)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 [![Get it on Google Play](https://img.shields.io/badge/Get_it_on-Google_Play-4285F4?style=for-the-badge&logo=googleplay&logoColor=white)](https://play.google.com/store/apps/details?id=app.getopencode)
@@ -147,6 +147,8 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/jonathanvanherpe"><img src="https://avatars.githubusercontent.com/u/2920210?v=4?s=100" width="100px;" alt="Jonathan Vanherpe"/><br /><sub><b>Jonathan Vanherpe</b></sub></a><br /><a href="https://github.com/alvarolorentedev/opencode-mobile/commits?author=jonathanvanherpe" title="Code">💻</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/robbe1912"><img src="https://avatars.githubusercontent.com/u/20685876?v=4?s=100" width="100px;" alt="Robin Fröhlich"/><br /><sub><b>Robin Fröhlich</b></sub></a><br /><a href="https://github.com/alvarolorentedev/opencode-mobile/commits?author=robbe1912" title="Code">💻</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/NANAMINER"><img src="https://avatars.githubusercontent.com/u/142423117?v=4?s=100" width="100px;" alt="NANAMINER"/><br /><sub><b>NANAMINER</b></sub></a><br /><a href="https://github.com/alvarolorentedev/opencode-mobile/issues?q=author%3ANANAMINER" title="Bug reports">🐛</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/electronrancher"><img src="https://avatars.githubusercontent.com/u/6657599?v=4?s=100" width="100px;" alt="electronrancher"/><br /><sub><b>electronrancher</b></sub></a><br /><a href="https://github.com/alvarolorentedev/opencode-mobile/commits?author=electronrancher" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/subho1999"><img src="https://avatars.githubusercontent.com/u/29020364?v=4?s=100" width="100px;" alt="Subhabrata Ghosh"/><br /><sub><b>Subhabrata Ghosh</b></sub></a><br /><a href="https://github.com/alvarolorentedev/opencode-mobile/issues?q=author%3Asubho1999" title="Bug reports">🐛</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://aewens.com"><img src="https://avatars.githubusercontent.com/u/5826776?v=4?s=100" width="100px;" alt="Austin Ewens"/><br /><sub><b>Austin Ewens</b></sub></a><br /><a href="https://github.com/alvarolorentedev/opencode-mobile/issues?q=author%3Aaewens" title="Bug reports">🐛</a></td>
     </tr>
   </tbody>

@@ -122,13 +122,39 @@ function emitEvent(eventMessage) {
 
 const helpers = createSessionHelpers({ emitEvent, getNow, getState: () => state });
 
+const FAKE_MODEL = { id: 'gpt-4.1-mini', providerID: 'openai' };
+// Deterministic per-assistant-call usage so V2 e2e can assert context
+// utilization. Non-zero values prove the adapter carries model/tokens/cost;
+// session totals accumulate them the way the real server does.
+const ASSISTANT_USAGE = { input: 1200, output: 240, reasoning: 0, cache: { read: 800, write: 100 } };
+const ASSISTANT_COST = 0.0021;
+
+function sessionUsage(sessionID) {
+  const usage = { input: 0, output: 0, reasoning: 0, cost: 0, cache: { read: 0, write: 0 } };
+  for (const record of state.messagesBySession[sessionID] || []) {
+    if (record.info.role !== 'assistant') continue;
+    usage.input += ASSISTANT_USAGE.input;
+    usage.output += ASSISTANT_USAGE.output;
+    usage.reasoning += ASSISTANT_USAGE.reasoning;
+    usage.cache.read += ASSISTANT_USAGE.cache.read;
+    usage.cache.write += ASSISTANT_USAGE.cache.write;
+    usage.cost += ASSISTANT_COST;
+  }
+  return usage;
+}
+
 function sessionToV2(session) {
+  const usage = sessionUsage(session.id);
   return {
     id: session.id,
     projectID: session.projectID || state.project.id,
     title: session.title || '',
     time: { created: session.time.created, updated: session.time.updated },
     location: { directory: session.directory || state.project.worktree },
+    model: session.model || FAKE_MODEL,
+    ...(session.agent ? { agent: session.agent } : {}),
+    cost: usage.cost,
+    tokens: { input: usage.input, output: usage.output, reasoning: usage.reasoning, cache: usage.cache },
   };
 }
 
@@ -166,10 +192,10 @@ function messageToV2(record) {
     type: 'assistant',
     sessionID: record.info.sessionID,
     time: { created: record.info.time.created },
-    model: { id: 'gpt-4.1-mini', providerID: 'openai' },
+    model: state.sessions.find((session) => session.id === record.info.sessionID)?.model || FAKE_MODEL,
     content,
-    cost: 0,
-    tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+    cost: ASSISTANT_COST,
+    tokens: { input: ASSISTANT_USAGE.input, output: ASSISTANT_USAGE.output, reasoning: ASSISTANT_USAGE.reasoning, cache: { ...ASSISTANT_USAGE.cache } },
     finish: 'stop',
   };
 }
@@ -246,6 +272,11 @@ const server = http.createServer(async (req, res) => {
       v2Clients.clear();
       state = stateStore.resetState(body?.scenario || scenarioName);
       sendJson(res, 200, { data: { scenario: state.scenario } });
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/__control/instructions') {
+      sendJson(res, 200, { data: state.instructionsBySession });
       return;
     }
 
@@ -422,9 +453,44 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === 'POST' && /^\/api\/session\/[^/]+\/(agent|model)$/.test(pathname)) {
+      const sessionID = pathname.split('/')[3];
+      const body = await readJson(req);
+      const session = helpers.getSession(sessionID);
+      if (session) {
+        if (pathname.endsWith('/model') && body?.model) session.model = body.model;
+        if (pathname.endsWith('/agent') && body?.agent) session.agent = body.agent;
+      }
       res.writeHead(204, { 'Access-Control-Allow-Origin': '*' });
       res.end();
       return;
+    }
+
+    // Session-scoped instruction entries are the V2 replacement for the V1
+    // prompt `system` field. The adapter writes chat preferences here.
+    if (pathname.startsWith('/api/experimental/session/') && pathname.includes('/instructions/entries')) {
+      const match = pathname.match(/^\/api\/experimental\/session\/([^/]+)\/instructions\/entries(?:\/([^/]+))?$/);
+      if (!match) return notFound(res);
+      const sessionID = match[1];
+      const key = match[2] ? decodeURIComponent(match[2]) : undefined;
+      if (!helpers.getSession(sessionID)) return notFound(res);
+      const entries = state.instructionsBySession[sessionID] || (state.instructionsBySession[sessionID] = {});
+      if (req.method === 'GET' && !key) {
+        sendJson(res, 200, { data: Object.entries(entries).map(([entryKey, value]) => ({ key: entryKey, value })) });
+        return;
+      }
+      if (req.method === 'PUT' && key) {
+        const body = await readJson(req);
+        entries[key] = body?.value;
+        res.writeHead(204, { 'Access-Control-Allow-Origin': '*' });
+        res.end();
+        return;
+      }
+      if (req.method === 'DELETE' && key) {
+        delete entries[key];
+        res.writeHead(204, { 'Access-Control-Allow-Origin': '*' });
+        res.end();
+        return;
+      }
     }
 
     if (req.method === 'POST' && /^\/api\/session\/[^/]+\/permission\/[^/]+\/reply$/.test(pathname)) {
