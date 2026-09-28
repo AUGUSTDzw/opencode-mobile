@@ -108,6 +108,7 @@ Primary fields:
 Current fields:
 
 - `mode`
+- `language` (optional; `undefined` follows the OS locale)
 - `providerId`
 - `modelId`
 - `enabledModelIds`
@@ -209,8 +210,9 @@ Persisted values:
 
 - `opencode-mobile.settings` (connection URL and username; the password lives in secure storage)
 - `opencode-mobile.connection-profiles` (saved connections with name and optional per-profile model selection; passwords live in secure storage)
-- `opencode-mobile.chat-preferences` (active connection's preferences)
+- `opencode-mobile.chat-preferences` (chat preferences, including the global UI `language`; not connection-scoped)
 - `opencode-mobile.active-project`
+- `opencode-mobile.onboarding-version` (completion-only first-run marker; see below)
 - `opencode-mobile.last-session-by-project` (nested `connectionScope -> projectPath -> sessionId`; legacy flat maps are discarded on hydration)
 - `opencode-mobile.pending-notification-sessions` (non-secret connection references, keyed by connection scope + session ID)
 - `opencode-mobile.sessions.<connectionScope>.<projectPath>` / `opencode-mobile.session-statuses.<connectionScope>.<projectPath>` (per connection + project cache)
@@ -258,6 +260,7 @@ Hydration rules:
 - last-session map is restored if present and is nested by connection scope; the legacy flat map fails validation and is removed
 - each persisted key hydrates independently; a storage read failure leaves that key untouched, while malformed or invalid JSON is removed without blocking other keys
 - per connection + project session caches hydrate on app open and on every connection or project switch so the workspace list paints before the server answers; they are written only from confirmed fetch results, so a cached empty list means the server reported no sessions for that project. A late hydration result is discarded unless both the connection scope and project path are still current.
+- onboarding completion is resolved last, so `isHydrated` already implies the assistant's visibility is known. When the marker is absent, an installation that already has a stored settings key, saved profile metadata, or an active project is treated as completed (existing users never see onboarding); a fresh installation starts the assistant. The decision is persisted immediately (version 0 when onboarding should run, `CURRENT_ONBOARDING_VERSION` when it should not), which makes it sticky and stops the settings write effect from later re-triggering migration. Storage read failures report completed without persisting, so an unreadable store can never gate an existing user.
 
 Credentials:
 

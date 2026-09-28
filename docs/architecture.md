@@ -72,9 +72,36 @@ If this app were reimplemented, this provider would be the main source of truth 
 ### App Shell
 
 - `app/_layout.tsx`
-  Root providers, theming, side-effect bootstrap.
+  Root providers, theming, side-effect bootstrap, hydration splash, and the
+  onboarding/app routing gate described below.
 - `app/(tabs)/_layout.tsx`
   Bottom tabs only.
+- `app/onboarding/_layout.tsx`
+  Nested stack for the first-run setup assistant.
+
+### First-Run Onboarding
+
+The assistant is a short, functional setup flow rather than a marketing
+carousel: welcome, connect, workspace, preferences, permissions, and ready.
+
+- Completion lives in `opencode-mobile.onboarding-version` (managed by
+  `providers/onboarding-state.ts`) and represents completion only. Connection
+  settings, passwords, active workspace, chat preferences, and OS permissions
+  stay in their existing stores.
+- `app/_layout.tsx` keeps the native splash up until `isHydrated`, then uses
+  `Stack.Protected` to register either `(tabs)` + `session/[id]` (completed) or
+  `onboarding`. Review mode (`onboardingActive`) registers both, so re-running
+  the assistant from Settings never unmounts the tab navigator.
+- The boot connect effect is suppressed until onboarding is completed, so a
+  fresh install never silently connects to the default loopback URL. Any
+  explicit `runConnect` also satisfies the one-time boot connect, which stops
+  completion from triggering a duplicate reconnect.
+- The assistant reuses existing infrastructure: `switchConnection` for the
+  server step, `selectProject`/`addWorkspace` for the workspace step,
+  `updateChatPreferences` plus `ModelPicker`/settings sections for preferences,
+  and `useNotificationSetup`/`lib/voice/permissions.ts` for permissions. The
+  provider configuration dialog state machine is shared through
+  `components/settings/use-provider-configuration.tsx`.
 
 ### Screens
 
@@ -88,6 +115,10 @@ If this app were reimplemented, this provider would be the main source of truth 
   Fourth-tab line console for creating, opening, using, and terminating project PTYs.
 - `app/session/[id].tsx`
   Session deep-link resolver. Parses `sessionId` + `project`, delegates to `openDeepLinkSession()`, then replaces onto the Chat tab.
+- `app/onboarding/*.tsx`
+  First-run setup assistant steps (welcome, connect, workspace, preferences,
+  permissions, ready). Thin controllers over provider state; they do not own
+  connection/workspace/preference persistence.
 
 ### Provider Layer
 
@@ -186,19 +217,45 @@ If this app were reimplemented, this provider would be the main source of truth 
 - `lib/voice/working-sound.ts`
   Generated looping working sound.
 
+### Internationalization
+
+- `lib/i18n/index.ts`
+  i18next initialization, device-locale detection via `expo-localization`, and the persisted-preference sync.
+- `lib/i18n/languages.ts`
+  Supported language list plus pure preference/device-tag resolution.
+- `lib/i18n/resources.ts`
+  Static, bundled namespace resources per language (no runtime loading).
+- `lib/i18n/locales/<lang>/<namespace>.json`
+  Committed translation files; English is the source of truth and fallback.
+- `lib/i18n/format.ts`
+  `Intl`-based date, number, currency, and relative-time formatting bound to the active language.
+
+UI text is grouped into feature namespaces (`common`, `chat`, `workspace`,
+`terminal`, `settings`, `notifications`). Components translate with
+`useTranslation()` and explicit namespace prefixes. The root layout imports
+`lib/i18n` so translations are initialized before first render, and
+`OpencodeProvider` applies the persisted language preference after hydration.
+
+Domain-generated labels (`lib/opencode/format.ts` detail labels,
+`lib/opencode/transcript.ts` activity summaries, and provider/transport error
+strings) remain English. They are built outside the React tree and are partly
+memoized per message record, so translating them needs a by-kind/enum pass
+rather than an in-place `t()` call.
+
 ## Runtime Boot Sequence
 
 The normal startup flow is:
 
-1. Root layout mounts providers.
-2. `useOpencodePersistence()` hydrates settings, chat preferences, active project, and the connection-scoped last-session map from AsyncStorage.
-3. After hydration, `OpencodeProvider` calls `connect()`.
-4. `connect()` loads workspace catalog using a catalog-scoped client with no directory.
-5. Connection state becomes `connected` or `error`.
-6. If a project exists, the provider fetches sessions and chat capabilities.
-7. A follow-up effect calls `ensureActiveSession()` for the active project.
-8. `ensureActiveSession()` honors a transient deep-link target (set by `openDeepLinkSession`), then reopens the remembered session, falls back to the newest returned session, or creates a new one. A deep-link target that does not match any session never triggers session creation.
-9. The Chat tab can then render transcript, diffs, todos, pending interactions, and controls.
+1. Root layout mounts providers and keeps the native splash up.
+2. `useOpencodePersistence()` hydrates settings, chat preferences, active project, the connection-scoped last-session map, and the onboarding completion marker from AsyncStorage.
+3. The routing gate resolves: existing configured installs show `(tabs)`; a fresh install shows the onboarding assistant. A fresh install does not auto-connect.
+4. After hydration, once onboarding is completed, `OpencodeProvider` calls `connect()`.
+5. `connect()` loads workspace catalog using a catalog-scoped client with no directory.
+6. Connection state becomes `connected` or `error`.
+7. If a project exists, the provider fetches sessions and chat capabilities.
+8. A follow-up effect calls `ensureActiveSession()` for the active project.
+9. `ensureActiveSession()` honors a transient deep-link target (set by `openDeepLinkSession`), then reopens the remembered session, falls back to the newest returned session, or creates a new one. A deep-link target that does not match any session never triggers session creation.
+10. The Chat tab can then render transcript, diffs, todos, pending interactions, and controls.
 
 When the app is launched from (or navigated to) a session deep link, the dedicated resolver route `app/session/[id].tsx` parses `sessionId` + `project`, calls `openDeepLinkSession()`, and replaces onto the Chat tab where the session is already current.
 
@@ -280,6 +337,7 @@ User interactions are converted to provider actions such as:
 - workspace patch save, archive/restore, worktree, MCP, and terminal actions
 - `setProviderAuth`
 - `toggleConversationMode`
+- `completeOnboarding`, `startOnboardingReview`, and `stopOnboardingReview` (first-run setup completion and Settings re-entry)
 
 ## Real-Time Update Architecture
 
@@ -365,6 +423,8 @@ Responsibilities:
 - choose model enablement defaults
 - inspect and enable notification setup
 - manage voice and response-style preferences
+- choose the app interface language
+- launch the Setup assistant, which reopens the onboarding flow in review mode seeded from the current connection, workspace, preferences, and permissions without wiping any of them
 
 ### Terminal Screen
 

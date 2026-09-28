@@ -68,6 +68,10 @@ Used for most UI components and themed surfaces.
 
 Used for persistence of user settings and lightweight workflow continuity state.
 
+### Localization
+
+`expo-localization` detects the device/app locale for the i18n runtime. `i18next` / `react-i18next` provide the runtime, English is bundled as the source and fallback language, and translations are organized by feature namespace under `lib/i18n/locales/`. Shipped locales: English (source), Spanish, Hindi, German, French, Simplified Chinese, Portuguese, and Japanese. The `supportedLocales` plugin option exposes the shipped languages to iOS and Android. The active in-app language is a normal persisted preference (stored with chat preferences); an unset preference follows the OS locale. See `docs/state-and-data.md` and `docs/architecture.md`.
+
 ### Notifications
 
 `expo-notifications`, `expo-background-task`, and `expo-task-manager` are used together for:
@@ -158,6 +162,7 @@ Notable values:
 - E2E mode controlled by `EXPO_PUBLIC_E2E_MODE=1`
 - Android package name varies between production and development variants
 - Expo Router, notifications, background task, speech recognition, and splash plugins are configured
+- `expo-localization` is configured with `supportedLocales` for iOS and Android
 - React compiler and typed routes are enabled in Expo experiments
 
 ## Environment / Variant Rules

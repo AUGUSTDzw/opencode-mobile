@@ -414,6 +414,19 @@ Important current implementation note:
 
 - response scope and next-actions settings do not change app layout; they only shape the generated system prompt sent to the server
 
+### Language Section
+
+Purpose:
+
+- choose the app interface language, or follow the system default
+
+Behavior exposed today:
+
+- options are built from the supported language list (English source plus Spanish, Hindi, German, French, Simplified Chinese, Portuguese, and Japanese)
+- `System default` follows the OS locale; an explicit choice overrides it
+- the choice is persisted with chat preferences and applied immediately
+- the interface language also drives `Intl` date, number, currency, and relative-time formatting
+
 ## Conversation Mode Detailed Behavior
 
 Conversation mode is a hands-free loop around one active session.

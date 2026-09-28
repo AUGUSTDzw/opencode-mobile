@@ -376,6 +376,7 @@ This is important to parity because the chat layout is intentionally dense and h
 - shows compact settings rows in one group and opens one category at a time
 - uses the same safe-area app header and title treatment as Chat and Terminal
 - groups MCP servers and diagnostics under the `Advanced` category
+- shows a `Language` category for the app interface language
 - shows compact category summaries and renders one category at a time in the shared overlay
 - opens connection and provider forms in keyboard-safe full-screen surfaces
 
@@ -398,6 +399,7 @@ This is important to parity because the chat layout is intentionally dense and h
 - `AiDefaultsSection`
 - `NotificationsSection`
 - `VoiceSection`
+- `LanguageSection`
 - `DiagnosticsSection`
 
 ### `ConnectionSection`
@@ -466,6 +468,14 @@ Responsibility:
 - select working sound and speech voice
 - adjust speech rate and working-sound volume with touch sliders
 
+### `LanguageSection`
+
+Responsibility:
+
+- choose the app interface language or follow the system default
+- persist the choice through `updateChatPreferences({ language })`; `undefined` follows the OS locale
+- list the supported languages built from `SUPPORTED_LANGUAGES`
+
 ### `DiagnosticsSection`
 
 Responsibility:
@@ -516,6 +526,46 @@ Main relevant props:
 - working sound option definitions
 - provider marketing copy
 - provider marketing copy and settings option lists
+
+## Onboarding Components
+
+## `app/onboarding/*.tsx`
+
+Responsibility:
+
+- the six first-run setup steps: welcome, connect, workspace, preferences, permissions, ready
+- thin controllers only; connection/workspace/preference persistence and permission requests are delegated to the provider and existing helpers
+- seeded from current provider state so re-running from Settings reviews rather than resets
+
+## `components/onboarding/onboarding-step.tsx`
+
+- shared step chrome: back action, step progress, title/subtitle, scrollable body, pinned footer
+- keeps every step visually consistent without duplicating layout
+
+## `components/onboarding/project-options.tsx`
+
+- presentational project-row list shared by `WorkspacePicker` and the onboarding workspace step
+- callers own empty/loading states
+
+## `providers/onboarding-state.ts`
+
+- `CURRENT_ONBOARDING_VERSION`, parse/serialize for the completion marker
+- pure `resolveOnboardingStatus()` migration decision and the storage-backed `loadOnboardingStatus()`
+- completion only; never stores connection, workspace, preference, or permission values
+
+## `components/settings/use-notification-setup.ts`
+
+- notification permission/status/platform-settings controller shared by Settings and onboarding
+- requests permission only from `enable()`; `refreshStatus()` is read-only
+
+## `components/settings/use-provider-configuration.tsx`
+
+- provider credential dialog state machine (manual API key and OAuth, including the code callback) shared by Settings and onboarding
+- returns the dialogs as `dialog` plus `feedback`/`setFeedback`
+
+## `lib/voice/permissions.ts`
+
+- `getVoiceInputPermissionAsync()` (read-only) and `requestVoiceInputPermissionAsync()` (explicit-action only) wrappers over `expo-speech-recognition`
 
 ## Shared UI Components
 

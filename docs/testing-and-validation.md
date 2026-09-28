@@ -32,6 +32,7 @@ From `TESTING.md`, those gates include:
   - `npm run test:usage`
   - `npm run test:v2-mappers`
   - `npm run test:format`
+  - `npm run test:i18n`
   - `npm run test:provider-utils`
   - `npm run test:workspace-patch`
   - `npm run test:persistence-hydration`
@@ -43,6 +44,7 @@ From `TESTING.md`, those gates include:
   - `npm run test:last-session`
   - `npm run test:notifications`
   - `npm run test:notifications-background`
+  - `npm run test:onboarding`
 - `npm run test:fake-server:self`
 - Playwright E2E flow tests against the fake OpenCode server
 
@@ -52,6 +54,12 @@ connection scopes, fully validated profile metadata, connection+project session
 cache isolation, connection-scoped last sessions, non-secret pending
 notification records with per-connection credential resolution, and legacy
 values that fail safe instead of being guessed.
+
+The `test:i18n` suite guards translations: it checks that every language defines
+exactly the English key set, that interpolation variables match per key, that
+each plural base carries the plural categories required by its locale, and that
+the pure language-resolution helper picks the preference, then the device tag,
+then English.
 
 ## Fake OpenCode Server
 
@@ -196,6 +204,27 @@ The SSE endpoint intentionally fails, forcing the app to complete the workflow t
   project paths, switch between them, and verify each connection shows only its
   own sessions and restores its own model selection (the session cache,
   remembered session, and model preferences can never leak across servers)
+
+### Onboarding Flows
+
+`tests/e2e/onboarding.spec.mjs` deliberately omits the `opencode-mobile.onboarding-version`
+seed used by `flows.spec.mjs`, so the assistant is exercised:
+
+- fresh install shows the welcome step, walks connect → workspace → preferences skip → permissions skip → ready, enters chat, and does not reappear on relaunch
+- a failed connection keeps the entered values and allows a retry
+- an installation with a stored settings key but no onboarding marker skips onboarding (upgrade migration)
+- clearing `localStorage` shows onboarding again
+- Settings reopens the Setup assistant with the connection prefilled and returns the app to a working chat without wiping configuration
+
+Provider permission prompts (notifications, microphone) cannot be exercised on
+web because the platform APIs are unavailable there; the suite covers the
+optional/skippable UI instead. Native permission behavior still needs device
+validation.
+
+The `test:onboarding` static suite pins the completion-marker contract:
+malformed markers are removed, version 0 is sticky, an existing configuration
+(migrated from a pre-onboarding version) is treated as complete, and storage
+read failures never onboard an existing user.
 
 ## Intended Coverage Strengths
 
