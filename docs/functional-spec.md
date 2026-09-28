@@ -213,6 +213,10 @@ When a session has no display transcript yet, the user sees:
 - descriptive copy about specific prompts
 - tappable starter prompts that immediately send predefined text
 
+## Overlay and Back Navigation
+
+Overlays are dismissible with the platform back action. On Android, pressing the hardware back button while an overlay is open dismisses that overlay and keeps the current screen in place; a second back press then performs the underlying navigation. Overlay sheets (chat library, session usage, workspace and terminal pickers) share this behavior through `OverlaySheet`, and the conversation-mode overlay stops the mode on back. Native modal surfaces (dialogs, model picker, file details, select pickers) follow the same dismiss-first rule through their own back handling.
+
 ## Transcript Behavior
 
 - transcript is paginated from the bottom using a fixed page size

@@ -3,6 +3,7 @@ import { Pressable, Text as NativeText, View } from 'react-native';
 import { useState } from 'react';
 import { Appbar, Portal, ProgressBar, Text } from 'react-native-paper';
 
+import { useDismissOnBack } from '@/hooks/use-dismiss-on-back';
 import { Colors } from '@/constants/theme';
 import type { Session } from '@/lib/opencode/types';
 import { formatEstimatedCost, formatTokenCount, type SessionUsage } from '@/lib/opencode/usage';
@@ -54,6 +55,8 @@ export function ChatHeader({
   usage,
 }: ChatHeaderProps) {
   const [usageVisible, setUsageVisible] = useState(false);
+  // Android back stops conversation mode instead of leaving the screen.
+  useDismissOnBack(conversation.active, onConfirmStopConversation);
   const usageLabel = usage.costStatus === 'pricing-unavailable' ? 'Pricing unavailable' : `Estimated API cost ${formatEstimatedCost(usage.cost)}`;
   const contextProgress = contextLimit && contextTokens !== undefined ? Math.min(contextTokens / contextLimit, 1) : undefined;
   const usageIcon = contextProgress === undefined

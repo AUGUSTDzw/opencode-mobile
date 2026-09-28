@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useDismissOnBack } from '@/hooks/use-dismiss-on-back';
 
 export function OverlaySheet({ visible, title, onClose, children, headerAction, testID, fitContent = false }: {
   visible: boolean;
@@ -18,6 +19,8 @@ export function OverlaySheet({ visible, title, onClose, children, headerAction, 
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
   const palette = Colors[useColorScheme() ?? 'light'];
+  // Android back dismisses the open sheet instead of navigating the screen behind it.
+  useDismissOnBack(visible, onClose);
   if (!visible) return null;
 
   return (
