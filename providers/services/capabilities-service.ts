@@ -1,6 +1,7 @@
 import type { OpencodeClient, ProviderListResponse } from '@opencode-ai/sdk/v2/client';
 
 import { getConfiguredProviderIds, toAgentOption, type ModelOption } from '@/providers/opencode-model-selection';
+import { requireData } from '@/providers/services/require-data';
 
 type DiscoveredModel = ProviderListResponse['all'][number]['models'][string];
 const INPUT_MODALITIES: ModelOption['inputModalities'] = ['text', 'audio', 'image', 'video', 'pdf'];
@@ -16,13 +17,6 @@ function uniqueById<T extends { id: string }>(items: T[]) {
     seen.add(item.id);
     return true;
   });
-}
-
-function requireData<T>(data: T | undefined, operation: string): T {
-  if (data === undefined) {
-    throw new Error(`OpenCode ${operation} returned no data.`);
-  }
-  return data;
 }
 
 export async function discoverChatCapabilities(client: OpencodeClient, activeProjectPath?: string) {

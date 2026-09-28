@@ -9,7 +9,7 @@ import type { ChatPreferences } from '@/providers/opencode-preferences';
 
 // Saved connection metadata is non-secret and lives in AsyncStorage. Passwords
 // are stored per profile in SecureStore and are never part of this model.
-export type ProfileModelPreferences = Pick<
+type ProfileModelPreferences = Pick<
   ChatPreferences,
   'providerId' | 'modelId' | 'enabledModelIds' | 'providerModelSelections' | 'recentModelIds'
 >;

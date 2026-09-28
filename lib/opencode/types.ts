@@ -1,5 +1,3 @@
-import type { AppSkillsResponse } from '@opencode-ai/sdk/v2/client';
-
 export type {
   Agent,
   Command,
@@ -43,7 +41,5 @@ export type {
   GlobalSession,
   SnapshotFileDiff as FileDiff,
 } from '@opencode-ai/sdk/v2/client';
-
-export type Skill = AppSkillsResponse[number];
 
 export default {};

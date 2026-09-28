@@ -1,13 +1,7 @@
 import type { OpencodeClient, PermissionRuleset } from '@opencode-ai/sdk/v2/client';
 
 import type { GlobalSession, Project } from '@/lib/opencode/types';
-
-function requireData<T>(data: T | undefined, operation: string): T {
-  if (data === undefined) {
-    throw new Error(`OpenCode ${operation} returned no data.`);
-  }
-  return data;
-}
+import { requireData } from '@/providers/services/require-data';
 
 export async function loadWorkspaceCatalog(catalogClient: OpencodeClient) {
   const [pathResponse, projectsResponse, currentProjectResponse] = await Promise.all([
@@ -121,14 +115,14 @@ export async function updateSessionTitle(client: OpencodeClient, sessionId: stri
   return (await client.session.update({ sessionID: sessionId, title })).data;
 }
 
-export type SessionUpdate = {
+type SessionUpdate = {
   title?: string;
   metadata?: Record<string, unknown>;
   permission?: PermissionRuleset;
   time?: { archived?: number };
 };
 
-export async function updateSession(client: OpencodeClient, sessionId: string, update: SessionUpdate) {
+async function updateSession(client: OpencodeClient, sessionId: string, update: SessionUpdate) {
   return requireData((await client.session.update({ sessionID: sessionId, ...update })).data, 'session update request');
 }
 
@@ -138,10 +132,6 @@ export function archiveSession(client: OpencodeClient, sessionId: string, archiv
 
 export function restoreSession(client: OpencodeClient, sessionId: string) {
   return updateSession(client, sessionId, { time: { archived: 0 } });
-}
-
-export async function getSessionChildren(client: OpencodeClient, sessionId: string) {
-  return requireData((await client.session.children({ sessionID: sessionId })).data, 'session children request');
 }
 
 export async function forkSession(client: OpencodeClient, sessionId: string, messageId?: string) {

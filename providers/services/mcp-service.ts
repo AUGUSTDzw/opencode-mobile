@@ -1,9 +1,6 @@
 import type { McpLocalConfig, McpRemoteConfig, OpencodeClient } from '@opencode-ai/sdk/v2/client';
 
-function requireData<T>(data: T | undefined, operation: string): T {
-  if (data === undefined) throw new Error(`OpenCode ${operation} returned no data.`);
-  return data;
-}
+import { requireData } from '@/providers/services/require-data';
 
 export async function getMcpStatus(client: OpencodeClient) {
   return requireData((await client.mcp.status()).data, 'MCP status request');
@@ -28,10 +25,6 @@ export async function startMcpOAuth(client: OpencodeClient, name: string) {
 
 export async function completeMcpOAuth(client: OpencodeClient, name: string, code: string) {
   return requireData((await client.mcp.auth.callback({ name, code })).data, 'MCP OAuth callback request');
-}
-
-export async function removeMcpOAuth(client: OpencodeClient, name: string) {
-  return requireData((await client.mcp.auth.remove({ name })).data, 'MCP OAuth removal request');
 }
 
 async function updateMcpConfig(client: OpencodeClient, update: (mcp: NonNullable<Awaited<ReturnType<typeof getConfig>>['mcp']>) => void) {

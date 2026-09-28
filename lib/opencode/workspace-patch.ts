@@ -1,4 +1,4 @@
-export type FullFilePatchInput = {
+type FullFilePatchInput = {
   path: string;
   expectedContent: string;
   content: string;

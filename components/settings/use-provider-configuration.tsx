@@ -10,7 +10,7 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useCapabilities, useConnection } from '@/providers/opencode-contexts';
 
-export type ProviderFeedback = { type: 'success' | 'info' | 'error'; message: string };
+type ProviderFeedback = { type: 'success' | 'info' | 'error'; message: string };
 
 type PendingOAuth = { providerId: string; methodIndex: number; instructions?: string };
 

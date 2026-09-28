@@ -27,20 +27,11 @@ import type {
 import type { Diagnostics } from '@/providers/services/diagnostics-service';
 import type { SessionMessageRecord, TranscriptEntry } from '@/lib/opencode/format';
 import type { SessionUsage } from '@/lib/opencode/usage';
-import type { AgentOption as ProviderAgentOption, ModelOption as ProviderModelOption } from '@/providers/opencode-model-selection';
-import type {
-  ChatPreferences as ProviderChatPreferences,
-  ReasoningLevel as ProviderReasoningLevel,
-  ResponseScope as ProviderResponseScope,
-} from '@/providers/opencode-preferences';
-import type { ServerCapabilities as ProviderServerCapabilities } from '@/providers/opencode-capabilities';
+import type { AgentOption, ModelOption } from '@/providers/opencode-model-selection';
+import type { ChatPreferences, ReasoningLevel, ResponseScope } from '@/providers/opencode-preferences';
+import type { ServerCapabilities } from '@/providers/opencode-capabilities';
 
-export type AgentOption = ProviderAgentOption;
-export type ChatPreferences = ProviderChatPreferences;
-export type ModelOption = ProviderModelOption;
-export type ReasoningLevel = ProviderReasoningLevel;
-export type ResponseScope = ProviderResponseScope;
-export type ServerCapabilities = ProviderServerCapabilities;
+export type { AgentOption, ChatPreferences, ModelOption, ReasoningLevel, ResponseScope, ServerCapabilities };
 export type { ProviderAuthMethod } from '@/lib/opencode/types';
 
 export type ProviderOption = {

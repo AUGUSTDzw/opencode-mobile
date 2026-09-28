@@ -24,7 +24,7 @@ export const SUPPORTED_LANGUAGES: SupportedLanguage[] = [
 
 export const SUPPORTED_LANGUAGE_CODES = SUPPORTED_LANGUAGES.map((language) => language.code);
 
-export function findSupportedLanguage(value?: string) {
+function findSupportedLanguage(value?: string) {
   if (!value) {
     return undefined;
   }
@@ -35,10 +35,6 @@ export function findSupportedLanguage(value?: string) {
   }
 
   return SUPPORTED_LANGUAGE_CODES.find((code) => code.toLowerCase() === normalized);
-}
-
-export function isSupportedLanguage(value?: string) {
-  return Boolean(findSupportedLanguage(value));
 }
 
 // A persisted preference wins when it is supported; otherwise fall back to the

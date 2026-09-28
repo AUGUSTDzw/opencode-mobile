@@ -54,7 +54,7 @@ export function isOnboardingComplete(version: number | undefined) {
   return typeof version === 'number' && version >= CURRENT_ONBOARDING_VERSION;
 }
 
-export type ExistingConfiguration = {
+type ExistingConfiguration = {
   hasStoredSettings: boolean;
   hasStoredProfiles: boolean;
   hasActiveProject: boolean;
@@ -64,7 +64,7 @@ export function hasExistingConfiguration({ hasStoredSettings, hasStoredProfiles,
   return hasStoredSettings || hasStoredProfiles || hasActiveProject;
 }
 
-export type ResolvedOnboardingStatus = {
+type ResolvedOnboardingStatus = {
   completed: boolean;
   version: number;
 };

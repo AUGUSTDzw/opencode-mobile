@@ -193,14 +193,6 @@ async function configureNotificationChannelAsync() {
   });
 }
 
-export async function getNotificationPermissionsStatusAsync() {
-  if (!canUseNotifications()) {
-    return null;
-  }
-
-  return Notifications.getPermissionsAsync();
-}
-
 export async function ensureNotificationPermissionsAsync() {
   if (!canUseNotifications()) {
     return null;
@@ -301,14 +293,4 @@ export async function clearPendingTaskFinishedNotification(connectionScope: stri
 // only the session title and never render notification strings themselves.
 export async function notifyTaskFinished(sessionTitle?: string) {
   await scheduleTaskFinishedNotification(sessionTitle);
-}
-
-export async function sendTestNotificationAsync() {
-  const permissions = await ensureNotificationPermissionsAsync();
-  if (!permissions?.granted) {
-    return false;
-  }
-
-  await scheduleLocalNotification('OpenCode notifications are on', 'This is a test notification from your device.');
-  return true;
 }

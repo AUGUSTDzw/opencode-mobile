@@ -45,7 +45,7 @@ export async function initializeVoiceAudioAsync() {
   audioModeInitialized = true;
 }
 
-export async function activateVoiceDuckingAsync() {
+async function activateVoiceDuckingAsync() {
   const audioModule = await getAudioModuleAsync();
   if (!audioModule) {
     return;
@@ -60,7 +60,7 @@ export async function activateVoiceDuckingAsync() {
   duckingActive = true;
 }
 
-export async function deactivateVoiceDuckingAsync() {
+async function deactivateVoiceDuckingAsync() {
   const audioModule = await getAudioModuleAsync();
   if (!audioModule) {
     return;
@@ -79,7 +79,7 @@ function compactWhitespace(value: string) {
   return value.replace(/\s+/g, ' ').trim();
 }
 
-export function getSpeakableText(text: string) {
+function getSpeakableText(text: string) {
   return compactWhitespace(
     text
       .replace(/```[\s\S]*?```/g, ' code block omitted ')

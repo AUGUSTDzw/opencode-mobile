@@ -1,11 +1,7 @@
 import type { OpencodeClient } from '@opencode-ai/sdk/v2/client';
 
 import { buildPtyWebSocketUrl, type OpencodeConnectionSettings, type ServerContract } from '@/lib/opencode/client';
-
-function requireData<T>(data: T | undefined, operation: string): T {
-  if (data === undefined) throw new Error(`OpenCode ${operation} returned no data.`);
-  return data;
-}
+import { requireData } from '@/providers/services/require-data';
 
 export async function listShells(client: OpencodeClient) {
   return requireData((await client.pty.shells()).data, 'shell list request');
@@ -20,18 +16,6 @@ export async function createTerminal(
   input?: { command?: string; args?: string[]; cwd?: string; title?: string; env?: Record<string, string> },
 ) {
   return requireData((await client.pty.create(input)).data, 'terminal create request');
-}
-
-export async function getTerminal(client: OpencodeClient, ptyId: string) {
-  return requireData((await client.pty.get({ ptyID: ptyId })).data, 'terminal get request');
-}
-
-export async function updateTerminal(
-  client: OpencodeClient,
-  ptyId: string,
-  update: { title?: string; size?: { rows: number; cols: number } },
-) {
-  return requireData((await client.pty.update({ ptyID: ptyId, ...update })).data, 'terminal update request');
 }
 
 export async function removeTerminal(client: OpencodeClient, ptyId: string) {

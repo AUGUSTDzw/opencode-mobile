@@ -13,14 +13,14 @@ export type ServerContract = 'v1' | 'v2';
 
 export type PendingPermissionRequest = PermissionRequest;
 
-export type PendingQuestionOption = {
+type PendingQuestionOption = {
   label: string;
   description?: string;
   /** Stable value submitted to the server. V1 uses the label; V2 forms carry an explicit value. */
   value?: string;
 };
 
-export type PendingQuestionWhen = {
+type PendingQuestionWhen = {
   key: string;
   op: 'eq' | 'neq';
   value: string | number | boolean;
@@ -81,7 +81,7 @@ export type ScopedOpencodeClient = OpencodeClient & {
   __opencode: ClientMetadata;
 };
 
-export function joinUrlPath(prefix: string, pathname: string) {
+function joinUrlPath(prefix: string, pathname: string) {
   const normalizedPrefix = prefix === '/' ? '' : prefix.replace(/\/$/, '');
   const normalizedPathname = pathname.startsWith('/') ? pathname : `/${pathname}`;
   return `${normalizedPrefix}${normalizedPathname}`;

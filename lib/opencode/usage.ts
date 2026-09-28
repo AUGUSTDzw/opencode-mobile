@@ -1,11 +1,11 @@
 import type { Model, Part } from '@/lib/opencode/types';
 import type { SessionMessageRecord } from '@/lib/opencode/format';
 
-export type CostStatus = 'recorded' | 'estimated' | 'free' | 'pricing-unavailable';
-export type UsageTotals = { cost: number; inputTokens: number; outputTokens: number; reasoningTokens: number; cacheReadTokens: number; cacheWriteTokens: number; completedSteps: number };
-export type ModelUsage = UsageTotals & { providerId: string; modelId: string; costStatus: CostStatus };
-export type ProviderUsage = UsageTotals & { providerId: string; models: ModelUsage[] };
-export type UsagePricing = Model['cost'];
+type CostStatus = 'recorded' | 'estimated' | 'free' | 'pricing-unavailable';
+type UsageTotals = { cost: number; inputTokens: number; outputTokens: number; reasoningTokens: number; cacheReadTokens: number; cacheWriteTokens: number; completedSteps: number };
+type ModelUsage = UsageTotals & { providerId: string; modelId: string; costStatus: CostStatus };
+type ProviderUsage = UsageTotals & { providerId: string; models: ModelUsage[] };
+type UsagePricing = Model['cost'];
 export type SessionUsage = UsageTotals & { costStatus: CostStatus; providers: ProviderUsage[] };
 
 const EMPTY_TOTALS: UsageTotals = { cacheReadTokens: 0, cacheWriteTokens: 0, completedSteps: 0, cost: 0, inputTokens: 0, outputTokens: 0, reasoningTokens: 0 };
@@ -89,14 +89,6 @@ export function aggregateSessionUsage(messages: SessionMessageRecord[], pricingB
   }
   const costStatus: CostStatus = hasRecordedCost ? 'recorded' : hasEstimatedCost ? 'estimated' : hasUnavailablePricing ? 'pricing-unavailable' : 'free';
   return { ...totals, costStatus, providers: [...providers.values()].sort((a, b) => b.cost - a.cost) };
-}
-
-export function aggregateUsageByProvider(messages: SessionMessageRecord[], pricingByModel?: Record<string, UsagePricing>) {
-  return aggregateSessionUsage(messages, pricingByModel).providers;
-}
-
-export function aggregateUsageByModel(messages: SessionMessageRecord[], pricingByModel?: Record<string, UsagePricing>) {
-  return aggregateUsageByProvider(messages, pricingByModel).flatMap((provider) => provider.models);
 }
 
 export function getLatestAssistantTurnUsage(messages: SessionMessageRecord[], pricingByModel?: Record<string, UsagePricing>) {

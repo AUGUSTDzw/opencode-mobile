@@ -17,7 +17,7 @@ import {
 const ANSI_CSI_PATTERN = new RegExp('\\u001b\\[[0-?]*[ -/]*[@-~]', 'gi');
 const MAX_TERMINAL_OUTPUT_CHARS = 100_000;
 
-export type TerminalConnectionState = 'idle' | 'connecting' | 'connected' | 'error';
+type TerminalConnectionState = 'idle' | 'connecting' | 'connected' | 'error';
 
 export function useTerminalState({
   client,

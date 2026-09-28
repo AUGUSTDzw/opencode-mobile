@@ -7,7 +7,7 @@ import { SETTINGS_STORAGE_KEY } from '@/lib/storage-keys';
 
 const CONNECTION_PASSWORD_STORAGE_KEY = 'opencode-mobile.connection-password';
 
-export type StoredConnectionSettings = Omit<OpencodeConnectionSettings, 'password'>;
+type StoredConnectionSettings = Omit<OpencodeConnectionSettings, 'password'>;
 
 export function withoutConnectionPassword(settings: OpencodeConnectionSettings): StoredConnectionSettings {
   const { password: _password, ...storedSettings } = settings;

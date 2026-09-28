@@ -1,13 +1,13 @@
 import type { Colors } from '@/constants/theme';
 
-export type DiffLine = {
+type DiffLine = {
   kind: 'context' | 'added' | 'removed';
   leftNumber?: number;
   rightNumber?: number;
   text: string;
 };
 
-export type DiffBlock =
+type DiffBlock =
   | { type: 'lines'; lines: DiffLine[] }
   | { type: 'collapsed'; hiddenCount: number; startLine?: number; endLine?: number };
 

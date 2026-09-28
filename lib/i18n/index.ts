@@ -8,7 +8,7 @@ import { resources, TRANSLATION_NAMESPACES } from '@/lib/i18n/resources';
 export { DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES, resolveLanguage } from '@/lib/i18n/languages';
 export type { SupportedLanguage } from '@/lib/i18n/languages';
 
-export function getDeviceLanguageTags(): string[] {
+function getDeviceLanguageTags(): string[] {
   try {
     return getLocales()
       .map((locale) => locale.languageTag)

@@ -1,4 +1,4 @@
-import { createContext, useContext } from 'react';
+import { createContext, useContext, type Context } from 'react';
 
 import type {
   CapabilitiesContextValue,
@@ -28,49 +28,21 @@ export const ConversationContext = createContext<ConversationContextValue | null
 export const TerminalContext = createContext<TerminalContextValue | null>(null);
 export const McpContext = createContext<McpContextValue | null>(null);
 
-function useDomainContext<T>(value: T | null, name: string): T {
+function useDomainValue<T>(context: Context<T | null>, name: string): T {
+  const value = useContext(context);
   if (!value) {
     throw new Error(`${name} must be used inside OpencodeProvider.`);
   }
   return value;
 }
 
-export function useOnboarding() {
-  return useDomainContext(useContext(OnboardingContext), 'useOnboarding');
-}
-
-export function useConnection() {
-  return useDomainContext(useContext(ConnectionContext), 'useConnection');
-}
-
-export function useCapabilities() {
-  return useDomainContext(useContext(CapabilitiesContext), 'useCapabilities');
-}
-
-export function usePreferences() {
-  return useDomainContext(useContext(PreferencesContext), 'usePreferences');
-}
-
-export function useWorkspace() {
-  return useDomainContext(useContext(WorkspaceContext), 'useWorkspace');
-}
-
-export function useSessions() {
-  return useDomainContext(useContext(SessionContext), 'useSessions');
-}
-
-export function useChat() {
-  return useDomainContext(useContext(ChatContext), 'useChat');
-}
-
-export function useConversation() {
-  return useDomainContext(useContext(ConversationContext), 'useConversation');
-}
-
-export function useTerminal() {
-  return useDomainContext(useContext(TerminalContext), 'useTerminal');
-}
-
-export function useMcp() {
-  return useDomainContext(useContext(McpContext), 'useMcp');
-}
+export const useOnboarding = () => useDomainValue(OnboardingContext, 'useOnboarding');
+export const useConnection = () => useDomainValue(ConnectionContext, 'useConnection');
+export const useCapabilities = () => useDomainValue(CapabilitiesContext, 'useCapabilities');
+export const usePreferences = () => useDomainValue(PreferencesContext, 'usePreferences');
+export const useWorkspace = () => useDomainValue(WorkspaceContext, 'useWorkspace');
+export const useSessions = () => useDomainValue(SessionContext, 'useSessions');
+export const useChat = () => useDomainValue(ChatContext, 'useChat');
+export const useConversation = () => useDomainValue(ConversationContext, 'useConversation');
+export const useTerminal = () => useDomainValue(TerminalContext, 'useTerminal');
+export const useMcp = () => useDomainValue(McpContext, 'useMcp');

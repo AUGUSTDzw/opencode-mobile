@@ -129,7 +129,7 @@ export function getSessionSubtitle(session: Session) {
   return `${summary.files} files changed, +${summary.additions} / -${summary.deletions}`;
 }
 
-export function getPrimaryText(parts: Part[]) {
+function getPrimaryText(parts: Part[]) {
   return parts
     .filter((part) => part.type === 'text')
     .map((part) => part.text.trim())

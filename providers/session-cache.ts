@@ -11,7 +11,7 @@ type SessionCacheStorage = PersistenceStorage & Pick<typeof AsyncStorage, 'setIt
 // this at write time, so a future upstream field is never persisted by
 // accident, and sensitive or large fields (share URLs, metadata, tokens,
 // revert diffs) are never written to plain AsyncStorage.
-export type CachedSession = {
+type CachedSession = {
   id: string;
   title: string;
   createdAt: number;
@@ -20,7 +20,7 @@ export type CachedSession = {
 };
 
 // Only the status discriminant is rendered; retry details are dropped.
-export type CachedSessionStatus = { type: 'idle' | 'busy' | 'retry' };
+type CachedSessionStatus = { type: 'idle' | 'busy' | 'retry' };
 
 export const SESSION_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -89,7 +89,7 @@ export function toCachedSession(session: Session): CachedSession {
 // Rebuilds the in-memory Session shape. Fields outside the DTO are absent
 // (matching the v2 adapter, which already omits them) and are reconciled by
 // the next server fetch.
-export function toSessionFromCache(cached: CachedSession): Session {
+function toSessionFromCache(cached: CachedSession): Session {
   return {
     id: cached.id,
     title: cached.title,
