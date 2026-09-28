@@ -2,8 +2,12 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import ts from 'typescript';
 
-const source = await readFile(new URL('../providers/opencode-provider-utils.ts', import.meta.url), 'utf8');
-const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2020 } }).outputText;
+// Stub the preferences alias so the data-URL import does not need the whole
+// preferences module (getInitialMode falls back to the default mode).
+const preferencesStubUri = `data:text/javascript,${encodeURIComponent('export const defaultChatPreferences = { mode: "build" };')}`;
+const source = await readFile(new URL('../providers/opencode-model-selection.ts', import.meta.url), 'utf8');
+const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2020 } })
+  .outputText.replace(/from '@\/providers\/opencode-preferences'/g, `from "${preferencesStubUri}"`);
 const { getConfiguredProviderIds, getInitialModelId, getInitialProviderId, getModelIdForProvider, recordRecentModelId, resolveConfigModelId } = await import(`data:text/javascript,${encodeURIComponent(output)}`);
 const models = [{ id: 'openai/gpt', modelID: 'gpt', providerID: 'openai' }];
 

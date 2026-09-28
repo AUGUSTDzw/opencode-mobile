@@ -15,14 +15,15 @@ import { NativeSelect } from '@/components/ui/native-select';
 import { renderProviderIcon } from '@/components/ui/provider-icon';
 import { Colors, Fonts } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useOpencode } from '@/providers/opencode-provider';
+import { useCapabilities, usePreferences } from '@/providers/opencode-contexts';
 import type { ResponseScope } from '@/providers/opencode-provider-types';
 
 export default function OnboardingPreferencesScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const palette = Colors[useColorScheme() ?? 'light'];
-  const { availableModels, availableProviders, configuredProviders, chatPreferences, updateChatPreferences } = useOpencode();
+  const { availableModels, availableProviders, configuredProviders } = useCapabilities();
+  const { chatPreferences, updateChatPreferences } = usePreferences();
   const providerConfig = useProviderConfiguration();
 
   const responseScopeOptions = RESPONSE_SCOPE_OPTIONS.map((option) => ({

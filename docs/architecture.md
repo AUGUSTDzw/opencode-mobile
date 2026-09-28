@@ -6,7 +6,8 @@ The app uses a simple structural pattern:
 
 - Expo Router provides navigation and screen composition.
 - `OpencodeProvider` owns nearly all domain state and orchestration.
-- Screens are thin and read/write provider state through `useOpencode()`.
+- Screens are thin and read/write provider state through narrow domain hooks
+  (`useChat()`, `useWorkspace()`, `useConnection()`, ...).
 - Service modules under `providers/services/` isolate a small amount of API aggregation logic.
 - `lib/` contains protocol helpers, formatting, notifications, and voice utilities.
 - `components/` contains UI composition only, with very little business logic except local presentation state.
@@ -67,6 +68,15 @@ This file is the application's effective domain layer. It owns:
 
 If this app were reimplemented, this provider would be the main source of truth for required behavior.
 
+Its public contract is split into domain contexts (`providers/opencode-contexts.ts`
++ the `*ContextValue` types): onboarding, connection, capabilities, preferences,
+workspace, sessions, chat, conversation, terminal, and MCP. The provider still
+owns all the state and actions; each domain value is memoized and rendered as its
+own context, so a consumer only re-renders when the domain it reads changes and
+each screen declares its real dependencies instead of pulling from one
+130-member surface. `OpencodeContextValue` remains only as the documented union
+of those domains.
+
 ## Module Map
 
 ### App Shell
@@ -125,9 +135,17 @@ carousel: welcome, connect, workspace, preferences, permissions, and ready.
 - `providers/opencode-provider.tsx`
   Main orchestrator and context source.
 - `providers/opencode-provider-types.ts`
-  Shared public types and constants.
+  Shared public types, the domain context values, and their union.
+- `providers/opencode-contexts.ts`
+  The ten domain contexts and their `use*` hooks.
+- `providers/opencode-preferences.ts`
+  Chat preference shape, defaults, and the derived system prompt.
+- `providers/opencode-capabilities.ts`
+  Server capability flags and the auto-approve permission policy.
+- `providers/opencode-model-selection.ts`
+  Model/agent catalog shapes and pure provider/model selection rules.
 - `providers/opencode-provider-utils.ts`
-  Preference defaults, config helpers, model/provider selection logic, permission config helpers.
+  Small provider-agnostic helpers (project labels, pending-request grouping).
 - `providers/opencode-provider-selectors.ts`
   Derived selectors extracted from the provider body.
 - `providers/use-opencode-persistence.ts`
@@ -140,6 +158,20 @@ carousel: welcome, connect, workspace, preferences, permissions, and ready.
   Keeps device awake during conversation mode.
 - `providers/use-conversation-screen-dim.ts`
   Dims screen during conversation mode.
+- `providers/use-terminal-state.ts`
+  Project-scoped PTY list, connect-token flow, WebSocket replay, and output
+  buffer, composed by the provider so the PTY domain stays self-contained.
+- `providers/use-mcp-state.ts`
+  MCP server status plus its lifecycle actions.
+- `providers/use-worktree-state.ts`
+  Experimental worktree list plus its lifecycle actions.
+
+These domain hooks are composed by `OpencodeProvider`, which stays the single
+orchestrator. Each hook receives the current client (and, when it must call a
+later-defined provider callback, a latest-ref) and exposes its own reset, so the
+provider's project/connection reset composes them instead of inlining state.
+`test:architecture` ratchets the provider size and the public context surface so
+they cannot silently regrow.
 
 ### Services
 
@@ -161,7 +193,7 @@ carousel: welcome, connect, workspace, preferences, permissions, and ready.
 - `lib/opencode/client.ts`
   Normalizes server URL, adds optional basic auth, preserves configured URL path prefixes, probes the server contract, and builds either the OpenCode 1.x SDK client or the V2 adapter.
 - `lib/opencode/v2-client.ts`
-  OpenCode 2.x adapter over `@opencode/client`. Normalizes V2 responses and events back into the app's 1.x-shaped domain types and reports unsupported features explicitly.
+  OpenCode 2.x adapter over `@opencode/client`. Normalizes V2 responses and events back into the app's 1.x-shaped domain types and reports unsupported features explicitly. The V1-shaped client is assembled from per-domain builders (project, session, capabilities, filesystem, VCS, worktree, MCP, PTY, global, interactions) so a protocol change touches one builder.
 - `lib/opencode/format.ts`
   Converts raw message records into transcript entries and helper labels.
 - `lib/opencode/transcript.ts`

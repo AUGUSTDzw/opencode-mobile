@@ -370,6 +370,9 @@ This is important to parity because the chat layout is intentionally dense and h
 - open provider OAuth URLs
 - collect and submit authorization codes for code-based OAuth callbacks
 - wire MCP add/connect/disconnect/enable/disable and OAuth actions to `McpSection`
+- declare every category once in a `SettingsSection` registry (`icon`, `title`,
+  `summary`, `onPress`, `render`); the row list and the overlay both derive from
+  it, so adding a category is a single entry plus its presentational component
 
 ### Presentation
 
@@ -645,7 +648,7 @@ Used primarily by tab icons.
 
 - central domain controller for almost all app behavior
 
-The effective public UI contract is exposed through `useOpencode()` and typed by `OpencodeContextValue`.
+The public UI contract is exposed through domain hooks from `providers/opencode-contexts.ts` (`useOnboarding`, `useConnection`, `useCapabilities`, `usePreferences`, `useWorkspace`, `useSessions`, `useChat`, `useConversation`, `useTerminal`, `useMcp`), each typed by its matching `*ContextValue`. `OpencodeContextValue` is their documented union.
 
 ## `providers/opencode-provider-types.ts`
 
@@ -660,9 +663,9 @@ Most important exported contracts:
 - `ProviderOption`
 - `ProviderAuthMethod`
 - `OpencodeProject`
-- `OpencodeContextValue`
+- the `*ContextValue` domain types and their union `OpencodeContextValue`
 
-The context includes active/archived session lifecycle, commands, workspace editing/worktrees, MCP management, PTY terminal state/actions, diagnostics, global stream status, and OAuth callback completion in addition to chat state.
+The domain values cover active/archived session lifecycle, commands, workspace editing/worktrees, MCP management, PTY terminal state/actions, diagnostics, global stream status, and OAuth callback completion in addition to chat state.
 
 ## `providers/opencode-provider-selectors.ts`
 
@@ -670,14 +673,33 @@ The context includes active/archived session lifecycle, commands, workspace edit
 
 - derive current session-scoped interactions, configured providers, transcript activity label, conversation status label, and session previews
 
+## `providers/opencode-preferences.ts`
+
+### Responsibility
+
+- define the chat preference shape and defaults
+- build the reasoning/response-style system prompt
+
+## `providers/opencode-capabilities.ts`
+
+### Responsibility
+
+- map the resolved contract to server capability flags
+- read and merge the auto-approve permission config
+
+## `providers/opencode-model-selection.ts`
+
+### Responsibility
+
+- define model/agent catalog shapes
+- map agents and validate stored/configured provider and model choices
+
 ## `providers/opencode-provider-utils.ts`
 
 ### Responsibility
 
-- define preference defaults
-- map agents/models/providers
-- generate system prompt hints
-- merge permission config
+- derive project labels
+- group pending interactions by session
 
 ## `providers/services/session-service.ts`
 

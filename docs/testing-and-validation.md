@@ -45,6 +45,7 @@ From `TESTING.md`, those gates include:
   - `npm run test:notifications`
   - `npm run test:notifications-background`
   - `npm run test:onboarding`
+  - `npm run test:architecture`
 - `npm run test:fake-server:self`
 - Playwright E2E flow tests against the fake OpenCode server
 
@@ -62,7 +63,16 @@ the pure language-resolution helper picks the preference, then the device tag,
 then English. It also verifies that the generated `lib/i18n/resources.ts`
 registry matches the locale folders, that `SUPPORTED_LANGUAGES` and the folders
 agree, and that `app.config.ts` exposes the same `supportedLocales`. Regenerate
-the registry with `npm run gen:i18n`.
+the registry with `npm run gen:i18n`. During local iteration,
+`npm run test:i18n:loose` (`--allow-missing`) tolerates keys that a non-English
+locale has not translated yet (they fall back to English at runtime); CI runs the
+strict form and enforces full parity.
+
+The `test:architecture` suite is a ratchet on the documented layering: the
+provider file size, the combined domain-context surface, and a rule that
+`app/` and `components/` never call the network directly. It fails with a
+pointed message when a limit is outgrown, so the fix is to extract a domain or
+move code to the right layer rather than raise the number.
 
 ## Fake OpenCode Server
 

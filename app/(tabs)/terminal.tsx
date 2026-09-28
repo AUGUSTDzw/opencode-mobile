@@ -28,7 +28,7 @@ import { OverlaySheet } from '@/components/ui/overlay-sheet';
 import { SwipeRow } from '@/components/ui/swipe-row';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import type { Pty } from '@/lib/opencode/types';
-import { useOpencode } from '@/providers/opencode-provider';
+import { useConnection, useTerminal, useWorkspace } from '@/providers/opencode-contexts';
 
 export default function TerminalScreen() {
   const { t } = useTranslation();
@@ -37,12 +37,11 @@ export default function TerminalScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
   const outputRef = useRef<ScrollView>(null);
+  const { activeProject } = useWorkspace();
+  const { connect, connection } = useConnection();
   const {
-    activeProject,
     activeTerminalId,
     closeTerminal,
-    connect,
-    connection,
     createTerminal,
     openTerminal,
     refreshTerminals,
@@ -50,7 +49,7 @@ export default function TerminalScreen() {
     terminalConnection,
     terminalOutput,
     terminals,
-  } = useOpencode();
+  } = useTerminal();
   const [line, setLine] = useState('');
   const [busyId, setBusyId] = useState<string>();
   const [isCreating, setIsCreating] = useState(false);

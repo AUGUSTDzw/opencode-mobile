@@ -13,7 +13,7 @@ Because a probe can still misclassify a hybrid server, `connect()` tries the det
 
 The V2 adapter is best-effort and does not cover every 1.x feature. Unsupported on V2: session share/unshare, archive/restore, title summarization (`summarize`), `file.status`, `vcs.apply`, `find.text`/`find.symbol`, LSP and formatter diagnostics, and remote-MCP OAuth start/callback. These degrade to empty results or explicit errors. Server-owned session todos are not an endpoint on V2, but the adapter derives the same plan from the transcript's `todowrite` tool parts, so the todo surface is available on both contracts.
 
-`getServerCapabilities(contract)` in `providers/opencode-provider-utils.ts` turns the resolved contract into UI-facing flags (`share`, `archive`, `todos`, `summarize`, `fileSave`, `fileStatus`, `lsp`, `formatter`, `mcpOAuth`, `configWrite`, `worktreeReset`). The provider exposes them as `serverCapabilities`, and screens/components hide the corresponding actions on V2 instead of letting them fail at tap time. All flags are `true` for V1; `todos` is also `true` for V2 because it is derived client-side.
+`getServerCapabilities(contract)` in `providers/opencode-capabilities.ts` turns the resolved contract into UI-facing flags (`share`, `archive`, `todos`, `summarize`, `fileSave`, `fileStatus`, `lsp`, `formatter`, `mcpOAuth`, `configWrite`, `worktreeReset`). The provider exposes them as `serverCapabilities`, and screens/components hide the corresponding actions on V2 instead of letting them fail at tap time. All flags are `true` for V1; `todos` is also `true` for V2 because it is derived client-side.
 
 The authoritative implementation is:
 

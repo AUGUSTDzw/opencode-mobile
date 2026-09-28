@@ -11,21 +11,17 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { getNormalizedServerUrl } from '@/lib/opencode/client';
 import { getVoiceInputPermissionAsync, type VoiceInputPermission } from '@/lib/voice/permissions';
-import { useOpencode } from '@/providers/opencode-provider';
+import { useCapabilities, useConnection, useOnboarding, usePreferences, useWorkspace } from '@/providers/opencode-contexts';
 
 export default function OnboardingReadyScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const palette = Colors[useColorScheme() ?? 'light'];
-  const {
-    activeProject,
-    availableModels,
-    chatPreferences,
-    settings,
-    onboardingActive,
-    completeOnboarding,
-    stopOnboardingReview,
-  } = useOpencode();
+  const { activeProject } = useWorkspace();
+  const { availableModels } = useCapabilities();
+  const { chatPreferences } = usePreferences();
+  const { settings } = useConnection();
+  const { onboardingActive, completeOnboarding, stopOnboardingReview } = useOnboarding();
   const notifications = useNotificationSetup();
   const [voice, setVoice] = useState<VoiceInputPermission>();
   const [isFinishing, setIsFinishing] = useState(false);

@@ -20,7 +20,7 @@ import { TextInput } from '@/components/ui/text-input';
 import { TopTab } from '@/components/chat/chat-controls';
 import { WorkspacePicker } from '@/components/ui/workspace-picker';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useOpencode } from '@/providers/opencode-provider';
+import { useConnection, useWorkspace } from '@/providers/opencode-contexts';
 
 export default function WorkspaceScreen() {
   const { t } = useTranslation();
@@ -29,17 +29,16 @@ export default function WorkspaceScreen() {
   const compact = width < 700;
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
+  const { connection, serverCapabilities } = useConnection();
   const {
     activeProject,
     addWorkspace,
-    connection,
     currentProjectPath,
     isRefreshingWorkspaceCatalog,
     projects,
     refreshWorkspaceCatalog,
     refreshWorkspaceStatus,
     selectProject,
-    serverCapabilities,
     serverRootPath,
     searchWorkspaceFiles,
     openWorkspaceFile,
@@ -53,7 +52,7 @@ export default function WorkspaceScreen() {
     createWorktree,
     resetWorktree,
     removeWorktree,
-  } = useOpencode();
+  } = useWorkspace();
   const [activePanel, setActivePanel] = useState<'files' | 'tools'>('files');
   const [workspacePickerVisible, setWorkspacePickerVisible] = useState(false);
   const [fileQuery, setFileQuery] = useState('');

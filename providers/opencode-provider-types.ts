@@ -27,14 +27,13 @@ import type {
 import type { Diagnostics } from '@/providers/services/diagnostics-service';
 import type { SessionMessageRecord, TranscriptEntry } from '@/lib/opencode/format';
 import type { SessionUsage } from '@/lib/opencode/usage';
+import type { AgentOption as ProviderAgentOption, ModelOption as ProviderModelOption } from '@/providers/opencode-model-selection';
 import type {
-  AgentOption as ProviderAgentOption,
   ChatPreferences as ProviderChatPreferences,
-  ModelOption as ProviderModelOption,
   ReasoningLevel as ProviderReasoningLevel,
   ResponseScope as ProviderResponseScope,
-  ServerCapabilities as ProviderServerCapabilities,
-} from '@/providers/opencode-provider-utils';
+} from '@/providers/opencode-preferences';
+import type { ServerCapabilities as ProviderServerCapabilities } from '@/providers/opencode-capabilities';
 
 export type AgentOption = ProviderAgentOption;
 export type ChatPreferences = ProviderChatPreferences;
@@ -123,13 +122,19 @@ export type WorkspaceCatalog = {
   serverProjects: Project[];
 };
 
-export type OpencodeContextValue = {
+// Domain-scoped context values. Consumers subscribe to the narrowest value they
+// need (`useWorkspace()`, `useChat()`, ...) instead of one 130-member surface,
+// so unrelated state changes do not re-render every screen.
+export type OnboardingContextValue = {
   isHydrated: boolean;
   onboardingCompleted: boolean;
   onboardingActive: boolean;
   completeOnboarding: () => Promise<void>;
   startOnboardingReview: () => void;
   stopOnboardingReview: () => void;
+};
+
+export type ConnectionContextValue = {
   settings: OpencodeConnectionSettings;
   updateSettings: (patch: Partial<OpencodeConnectionSettings>) => void;
   switchConnection: (
@@ -138,18 +143,59 @@ export type OpencodeContextValue = {
   ) => Promise<ConnectionState>;
   connection: ConnectionState;
   serverCapabilities: ServerCapabilities;
+  connect: () => Promise<ConnectionState>;
+  diagnostics?: Diagnostics;
+  refreshDiagnostics: () => Promise<void>;
+  eventStreamStatus: 'idle' | 'connecting' | 'connected' | 'error';
+};
+
+export type CapabilitiesContextValue = {
+  currentConfig?: Config;
+  availableProviders: ProviderOption[];
+  providerAuthMethodsById: Record<string, ProviderAuthMethod[]>;
+  configuredProviders: ProviderOption[];
+  availableModels: ModelOption[];
+  availableAgents: AgentOption[];
+  configureProvider: (providerId: string) => Promise<void>;
+  completeAutomaticProviderOAuth: (providerId: string) => Promise<void>;
+  setProviderAuth: (providerId: string, values: Record<string, string>) => Promise<void>;
+  removeProvider: (providerId: string) => Promise<void>;
+  startProviderOAuth: (providerId: string, methodIndex: number, inputs?: Record<string, string>) => Promise<{ url: string; instructions?: string; method: 'auto' | 'code' }>;
+  completeProviderOAuth: (providerId: string, methodIndex: number, code: string) => Promise<void>;
+};
+
+export type PreferencesContextValue = {
+  chatPreferences: ChatPreferences;
+  updateChatPreferences: (patch: Partial<ChatPreferences>) => void;
+};
+
+export type WorkspaceContextValue = {
   projects: OpencodeProject[];
   activeProjectPath?: string;
   activeProject?: OpencodeProject;
   selectProject: (path: string) => void;
   addWorkspace: (directory: string) => Promise<string>;
-  openSessionInProject: (projectPath: string, sessionId: string, connectionScope?: string) => Promise<void>;
   serverProjects: Project[];
   currentProjectPath?: string;
   serverRootPath?: string;
   isRefreshingWorkspaceCatalog: boolean;
   refreshWorkspaceCatalog: (silent?: boolean) => Promise<void>;
   refreshWorkspaceStatus: () => Promise<void>;
+  workspaceFiles: string[];
+  workspaceFileStatuses: File[];
+  selectedWorkspaceFile?: { path: string; content: FileContent };
+  vcsInfo?: VcsInfo;
+  searchWorkspaceFiles: (query: string) => Promise<void>;
+  openWorkspaceFile: (path: string) => Promise<void>;
+  saveWorkspaceFile: (path: string, expectedContent: string, content: string) => Promise<void>;
+  worktrees: (string | Worktree)[];
+  refreshWorktrees: () => Promise<void>;
+  createWorktree: (name?: string, startCommand?: string) => Promise<void>;
+  resetWorktree: (directory: string) => Promise<void>;
+  removeWorktree: (directory: string) => Promise<void>;
+};
+
+export type SessionContextValue = {
   sessions: Session[];
   archivedSessions: GlobalSession[];
   sessionStatuses: Record<string, SessionStatus>;
@@ -159,6 +205,27 @@ export type OpencodeContextValue = {
   clearFavoriteSession: (sessionId: string) => void;
   currentSessionId?: string;
   activeSession?: Session;
+  sessionPreviewById: Record<string, string>;
+  isRefreshingSessions: boolean;
+  refreshSessions: (silent?: boolean) => Promise<void>;
+  openSession: (sessionId: string) => Promise<void>;
+  ensureActiveSession: () => Promise<string | undefined>;
+  openDeepLinkSession: (target: SessionDeepLinkTarget, signal?: AbortSignal) => Promise<{ ok: boolean; error?: string }>;
+  createSession: (title?: string) => Promise<Session>;
+  deleteSession: (sessionId: string) => Promise<void>;
+  archiveSession: (sessionId: string) => Promise<void>;
+  restoreSession: (sessionId: string) => Promise<void>;
+  refreshArchivedSessions: () => Promise<void>;
+  renameSession: (sessionId: string, title: string) => Promise<void>;
+  forkSession: (sessionId: string, messageId?: string) => Promise<Session>;
+  shareSession: (sessionId: string) => Promise<Session>;
+  unshareSession: (sessionId: string) => Promise<Session>;
+  revertSession: (sessionId: string, messageId: string) => Promise<void>;
+  unrevertSession: (sessionId: string) => Promise<void>;
+  openSessionInProject: (projectPath: string, sessionId: string, connectionScope?: string) => Promise<void>;
+};
+
+export type ChatContextValue = {
   currentMessages: SessionMessageRecord[];
   currentTranscript: TranscriptEntry[];
   currentUsage: SessionUsage;
@@ -173,28 +240,18 @@ export type OpencodeContextValue = {
   currentTodos: Todo[];
   currentPendingPermissions: PendingPermissionRequest[];
   currentPendingQuestions: PendingQuestionRequest[];
-  sessionPreviewById: Record<string, string>;
-  isRefreshingSessions: boolean;
   isRefreshingMessages: boolean;
   isRefreshingDiffs: boolean;
   isBootstrappingChat: boolean;
-  currentConfig?: Config;
-  availableProviders: ProviderOption[];
-  providerAuthMethodsById: Record<string, ProviderAuthMethod[]>;
-  configuredProviders: ProviderOption[];
-  availableModels: ModelOption[];
-  availableAgents: AgentOption[];
-  chatPreferences: ChatPreferences;
-  updateChatPreferences: (patch: Partial<ChatPreferences>) => void;
-  conversation: ConversationState;
-  clearConversationFeedback: () => void;
-  toggleConversationMode: () => Promise<void>;
-  configureProvider: (providerId: string) => Promise<void>;
-  completeAutomaticProviderOAuth: (providerId: string) => Promise<void>;
-  setProviderAuth: (providerId: string, values: Record<string, string>) => Promise<void>;
-  removeProvider: (providerId: string) => Promise<void>;
-  startProviderOAuth: (providerId: string, methodIndex: number, inputs?: Record<string, string>) => Promise<{ url: string; instructions?: string; method: 'auto' | 'code' }>;
-  completeProviderOAuth: (providerId: string, methodIndex: number, code: string) => Promise<void>;
+  refreshCurrentSession: (silent?: boolean) => Promise<void>;
+  refreshCurrentTodos: (silent?: boolean) => Promise<void>;
+  replyToPermission: (requestId: string, reply: 'once' | 'always' | 'reject') => Promise<void>;
+  replyToQuestion: (requestId: string, answers: PendingQuestionAnswer[]) => Promise<void>;
+  rejectQuestion: (requestId: string) => Promise<void>;
+  commands: Command[];
+  executeCommand: (sessionId: string, command: string, args: string) => Promise<void>;
+  sendPrompt: (sessionId: string, prompt: string, attachments?: { uri: string; mime?: string; filename?: string }[]) => Promise<boolean>;
+  abortSession: (sessionId: string) => Promise<void>;
   setAutoApprove: (enabled: boolean) => Promise<void>;
   sendingState: {
     sessionId?: string;
@@ -202,51 +259,15 @@ export type OpencodeContextValue = {
   };
   promptError?: { message: string; occurredAt: number; sessionId?: string };
   clearPromptError: () => void;
-  connect: () => Promise<ConnectionState>;
-  refreshSessions: (silent?: boolean) => Promise<void>;
-  openSession: (sessionId: string) => Promise<void>;
-  refreshCurrentSession: (silent?: boolean) => Promise<void>;
-  refreshCurrentTodos: (silent?: boolean) => Promise<void>;
-  ensureActiveSession: () => Promise<string | undefined>;
-  openDeepLinkSession: (target: SessionDeepLinkTarget, signal?: AbortSignal) => Promise<{ ok: boolean; error?: string }>;
-  createSession: (title?: string) => Promise<Session>;
-  deleteSession: (sessionId: string) => Promise<void>;
-  archiveSession: (sessionId: string) => Promise<void>;
-  restoreSession: (sessionId: string) => Promise<void>;
-  refreshArchivedSessions: () => Promise<void>;
-  renameSession: (sessionId: string, title: string) => Promise<void>;
-  forkSession: (sessionId: string, messageId?: string) => Promise<Session>;
-  shareSession: (sessionId: string) => Promise<Session>;
-  unshareSession: (sessionId: string) => Promise<Session>;
-  revertSession: (sessionId: string, messageId: string) => Promise<void>;
-  unrevertSession: (sessionId: string) => Promise<void>;
-  sendPrompt: (sessionId: string, prompt: string, attachments?: { uri: string; mime?: string; filename?: string }[]) => Promise<boolean>;
-  abortSession: (sessionId: string) => Promise<void>;
-  replyToPermission: (requestId: string, reply: 'once' | 'always' | 'reject') => Promise<void>;
-  replyToQuestion: (requestId: string, answers: PendingQuestionAnswer[]) => Promise<void>;
-  rejectQuestion: (requestId: string) => Promise<void>;
-  commands: Command[];
-  executeCommand: (sessionId: string, command: string, args: string) => Promise<void>;
-  workspaceFiles: string[];
-  workspaceFileStatuses: File[];
-  selectedWorkspaceFile?: { path: string; content: FileContent };
-  vcsInfo?: VcsInfo;
-  searchWorkspaceFiles: (query: string) => Promise<void>;
-  openWorkspaceFile: (path: string) => Promise<void>;
-  saveWorkspaceFile: (path: string, expectedContent: string, content: string) => Promise<void>;
-  worktrees: (string | Worktree)[];
-  refreshWorktrees: () => Promise<void>;
-  createWorktree: (name?: string, startCommand?: string) => Promise<void>;
-  resetWorktree: (directory: string) => Promise<void>;
-  removeWorktree: (directory: string) => Promise<void>;
-  mcpStatuses: Record<string, McpStatus>;
-  refreshMcpServers: () => Promise<void>;
-  addMcpServer: (name: string, config: McpLocalConfig | McpRemoteConfig) => Promise<void>;
-  connectMcpServer: (name: string) => Promise<void>;
-  disconnectMcpServer: (name: string) => Promise<void>;
-  setMcpServerEnabled: (name: string, enabled: boolean) => Promise<void>;
-  startMcpOAuth: (name: string) => Promise<string>;
-  completeMcpOAuth: (name: string, code: string) => Promise<void>;
+};
+
+export type ConversationContextValue = {
+  conversation: ConversationState;
+  clearConversationFeedback: () => void;
+  toggleConversationMode: () => Promise<void>;
+};
+
+export type TerminalContextValue = {
   terminals: Pty[];
   terminalShells: PtyShellsResponse;
   activeTerminalId?: string;
@@ -257,7 +278,28 @@ export type OpencodeContextValue = {
   openTerminal: (ptyId: string) => Promise<void>;
   sendTerminalInput: (input: string) => void;
   closeTerminal: (ptyId: string) => Promise<void>;
-  diagnostics?: Diagnostics;
-  refreshDiagnostics: () => Promise<void>;
-  eventStreamStatus: 'idle' | 'connecting' | 'connected' | 'error';
 };
+
+export type McpContextValue = {
+  mcpStatuses: Record<string, McpStatus>;
+  refreshMcpServers: () => Promise<void>;
+  addMcpServer: (name: string, config: McpLocalConfig | McpRemoteConfig) => Promise<void>;
+  connectMcpServer: (name: string) => Promise<void>;
+  disconnectMcpServer: (name: string) => Promise<void>;
+  setMcpServerEnabled: (name: string, enabled: boolean) => Promise<void>;
+  startMcpOAuth: (name: string) => Promise<string>;
+  completeMcpOAuth: (name: string, code: string) => Promise<void>;
+};
+
+// The union of every domain, kept for documentation and the architecture
+// ratchet. No runtime context exposes this shape.
+export type OpencodeContextValue = OnboardingContextValue &
+  ConnectionContextValue &
+  CapabilitiesContextValue &
+  PreferencesContextValue &
+  WorkspaceContextValue &
+  SessionContextValue &
+  ChatContextValue &
+  ConversationContextValue &
+  TerminalContextValue &
+  McpContextValue;

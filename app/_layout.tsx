@@ -12,7 +12,8 @@ import { getPaperTheme } from '@/constants/paper-theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { installGlobalErrorHandler } from '@/lib/error-reporting';
 import '@/lib/i18n';
-import { OpencodeProvider, useOpencode } from '@/providers/opencode-provider';
+import { useOnboarding } from '@/providers/opencode-contexts';
+import { OpencodeProvider } from '@/providers/opencode-provider';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -65,7 +66,7 @@ export default function RootLayout() {
 function RootNavigator() {
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
-  const { isHydrated, onboardingCompleted, onboardingActive } = useOpencode();
+  const { isHydrated, onboardingCompleted, onboardingActive } = useOnboarding();
 
   useEffect(() => {
     if (isHydrated) {

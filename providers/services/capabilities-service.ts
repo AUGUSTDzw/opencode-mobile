@@ -1,6 +1,6 @@
 import type { OpencodeClient, ProviderListResponse } from '@opencode-ai/sdk/v2/client';
 
-import { getConfiguredProviderIds, toAgentOption, type ModelOption } from '@/providers/opencode-provider-utils';
+import { getConfiguredProviderIds, toAgentOption, type ModelOption } from '@/providers/opencode-model-selection';
 
 type DiscoveredModel = ProviderListResponse['all'][number]['models'][string];
 const INPUT_MODALITIES: ModelOption['inputModalities'] = ['text', 'audio', 'image', 'video', 'pdf'];

@@ -13,19 +13,20 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { formatRelativeTime, getSessionSubtitle } from '@/lib/opencode/format';
 import type { Session } from '@/lib/opencode/types';
-import { useOpencode } from '@/providers/opencode-provider';
+import { useConnection, usePreferences, useSessions, useWorkspace } from '@/providers/opencode-contexts';
 
 export function ChatLibrary({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { t } = useTranslation();
   const palette = Colors[useColorScheme() ?? 'light'];
+  const { activeProject, addWorkspace, projects, refreshWorkspaceCatalog, selectProject } = useWorkspace();
   const {
-    activeProject, addWorkspace, archivedSessions, archiveSession, chatPreferences, clearFavoriteSession,
-    createSession, currentSessionId, deleteSession, favoriteSessions, isFavoriteSession,
-    openSession, openSessionInProject, projects, refreshArchivedSessions, refreshWorkspaceCatalog,
-    renameSession, restoreSession, selectProject, serverCapabilities, sessionPreviewById,
-    sessionStatuses, sessions, shareSession, toggleFavoriteSession, unshareSession,
-    updateChatPreferences,
-  } = useOpencode();
+    archivedSessions, archiveSession, clearFavoriteSession, createSession, currentSessionId, deleteSession,
+    favoriteSessions, isFavoriteSession, openSession, openSessionInProject, refreshArchivedSessions,
+    renameSession, restoreSession, sessionPreviewById, sessionStatuses, sessions, shareSession,
+    toggleFavoriteSession, unshareSession,
+  } = useSessions();
+  const { chatPreferences, updateChatPreferences } = usePreferences();
+  const { serverCapabilities } = useConnection();
   const [workspaceVisible, setWorkspaceVisible] = useState(false);
   const [query, setQuery] = useState('');
   const [section, setSection] = useState<'active' | 'archived'>('active');

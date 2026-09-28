@@ -5,7 +5,7 @@ import { Platform } from 'react-native';
 import { getConnectionPassword } from '@/lib/connection-password';
 import { getConnectionScope, type ConnectionIdentity } from '@/lib/connection-scope';
 import { CONNECTION_PROFILES_STORAGE_KEY, SETTINGS_STORAGE_KEY } from '@/lib/storage-keys';
-import type { ChatPreferences } from '@/providers/opencode-provider-utils';
+import type { ChatPreferences } from '@/providers/opencode-preferences';
 
 // Saved connection metadata is non-secret and lives in AsyncStorage. Passwords
 // are stored per profile in SecureStore and are never part of this model.

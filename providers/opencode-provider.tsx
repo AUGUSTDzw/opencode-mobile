@@ -6,22 +6,14 @@ import type {
   FileContent,
   FileDiff,
   GlobalSession,
-  McpLocalConfig,
-  McpRemoteConfig,
-  McpStatus,
   Project,
-  Pty,
-  PtyShellsResponse,
   Session,
   SessionStatus,
   Todo,
   VcsInfo,
-  Worktree,
 } from '@/lib/opencode/types';
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -81,23 +73,19 @@ import {
   stopWorkingSoundAsync,
   unloadWorkingSoundAsync,
 } from '@/lib/voice/working-sound';
+import { getServerCapabilities, isAutoApproveEnabled, mergePermissionConfig } from '@/providers/opencode-capabilities';
 import {
-  buildSystemPrompt,
-  defaultChatPreferences,
   getConfiguredProviderIds,
   getEnabledModelIds,
   getInitialMode,
   getInitialModelId,
   getInitialProviderId,
   getModelIdForProvider,
-  getProjectLabel,
   getSelectedModelParts,
-  getServerCapabilities,
-  groupPendingRequestsBySession,
-  isAutoApproveEnabled,
-  mergePermissionConfig,
   recordRecentModelId,
-} from '@/providers/opencode-provider-utils';
+} from '@/providers/opencode-model-selection';
+import { buildSystemPrompt, defaultChatPreferences } from '@/providers/opencode-preferences';
+import { getProjectLabel, groupPendingRequestsBySession } from '@/providers/opencode-provider-utils';
 import {
   getConfiguredProviders,
   getConversationStatusLabel,
@@ -112,20 +100,42 @@ import {
   CONVERSATION_LISTENING_RESTART_MS,
   FAVORITE_SESSIONS_MAX,
   type AgentOption,
+  type CapabilitiesContextValue,
+  type ChatContextValue,
   type ChatPreferences,
+  type ConnectionContextValue,
   type ConnectionState,
+  type ConversationContextValue,
   type ConversationPhase,
+  type ConversationState,
   type DiffScope,
   type DiffTurn,
   type FavoriteSession,
+  type McpContextValue,
   type ModelOption,
-  type OpencodeContextValue,
+  type OnboardingContextValue,
   type OpencodeProject,
+  type PreferencesContextValue,
   type ProviderAuthMethod,
   type ProviderOption,
+  type SessionContextValue,
   type SessionDeepLinkTarget,
+  type TerminalContextValue,
   type WorkspaceCatalog,
+  type WorkspaceContextValue,
 } from '@/providers/opencode-provider-types';
+import {
+  CapabilitiesContext,
+  ChatContext,
+  ConnectionContext,
+  ConversationContext,
+  McpContext,
+  OnboardingContext,
+  PreferencesContext,
+  SessionContext,
+  TerminalContext,
+  WorkspaceContext,
+} from '@/providers/opencode-contexts';
 import { hydrateSessionCache, persistSessionCache } from '@/providers/session-cache';
 import {
   CURRENT_ONBOARDING_VERSION,
@@ -133,7 +143,10 @@ import {
 } from '@/providers/onboarding-state';
 import { useConversationKeepAwake } from '@/providers/use-conversation-keep-awake';
 import { useConversationScreenDim } from '@/providers/use-conversation-screen-dim';
+import { useMcpState } from '@/providers/use-mcp-state';
 import { useOpencodePersistence } from '@/providers/use-opencode-persistence';
+import { useTerminalState } from '@/providers/use-terminal-state';
+import { useWorktreeState } from '@/providers/use-worktree-state';
 import {
   loadWorkspaceCatalog as svcLoadWorkspaceCatalog,
   archiveSession as svcArchiveSession,
@@ -157,33 +170,12 @@ import {
 import { loadDiagnostics, type Diagnostics } from '@/providers/services/diagnostics-service';
 import {
   applyVcsPatch,
-  createWorktree as svcCreateWorktree,
   findFiles,
   getFileStatus,
   getVcsDiff as svcGetVcsDiff,
   getVcsInfo,
-  listWorktrees as svcListWorktrees,
   readFile,
-  removeWorktree as svcRemoveWorktree,
-  resetWorktree as svcResetWorktree,
 } from '@/providers/services/workspace-service';
-import {
-  addMcpServer as svcAddMcpServer,
-  completeMcpOAuth as svcCompleteMcpOAuth,
-  connectMcpServer as svcConnectMcpServer,
-  disconnectMcpServer as svcDisconnectMcpServer,
-  getMcpStatus,
-  setMcpServerEnabled as svcSetMcpServerEnabled,
-  startMcpOAuth as svcStartMcpOAuth,
-} from '@/providers/services/mcp-service';
-import {
-  createTerminal as svcCreateTerminal,
-  createTerminalConnectToken,
-  getTerminalWebSocketUrl,
-  listShells,
-  listTerminals,
-  removeTerminal as svcRemoveTerminal,
-} from '@/providers/services/terminal-service';
 
 export type {
   AgentOption,
@@ -202,9 +194,6 @@ export type {
   ReasoningLevel,
   ResponseScope,
 } from '@/providers/opencode-provider-types';
-
-const OpencodeContext = createContext<OpencodeContextValue | null>(null);
-const ANSI_CSI_PATTERN = new RegExp('\\u001b\\[[0-?]*[ -/]*[@-~]', 'gi');
 
 // Foreground notification tracking for prompts sent in this app session. Keyed
 // by connection scope + session ID so switching servers cannot complete or
@@ -279,13 +268,6 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
   const [selectedWorkspaceFile, setSelectedWorkspaceFile] = useState<{ path: string; content: FileContent }>();
   const [vcsInfo, setVcsInfo] = useState<VcsInfo>();
   const [diagnostics, setDiagnostics] = useState<Diagnostics>();
-  const [worktrees, setWorktrees] = useState<(string | Worktree)[]>([]);
-  const [mcpStatuses, setMcpStatuses] = useState<Record<string, McpStatus>>({});
-  const [terminals, setTerminals] = useState<Pty[]>([]);
-  const [terminalShells, setTerminalShells] = useState<PtyShellsResponse>([]);
-  const [activeTerminalId, setActiveTerminalId] = useState<string>();
-  const [terminalOutput, setTerminalOutput] = useState('');
-  const [terminalConnection, setTerminalConnection] = useState<'idle' | 'connecting' | 'connected' | 'error'>('idle');
 
   // Stable, password-free identity for the configured server + user. Every
   // piece of server-derived persisted state (session caches, last session,
@@ -326,9 +308,10 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
   const sessionRefreshOptionsRef = useRef<Record<string, { messages?: boolean; diff?: boolean; todos?: boolean; sessions?: boolean }>>({});
   const diffScopeBySessionRef = useRef<Record<string, DiffScope>>({});
   const selectedDiffMessageBySessionRef = useRef<Record<string, string | undefined>>({});
-  const terminalSocketRef = useRef<WebSocket | undefined>(undefined);
-  const terminalCursorByIdRef = useRef<Record<string, string>>({});
-  const terminalOpenGenerationRef = useRef(0);
+  // Latest-ref holders for callbacks that are defined after the domain hooks
+  // below. The hooks only read them from event handlers, never during render.
+  const refreshWorkspaceCatalogRef = useRef<(silent?: boolean) => Promise<void>>(async () => undefined);
+  const refreshChatCapabilitiesRef = useRef<() => Promise<void>>(async () => undefined);
   settingsRef.current = settings;
   chatPreferencesRef.current = chatPreferences;
   connectionScopeRef.current = connectionScope;
@@ -439,6 +422,55 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
     [],
   );
 
+  const {
+    terminals,
+    terminalShells,
+    activeTerminalId,
+    terminalOutput,
+    terminalConnection,
+    refreshTerminals,
+    openTerminal,
+    createTerminal,
+    sendTerminalInput,
+    closeTerminal,
+    resetTerminal,
+  } = useTerminalState({
+    client,
+    directory: activeProjectPath || '',
+    isCurrentClient,
+    serverContract,
+    serverUrl: settings.serverUrl,
+  });
+
+  const {
+    worktrees,
+    refreshWorktrees,
+    createWorktree,
+    resetWorktree,
+    removeWorktree,
+    resetWorktrees,
+  } = useWorktreeState({
+    client,
+    isCurrentClient,
+    refreshWorkspaceCatalog: (silent) => refreshWorkspaceCatalogRef.current(silent),
+  });
+
+  const {
+    mcpStatuses,
+    refreshMcpServers,
+    addMcpServer,
+    connectMcpServer,
+    disconnectMcpServer,
+    setMcpServerEnabled,
+    startMcpOAuth,
+    completeMcpOAuth,
+    resetMcpState,
+  } = useMcpState({
+    client,
+    isCurrentClient,
+    refreshChatCapabilities: () => refreshChatCapabilitiesRef.current(),
+  });
+
   const clearProjectState = useCallback(() => {
     bootstrapPromiseRef.current = null;
     bootstrapTokenRef.current = undefined;
@@ -467,18 +499,10 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
     setWorkspaceFileStatuses([]);
     setSelectedWorkspaceFile(undefined);
     setVcsInfo(undefined);
-    setWorktrees([]);
-    setMcpStatuses({});
-    setTerminals([]);
-    setTerminalShells([]);
-    setActiveTerminalId(undefined);
-    setTerminalOutput('');
-    setTerminalConnection('idle');
-    terminalSocketRef.current?.close();
-    terminalSocketRef.current = undefined;
-    terminalCursorByIdRef.current = {};
-    terminalOpenGenerationRef.current += 1;
-  }, []);
+    resetMcpState();
+    resetTerminal();
+    resetWorktrees();
+  }, [resetMcpState, resetTerminal, resetWorktrees]);
 
   // browseServerPath stub removed
 
@@ -523,6 +547,7 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
     },
     [loadWorkspaceCatalog],
   );
+  refreshWorkspaceCatalogRef.current = refreshWorkspaceCatalog;
 
   // Paint the cached session list for the active project on boot and on every
   // project switch; the regular refresh reconciles once the server answers.
@@ -822,6 +847,7 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
       };
     });
   }, [activeProjectPath, client, isCurrentClient]);
+  refreshChatCapabilitiesRef.current = refreshChatCapabilities;
 
   const openSession = useCallback(
     async (sessionId: string) => {
@@ -1094,163 +1120,6 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
       }
     }
   }, [client, refreshServerFeatures, refreshVcsDiff]);
-
-  const refreshWorktrees = useCallback(async () => {
-    const next = await svcListWorktrees(client);
-    if (isCurrentClient(client)) setWorktrees(next);
-  }, [client, isCurrentClient]);
-
-  const createWorktree = useCallback(async (name?: string, startCommand?: string) => {
-    await svcCreateWorktree(client, name?.trim() || undefined, startCommand?.trim() || undefined);
-    await Promise.all([refreshWorktrees(), refreshWorkspaceCatalog(true)]);
-  }, [client, refreshWorktrees, refreshWorkspaceCatalog]);
-
-  const resetWorktree = useCallback(async (directory: string) => {
-    await svcResetWorktree(client, directory);
-    await refreshWorktrees();
-  }, [client, refreshWorktrees]);
-
-  const removeWorktree = useCallback(async (directory: string) => {
-    await svcRemoveWorktree(client, directory);
-    await Promise.all([refreshWorktrees(), refreshWorkspaceCatalog(true)]);
-  }, [client, refreshWorktrees, refreshWorkspaceCatalog]);
-
-  const refreshMcpServers = useCallback(async () => {
-    const next = await getMcpStatus(client);
-    if (isCurrentClient(client)) setMcpStatuses(next);
-  }, [client, isCurrentClient]);
-
-  const addMcpServer = useCallback(async (name: string, config: McpLocalConfig | McpRemoteConfig) => {
-    await svcAddMcpServer(client, name.trim(), config);
-    await Promise.all([refreshMcpServers(), refreshChatCapabilities()]);
-  }, [client, refreshChatCapabilities, refreshMcpServers]);
-
-  const connectMcpServer = useCallback(async (name: string) => {
-    await svcConnectMcpServer(client, name);
-    await refreshMcpServers();
-  }, [client, refreshMcpServers]);
-
-  const disconnectMcpServer = useCallback(async (name: string) => {
-    await svcDisconnectMcpServer(client, name);
-    await refreshMcpServers();
-  }, [client, refreshMcpServers]);
-
-  const setMcpServerEnabled = useCallback(async (name: string, enabled: boolean) => {
-    await svcSetMcpServerEnabled(client, name, enabled);
-    await Promise.all([refreshMcpServers(), refreshChatCapabilities()]);
-  }, [client, refreshChatCapabilities, refreshMcpServers]);
-
-  const startMcpOAuth = useCallback(async (name: string) => {
-    return (await svcStartMcpOAuth(client, name)).authorizationUrl;
-  }, [client]);
-
-  const completeMcpOAuth = useCallback(async (name: string, code: string) => {
-    await svcCompleteMcpOAuth(client, name, code.trim());
-    await refreshMcpServers();
-  }, [client, refreshMcpServers]);
-
-  const refreshTerminals = useCallback(async () => {
-    const [nextTerminals, nextShells] = await Promise.all([listTerminals(client), listShells(client)]);
-    if (!isCurrentClient(client)) return;
-    setTerminals(nextTerminals);
-    setTerminalShells(nextShells);
-  }, [client, isCurrentClient]);
-
-  const openTerminal = useCallback(async (ptyId: string) => {
-    const generation = ++terminalOpenGenerationRef.current;
-    const previousSocket = terminalSocketRef.current;
-    terminalSocketRef.current = undefined;
-    previousSocket?.close();
-    const switchingTerminal = activeTerminalId !== ptyId;
-    setActiveTerminalId(ptyId);
-    if (switchingTerminal) setTerminalOutput('');
-    setTerminalConnection('connecting');
-    const token = await createTerminalConnectToken(client, ptyId);
-    if (!isCurrentClient(client) || generation !== terminalOpenGenerationRef.current) {
-      throw new Error('Terminal connection was superseded.');
-    }
-    const socket = new WebSocket(getTerminalWebSocketUrl(
-      { serverUrl: settings.serverUrl, directory: activeProjectPath || '' },
-      ptyId,
-      { ticket: token.ticket, cursor: terminalCursorByIdRef.current[ptyId] },
-      serverContractRef.current,
-    ));
-    terminalSocketRef.current = socket;
-    let opened = false;
-    const connected = new Promise<void>((resolve, reject) => {
-      socket.onopen = () => {
-        if (generation !== terminalOpenGenerationRef.current) {
-          socket.close();
-          reject(new Error('Terminal connection was superseded.'));
-          return;
-        }
-        opened = true;
-        setTerminalConnection('connected');
-        resolve();
-      };
-      socket.onerror = () => {
-        if (generation !== terminalOpenGenerationRef.current) return;
-        setTerminalConnection('error');
-        if (!opened) reject(new Error('Could not connect to the terminal.'));
-      };
-      socket.onclose = () => {
-        if (generation !== terminalOpenGenerationRef.current) return;
-        if (terminalSocketRef.current === socket && opened) setTerminalConnection('idle');
-        if (!opened) reject(new Error('The terminal connection closed before it was ready.'));
-      };
-    });
-    socket.onmessage = ({ data }) => {
-      // ponytail: strip common CSI styling; use a terminal emulator if full VT control becomes required.
-      if (generation !== terminalOpenGenerationRef.current) return;
-      const append = (value: string) => setTerminalOutput((current) => `${current}${value.replace(ANSI_CSI_PATTERN, '')}`.slice(-100_000));
-      if (typeof data === 'string') append(data);
-      else {
-        const read = async () => {
-          const buffer = data instanceof Blob ? await data.arrayBuffer() : data as ArrayBuffer;
-          if (generation !== terminalOpenGenerationRef.current) return;
-          const bytes = new Uint8Array(buffer);
-          const text = new TextDecoder().decode(bytes[0] === 0 ? bytes.subarray(1) : bytes);
-          if (bytes[0] !== 0) {
-            append(text);
-            return;
-          }
-          try {
-            const cursor = JSON.parse(text).cursor;
-            if (cursor !== undefined) terminalCursorByIdRef.current[ptyId] = String(cursor);
-          } catch {
-            // Ignore malformed control frames instead of rendering protocol data.
-          }
-        };
-        void read();
-      }
-    };
-    await connected;
-  }, [activeProjectPath, activeTerminalId, client, isCurrentClient, settings.serverUrl]);
-
-  const createTerminal = useCallback(async (command?: string, title?: string) => {
-    const terminal = await svcCreateTerminal(client, { command: command?.trim() || undefined, title: title?.trim() || undefined });
-    await refreshTerminals();
-    await openTerminal(terminal.id);
-    return terminal;
-  }, [client, openTerminal, refreshTerminals]);
-
-  const sendTerminalInput = useCallback((input: string) => {
-    if (terminalSocketRef.current?.readyState !== WebSocket.OPEN) throw new Error('Terminal is not connected.');
-    terminalSocketRef.current.send(input);
-  }, []);
-
-  const closeTerminal = useCallback(async (ptyId: string) => {
-    if (activeTerminalId === ptyId) {
-      terminalOpenGenerationRef.current += 1;
-      terminalSocketRef.current?.close();
-      terminalSocketRef.current = undefined;
-      setActiveTerminalId(undefined);
-      setTerminalOutput('');
-    }
-    delete terminalCursorByIdRef.current[ptyId];
-    await svcRemoveTerminal(client, ptyId);
-    await refreshTerminals();
-  }, [activeTerminalId, client, refreshTerminals]);
 
   const executeCommand = useCallback(async (sessionId: string, command: string, args: string) => {
     const selected = getSelectedModelParts(chatPreferences.modelId);
@@ -2884,7 +2753,6 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
 
       void stopSpeaking().catch(() => undefined);
       void unloadWorkingSoundAsync().catch(() => undefined);
-      terminalSocketRef.current?.close();
     },
     [],
   );
@@ -3124,297 +2992,93 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
   const sessionPreviewById = useMemo(() => getSessionPreviewById(messagesBySession), [messagesBySession]);
   const serverCapabilities = useMemo(() => getServerCapabilities(serverContract), [serverContract]);
 
-  const contextValue = useMemo<OpencodeContextValue>(
+  // The conversation snapshot is memoized so the ConversationContext value only
+  // changes when a conversation field changes.
+  const conversation = useMemo<ConversationState>(
     () => ({
-      isHydrated,
-      onboardingCompleted,
-      onboardingActive,
-      completeOnboarding,
-      startOnboardingReview,
-      stopOnboardingReview,
-      settings,
-      updateSettings,
-      switchConnection,
-      connection,
-      serverCapabilities,
-      projects,
-      activeProjectPath,
-      activeProject,
-      selectProject,
-      addWorkspace,
-      openSessionInProject,
-      serverProjects,
-      currentProjectPath,
-      serverRootPath,
-      isRefreshingWorkspaceCatalog,
-      refreshWorkspaceCatalog,
-      refreshWorkspaceStatus: refreshServerFeatures,
-      sessions,
-      archivedSessions,
-      sessionStatuses,
-      favoriteSessions,
-      toggleFavoriteSession,
-      isFavoriteSession,
-      clearFavoriteSession,
-      currentSessionId,
-      activeSession,
-      currentMessages,
-      currentUsage,
-      latestAssistantTurnUsage,
-      currentDiffs,
-      currentDiffScope,
-      setDiffScope,
-      diffTurns,
-      selectedDiffMessageId,
-      selectDiffMessage,
-      refreshDiffs,
-      currentTranscript,
-      currentTodos,
-      currentPendingPermissions,
-      currentPendingQuestions,
-      sessionPreviewById,
-      isRefreshingSessions,
-      isRefreshingMessages,
-      isRefreshingDiffs,
-      isBootstrappingChat,
-      currentConfig,
-      availableProviders,
-      providerAuthMethodsById,
-      configuredProviders,
-      availableModels,
-      availableAgents,
-      chatPreferences,
-      updateChatPreferences,
-      conversation: {
-        active: conversationActive,
-        feedback: conversationFeedback,
-        isListening: isConversationListening,
-        level: conversationListeningLevel,
-        latestHeardText: conversationLatestHeardText,
-        phase: conversationPhase,
-        sessionId: conversationSessionId,
-        statusLabel: conversationStatusLabel,
-      },
-      clearConversationFeedback,
-      toggleConversationMode,
-      configureProvider,
-      completeAutomaticProviderOAuth,
-      setProviderAuth,
-      removeProvider,
-      startProviderOAuth,
-      completeProviderOAuth,
-      setAutoApprove,
-      sendingState,
-      promptError,
-      clearPromptError,
-      connect,
-      refreshSessions,
-      openSession,
-      refreshCurrentSession,
-      refreshCurrentTodos,
-      ensureActiveSession,
-      openDeepLinkSession,
-      createSession,
-      deleteSession,
-      archiveSession,
-      restoreSession,
-      refreshArchivedSessions,
-      renameSession,
-      forkSession,
-      shareSession,
-      unshareSession,
-      revertSession,
-      unrevertSession,
-      sendPrompt,
-      abortSession,
-      replyToPermission,
-      replyToQuestion,
-      rejectQuestion,
-      commands,
-      executeCommand,
-      workspaceFiles,
-      workspaceFileStatuses,
-      selectedWorkspaceFile,
-      vcsInfo,
-      searchWorkspaceFiles,
-      openWorkspaceFile,
-      saveWorkspaceFile,
-      worktrees,
-      refreshWorktrees,
-      createWorktree,
-      resetWorktree,
-      removeWorktree,
-      mcpStatuses,
-      refreshMcpServers,
-      addMcpServer,
-      connectMcpServer,
-      disconnectMcpServer,
-      setMcpServerEnabled,
-      startMcpOAuth,
-      completeMcpOAuth,
-      terminals,
-      terminalShells,
-      activeTerminalId,
-      terminalOutput,
-      terminalConnection,
-      refreshTerminals,
-      createTerminal,
-      openTerminal,
-      sendTerminalInput,
-      closeTerminal,
-      diagnostics,
-      refreshDiagnostics,
-      eventStreamStatus,
+      active: conversationActive,
+      feedback: conversationFeedback,
+      isListening: isConversationListening,
+      level: conversationListeningLevel,
+      latestHeardText: conversationLatestHeardText,
+      phase: conversationPhase,
+      sessionId: conversationSessionId,
+      statusLabel: conversationStatusLabel,
     }),
-    [
-      activeSession,
-      activeProject,
-      activeProjectPath,
-      connect,
-      connection,
-      currentConfig,
-      availableProviders,
-      providerAuthMethodsById,
-      configuredProviders,
-      currentDiffs,
-      currentDiffScope,
-      diffTurns,
-      selectedDiffMessageId,
-      setDiffScope,
-      selectDiffMessage,
-      refreshDiffs,
-      createSession,
-      deleteSession,
-      renameSession,
-      forkSession,
-      shareSession,
-      unshareSession,
-      revertSession,
-      unrevertSession,
-      configureProvider,
-      completeAutomaticProviderOAuth,
-      currentMessages,
-      currentUsage,
-      latestAssistantTurnUsage,
-      currentSessionId,
-      currentTranscript,
-      currentTodos,
-      currentPendingPermissions,
-      currentPendingQuestions,
-      chatPreferences,
-      clearConversationFeedback,
-      clearPromptError,
-      conversationActive,
-      conversationFeedback,
-      conversationLatestHeardText,
-      conversationListeningLevel,
-      conversationPhase,
-      conversationSessionId,
-      conversationStatusLabel,
-      ensureActiveSession,
-      openDeepLinkSession,
-      availableAgents,
-      availableModels,
-      isConversationListening,
-      isBootstrappingChat,
-      isRefreshingDiffs,
-      isHydrated,
-      onboardingCompleted,
-      onboardingActive,
-      completeOnboarding,
-      startOnboardingReview,
-      stopOnboardingReview,
-      isRefreshingMessages,
-      isRefreshingWorkspaceCatalog,
-      isRefreshingSessions,
-      openSession,
-      promptError,
-      currentProjectPath,
-      projects,
-      refreshCurrentSession,
-      refreshCurrentTodos,
-      refreshWorkspaceCatalog,
-      refreshServerFeatures,
-      refreshSessions,
-      replyToPermission,
-      replyToQuestion,
-      rejectQuestion,
-      selectProject,
-      addWorkspace,
-      openSessionInProject,
-      setAutoApprove,
-      sendPrompt,
-      abortSession,
-      sendingState,
-      serverRootPath,
-      serverCapabilities,
-      sessionPreviewById,
-      sessionStatuses,
-      favoriteSessions,
-      toggleFavoriteSession,
-      isFavoriteSession,
-      clearFavoriteSession,
-      sessions,
-      serverProjects,
-      settings,
-      setProviderAuth,
-      removeProvider,
-      startProviderOAuth,
-      completeProviderOAuth,
-      toggleConversationMode,
-      updateChatPreferences,
-      updateSettings,
-      switchConnection,
-      commands,
-      executeCommand,
-      workspaceFiles,
-      workspaceFileStatuses,
-      selectedWorkspaceFile,
-      vcsInfo,
-      searchWorkspaceFiles,
-      openWorkspaceFile,
-      diagnostics,
-      refreshDiagnostics,
-      eventStreamStatus,
-      archivedSessions,
-      archiveSession,
-      restoreSession,
-      refreshArchivedSessions,
-      saveWorkspaceFile,
-      worktrees,
-      refreshWorktrees,
-      createWorktree,
-      resetWorktree,
-      removeWorktree,
-      mcpStatuses,
-      refreshMcpServers,
-      addMcpServer,
-      connectMcpServer,
-      disconnectMcpServer,
-      setMcpServerEnabled,
-      startMcpOAuth,
-      completeMcpOAuth,
-      terminals,
-      terminalShells,
-      activeTerminalId,
-      terminalOutput,
-      terminalConnection,
-      refreshTerminals,
-      createTerminal,
-      openTerminal,
-      sendTerminalInput,
-      closeTerminal,
-    ],
+    [conversationActive, conversationFeedback, isConversationListening, conversationListeningLevel, conversationLatestHeardText, conversationPhase, conversationSessionId, conversationStatusLabel],
   );
 
-  return <OpencodeContext.Provider value={contextValue}>{children}</OpencodeContext.Provider>;
-}
+  const onboardingValue = useMemo<OnboardingContextValue>(
+    () => ({ isHydrated, onboardingCompleted, onboardingActive, completeOnboarding, startOnboardingReview, stopOnboardingReview }),
+    [isHydrated, onboardingCompleted, onboardingActive, completeOnboarding, startOnboardingReview, stopOnboardingReview],
+  );
 
-export function useOpencode() {
-  const context = useContext(OpencodeContext);
-  if (!context) {
-    throw new Error('useOpencode must be used inside OpencodeProvider');
-  }
+  const connectionValue = useMemo<ConnectionContextValue>(
+    () => ({ settings, updateSettings, switchConnection, connection, serverCapabilities, connect, diagnostics, refreshDiagnostics, eventStreamStatus }),
+    [settings, updateSettings, switchConnection, connection, serverCapabilities, connect, diagnostics, refreshDiagnostics, eventStreamStatus],
+  );
 
-  return context;
+  const capabilitiesValue = useMemo<CapabilitiesContextValue>(
+    () => ({ currentConfig, availableProviders, providerAuthMethodsById, configuredProviders, availableModels, availableAgents, configureProvider, completeAutomaticProviderOAuth, setProviderAuth, removeProvider, startProviderOAuth, completeProviderOAuth }),
+    [currentConfig, availableProviders, providerAuthMethodsById, configuredProviders, availableModels, availableAgents, configureProvider, completeAutomaticProviderOAuth, setProviderAuth, removeProvider, startProviderOAuth, completeProviderOAuth],
+  );
+
+  const preferencesValue = useMemo<PreferencesContextValue>(
+    () => ({ chatPreferences, updateChatPreferences }),
+    [chatPreferences, updateChatPreferences],
+  );
+
+  const workspaceValue = useMemo<WorkspaceContextValue>(
+    () => ({ projects, activeProjectPath, activeProject, selectProject, addWorkspace, serverProjects, currentProjectPath, serverRootPath, isRefreshingWorkspaceCatalog, refreshWorkspaceCatalog, refreshWorkspaceStatus: refreshServerFeatures, workspaceFiles, workspaceFileStatuses, selectedWorkspaceFile, vcsInfo, searchWorkspaceFiles, openWorkspaceFile, saveWorkspaceFile, worktrees, refreshWorktrees, createWorktree, resetWorktree, removeWorktree }),
+    [projects, activeProjectPath, activeProject, selectProject, addWorkspace, serverProjects, currentProjectPath, serverRootPath, isRefreshingWorkspaceCatalog, refreshWorkspaceCatalog, refreshServerFeatures, workspaceFiles, workspaceFileStatuses, selectedWorkspaceFile, vcsInfo, searchWorkspaceFiles, openWorkspaceFile, saveWorkspaceFile, worktrees, refreshWorktrees, createWorktree, resetWorktree, removeWorktree],
+  );
+
+  const sessionValue = useMemo<SessionContextValue>(
+    () => ({ sessions, archivedSessions, sessionStatuses, favoriteSessions, toggleFavoriteSession, isFavoriteSession, clearFavoriteSession, currentSessionId, activeSession, sessionPreviewById, isRefreshingSessions, refreshSessions, openSession, ensureActiveSession, openDeepLinkSession, createSession, deleteSession, archiveSession, restoreSession, refreshArchivedSessions, renameSession, forkSession, shareSession, unshareSession, revertSession, unrevertSession, openSessionInProject }),
+    [sessions, archivedSessions, sessionStatuses, favoriteSessions, toggleFavoriteSession, isFavoriteSession, clearFavoriteSession, currentSessionId, activeSession, sessionPreviewById, isRefreshingSessions, refreshSessions, openSession, ensureActiveSession, openDeepLinkSession, createSession, deleteSession, archiveSession, restoreSession, refreshArchivedSessions, renameSession, forkSession, shareSession, unshareSession, revertSession, unrevertSession, openSessionInProject],
+  );
+
+  const chatValue = useMemo<ChatContextValue>(
+    () => ({ currentMessages, currentTranscript, currentUsage, latestAssistantTurnUsage, currentDiffs, currentDiffScope, setDiffScope, diffTurns, selectedDiffMessageId, selectDiffMessage, refreshDiffs, currentTodos, currentPendingPermissions, currentPendingQuestions, isRefreshingMessages, isRefreshingDiffs, isBootstrappingChat, refreshCurrentSession, refreshCurrentTodos, replyToPermission, replyToQuestion, rejectQuestion, commands, executeCommand, sendPrompt, abortSession, setAutoApprove, sendingState, promptError, clearPromptError }),
+    [currentMessages, currentTranscript, currentUsage, latestAssistantTurnUsage, currentDiffs, currentDiffScope, setDiffScope, diffTurns, selectedDiffMessageId, selectDiffMessage, refreshDiffs, currentTodos, currentPendingPermissions, currentPendingQuestions, isRefreshingMessages, isRefreshingDiffs, isBootstrappingChat, refreshCurrentSession, refreshCurrentTodos, replyToPermission, replyToQuestion, rejectQuestion, commands, executeCommand, sendPrompt, abortSession, setAutoApprove, sendingState, promptError, clearPromptError],
+  );
+
+  const conversationValue = useMemo<ConversationContextValue>(
+    () => ({ conversation, clearConversationFeedback, toggleConversationMode }),
+    [conversation, clearConversationFeedback, toggleConversationMode],
+  );
+
+  const terminalValue = useMemo<TerminalContextValue>(
+    () => ({ terminals, terminalShells, activeTerminalId, terminalOutput, terminalConnection, refreshTerminals, createTerminal, openTerminal, sendTerminalInput, closeTerminal }),
+    [terminals, terminalShells, activeTerminalId, terminalOutput, terminalConnection, refreshTerminals, createTerminal, openTerminal, sendTerminalInput, closeTerminal],
+  );
+
+  const mcpValue = useMemo<McpContextValue>(
+    () => ({ mcpStatuses, refreshMcpServers, addMcpServer, connectMcpServer, disconnectMcpServer, setMcpServerEnabled, startMcpOAuth, completeMcpOAuth }),
+    [mcpStatuses, refreshMcpServers, addMcpServer, connectMcpServer, disconnectMcpServer, setMcpServerEnabled, startMcpOAuth, completeMcpOAuth],
+  );
+
+  // Each domain context is memoized above, so a consumer only re-renders when
+  // the domain it reads changes, even though one provider owns all the state.
+  return (
+    <OnboardingContext.Provider value={onboardingValue}>
+      <ConnectionContext.Provider value={connectionValue}>
+        <CapabilitiesContext.Provider value={capabilitiesValue}>
+          <PreferencesContext.Provider value={preferencesValue}>
+            <WorkspaceContext.Provider value={workspaceValue}>
+              <SessionContext.Provider value={sessionValue}>
+                <ChatContext.Provider value={chatValue}>
+                  <ConversationContext.Provider value={conversationValue}>
+                    <TerminalContext.Provider value={terminalValue}>
+                      <McpContext.Provider value={mcpValue}>{children}</McpContext.Provider>
+                    </TerminalContext.Provider>
+                  </ConversationContext.Provider>
+                </ChatContext.Provider>
+              </SessionContext.Provider>
+            </WorkspaceContext.Provider>
+          </PreferencesContext.Provider>
+        </CapabilitiesContext.Provider>
+      </ConnectionContext.Provider>
+    </OnboardingContext.Provider>
+  );
 }

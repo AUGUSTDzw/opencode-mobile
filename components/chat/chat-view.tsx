@@ -19,65 +19,37 @@ import { getTranscriptActivityLabel, isTranscriptDisplayMessage } from '@/lib/op
 import { getLatestContextTokens } from '@/lib/opencode/usage';
 import { speakText, stopSpeaking } from '@/lib/voice/speech-output';
 import { useSpeechInput } from '@/lib/voice/use-speech-input';
-import { useOpencode } from '@/providers/opencode-provider';
+import {
+  useCapabilities,
+  useChat,
+  useConnection,
+  useConversation,
+  usePreferences,
+  useSessions,
+  useWorkspace,
+} from '@/providers/opencode-contexts';
 
 export function ChatView() {
   const { t } = useTranslation();
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
   const insets = useSafeAreaInsets();
+  const { activeProject } = useWorkspace();
   const {
-    activeSession,
-    activeProject,
-    currentMessages,
-    availableAgents,
-    availableModels,
-    chatPreferences,
-    commands,
-    connection,
-    configuredProviders,
-    createSession,
-    conversation,
-    clearConversationFeedback,
-    clearPromptError,
-    currentDiffs,
-    currentDiffScope,
-    currentPendingPermissions,
-    currentPendingQuestions,
-    currentTodos,
-    currentSessionId,
-    currentTranscript,
-    currentUsage,
-    diffTurns,
-    ensureActiveSession,
-    isRefreshingDiffs,
-    isRefreshingMessages,
-    latestAssistantTurnUsage,
-    openSession,
-    refreshCurrentSession,
-    refreshDiffs,
-    replyToPermission,
-    replyToQuestion,
-    rejectQuestion,
-    executeCommand,
-    forkSession,
-    revertSession,
-    selectDiffMessage,
-    setDiffScope,
-    selectedDiffMessageId,
-    unrevertSession,
-    sendPrompt,
-    promptError,
-    sendingState,
-    settings,
-    serverCapabilities,
-    sessionStatuses,
-    sessions,
-    setAutoApprove,
-    toggleConversationMode,
-    updateChatPreferences,
-    abortSession,
-  } = useOpencode();
+    activeSession, createSession, currentSessionId, ensureActiveSession, forkSession, openSession,
+    revertSession, sessionStatuses, sessions, unrevertSession,
+  } = useSessions();
+  const { availableAgents, availableModels, configuredProviders } = useCapabilities();
+  const { chatPreferences, updateChatPreferences } = usePreferences();
+  const { connection, settings, serverCapabilities } = useConnection();
+  const { conversation, clearConversationFeedback, toggleConversationMode } = useConversation();
+  const {
+    abortSession, clearPromptError, commands, currentDiffs, currentDiffScope, currentMessages,
+    currentPendingPermissions, currentPendingQuestions, currentTodos, currentTranscript, currentUsage,
+    diffTurns, executeCommand, isRefreshingDiffs, isRefreshingMessages, latestAssistantTurnUsage,
+    promptError, refreshCurrentSession, refreshDiffs, rejectQuestion, replyToPermission, replyToQuestion,
+    selectDiffMessage, selectedDiffMessageId, sendPrompt, sendingState, setAutoApprove, setDiffScope,
+  } = useChat();
 
   const [draft, setDraft] = useState('');
   const [attachments, setAttachments] = useState<{ uri: string; mime?: string; filename?: string }[]>([]);

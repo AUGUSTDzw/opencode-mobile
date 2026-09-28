@@ -17,26 +17,27 @@ export const WORKING_SOUND_OPTIONS: { value: WorkingSoundVariant }[] = [
 
 export const LANGUAGE_OPTIONS: { value: string; label: string }[] = SUPPORTED_LANGUAGES.map((language) => ({ value: language.code, label: language.nativeName }));
 
-const KNOWN_PROVIDER_IDS = new Set([
-  'openai',
-  'anthropic',
-  'github-copilot',
-  'google',
-  'groq',
-  'openrouter',
-  'mistral',
-  'xai',
-  'azure',
+// One entry per provider that ships curated copy. `genericApiKey` marks the
+// providers the app can configure with a plain API key. Adding a provider is a
+// single entry here plus the `settings:providerCopy.<id>` translation keys.
+const PROVIDER_DESCRIPTORS = new Map<string, { genericApiKey: boolean }>([
+  ['anthropic', { genericApiKey: true }],
+  ['azure', { genericApiKey: true }],
+  ['github-copilot', { genericApiKey: false }],
+  ['google', { genericApiKey: true }],
+  ['groq', { genericApiKey: true }],
+  ['mistral', { genericApiKey: true }],
+  ['openai', { genericApiKey: true }],
+  ['openrouter', { genericApiKey: true }],
+  ['xai', { genericApiKey: true }],
 ]);
 
-const GENERIC_API_KEY_PROVIDERS = new Set(['anthropic', 'azure', 'google', 'groq', 'mistral', 'openai', 'openrouter', 'xai']);
-
 export function supportsGenericApiKey(providerId?: string) {
-  return Boolean(providerId && GENERIC_API_KEY_PROVIDERS.has(providerId));
+  return Boolean(providerId && PROVIDER_DESCRIPTORS.get(providerId)?.genericApiKey);
 }
 
 export function getProviderCopy(providerId: string, fallbackLabel: string, t: TFunction) {
-  if (!KNOWN_PROVIDER_IDS.has(providerId)) {
+  if (!PROVIDER_DESCRIPTORS.has(providerId)) {
     return {
       label: fallbackLabel,
       description: undefined,

@@ -9,13 +9,13 @@ import { TextInput } from '@/components/ui/text-input';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { isValidServerUrl } from '@/lib/opencode/client';
-import { useOpencode } from '@/providers/opencode-provider';
+import { useConnection } from '@/providers/opencode-contexts';
 
 export default function OnboardingConnectScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const palette = Colors[useColorScheme() ?? 'light'];
-  const { settings, switchConnection } = useOpencode();
+  const { settings, switchConnection } = useConnection();
 
   // Seeded from the current settings so re-running the assistant from Settings
   // shows the live values. Failed attempts keep whatever the user typed.

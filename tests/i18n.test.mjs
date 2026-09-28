@@ -66,6 +66,13 @@ for (const namespace of namespaces) {
   sourceFlat[namespace] = flatten(await readJson(path.join(localesDir, 'en', `${namespace}.json`)));
 }
 
+// `--allow-missing` (npm run test:i18n:loose) is a local-iteration escape hatch:
+// keys absent from a non-English locale fall back to English at runtime, so WIP
+// strings do not force eight file edits. CI runs without the flag and enforces
+// full parity.
+const allowMissing = process.argv.includes('--allow-missing');
+const missingKeySummary = [];
+
 for (const language of languages) {
   if (language === 'en') {
     continue;
@@ -82,10 +89,21 @@ for (const language of languages) {
 
     const missing = sourceKeys.filter((key) => !(key in languageFlat));
     const extra = languageKeys.filter((key) => !(key in sourceFlat[namespace]));
-    assert.equal(missing.length, 0, `${language}/${namespace} is missing keys: ${missing.join(', ')}`);
+    if (allowMissing) {
+      if (missing.length > 0) {
+        missingKeySummary.push(`${language}/${namespace} (${missing.length})`);
+      }
+    } else {
+      assert.equal(missing.length, 0, `${language}/${namespace} is missing keys: ${missing.join(', ')}`);
+    }
     assert.equal(extra.length, 0, `${language}/${namespace} has unknown keys: ${extra.join(', ')}`);
 
     for (const key of sourceKeys) {
+      // In loose mode a missing key is a runtime English fallback, not a
+      // translation bug, so skip its value/interpolation checks.
+      if (!(key in languageFlat)) {
+        continue;
+      }
       const sourceVars = interpolations(sourceFlat[namespace][key]);
       const languageVars = interpolations(languageFlat[key]);
       assert.deepEqual(
@@ -158,6 +176,10 @@ const configLocaleLists = [...supportedLocalesBlock.matchAll(/(?:ios|android):\s
 assert.ok(configLocaleLists.length >= 2, 'app.config.ts must expose ios and android supportedLocales.');
 for (const list of configLocaleLists) {
   assert.deepEqual(list, sortedCodes, 'app.config.ts supportedLocales must match SUPPORTED_LANGUAGES.');
+}
+
+if (allowMissing && missingKeySummary.length > 0) {
+  console.warn(`i18n: incomplete locales fall back to English: ${missingKeySummary.join(', ')}`);
 }
 
 console.log(`i18n checks passed for ${languages.length} locale(s) and ${namespaces.length} namespace(s).`);

@@ -1,6 +1,6 @@
 import * as WebBrowser from 'expo-web-browser';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useEffect, useMemo, useState } from 'react';
+import { type ComponentProps, type ReactNode, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Alert, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -32,37 +32,30 @@ import {
 import { OverlaySheet } from '@/components/ui/overlay-sheet';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { getSpeechVoiceOptions, type SpeechVoiceOption } from '@/lib/voice/speech-output';
-import { useOpencode } from '@/providers/opencode-provider';
+import { useCapabilities, useConnection, useMcp, useOnboarding, usePreferences } from '@/providers/opencode-contexts';
+
+// One entry per settings section. Adding a section means adding an entry here
+// (and its presentational component); the row list and the overlay both derive
+// from this array, so there is a single place to edit.
+type SettingsSection = {
+  id: string;
+  icon: ComponentProps<typeof MaterialCommunityIcons>['name'];
+  title: string;
+  summary: string;
+  onPress: () => void;
+  render?: () => ReactNode;
+};
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
   const { t } = useTranslation();
-  const {
-    availableModels,
-    availableProviders,
-    addMcpServer,
-    chatPreferences,
-    completeMcpOAuth,
-    configuredProviders,
-    connectMcpServer,
-    currentConfig,
-    removeProvider,
-    connect,
-    connection,
-    diagnostics,
-    disconnectMcpServer,
-    eventStreamStatus,
-    mcpStatuses,
-    refreshDiagnostics,
-    refreshMcpServers,
-    serverCapabilities,
-    setMcpServerEnabled,
-    startMcpOAuth,
-    startOnboardingReview,
-    updateChatPreferences,
-  } = useOpencode();
+  const { availableModels, availableProviders, configuredProviders, currentConfig, removeProvider } = useCapabilities();
+  const { addMcpServer, completeMcpOAuth, connectMcpServer, disconnectMcpServer, mcpStatuses, refreshMcpServers, setMcpServerEnabled, startMcpOAuth } = useMcp();
+  const { chatPreferences, updateChatPreferences } = usePreferences();
+  const { connect, connection, diagnostics, eventStreamStatus, refreshDiagnostics, serverCapabilities } = useConnection();
+  const { startOnboardingReview } = useOnboarding();
   const router = useRouter();
   const notifications = useNotificationSetup();
   const providerConfig = useProviderConfiguration();
@@ -139,26 +132,75 @@ export default function SettingsScreen() {
     ]);
   }
 
-  const sections = [
-    { id: 'connection', title: t('settings:screen.categories.connection'), summary: connection.status === 'connected' ? t('common:labels.connected') : connection.message, icon: 'server-network' as const },
-    { id: 'ai', title: t('settings:screen.categories.ai'), summary: t('settings:screen.summaries.configuredCount', { value: configuredProviders.length }), icon: 'creation' as const },
-    { id: 'notifications', title: t('settings:screen.categories.notifications'), summary: notifications.status?.permissionGranted ? t('common:labels.enabled') : t('common:labels.off'), icon: 'bell-outline' as const },
-    { id: 'voice', title: t('settings:screen.categories.voice'), summary: chatPreferences.autoPlayAssistantReplies ? t('settings:screen.summaries.replyPlaybackOn') : t('settings:screen.summaries.replyPlaybackOff'), icon: 'waveform' as const },
-    { id: 'advanced', title: t('settings:screen.categories.advanced'), summary: t('settings:screen.summaries.advanced'), icon: 'tune' as const },
-    { id: 'language', title: t('settings:language.title'), summary: selectedLanguageLabel, icon: 'translate' as const },
-    { id: 'setup', title: t('onboarding:settingsAssistant.title'), summary: t('onboarding:settingsAssistant.summary'), icon: 'rocket-launch-outline' as const },
+  const sections: SettingsSection[] = [
+    {
+      id: 'connection',
+      icon: 'server-network',
+      title: t('settings:screen.categories.connection'),
+      summary: connection.status === 'connected' ? t('common:labels.connected') : connection.message,
+      onPress: () => setOpenSection('connection'),
+      render: () => <ConnectionSection connection={connection} palette={palette} />,
+    },
+    {
+      id: 'ai',
+      icon: 'creation',
+      title: t('settings:screen.categories.ai'),
+      summary: t('settings:screen.summaries.configuredCount', { value: configuredProviders.length }),
+      onPress: () => setOpenSection('ai'),
+      render: () => <AiDefaultsSection availableModels={availableModels} availableProviders={availableProviders} chatPreferences={chatPreferences} configuredProviders={configuredProviders} enabledModelIds={enabledModelIds} expandedProviderId={expandedProviderId} onExpandedProviderChange={setExpandedProviderId} onModelToggle={handleModelToggle} onRemoveProvider={handleRemoveProvider} onStartProviderConfiguration={providerConfig.startProviderConfiguration} palette={palette} />,
+    },
+    {
+      id: 'notifications',
+      icon: 'bell-outline',
+      title: t('settings:screen.categories.notifications'),
+      summary: notifications.status?.permissionGranted ? t('common:labels.enabled') : t('common:labels.off'),
+      onPress: () => setOpenSection('notifications'),
+      render: () => <NotificationsSection isRefreshingNotificationStatus={notifications.isRefreshing} notificationStatus={notifications.status} onEnableNotifications={() => void notifications.enable()} onOpenAppSettings={() => void notifications.openAppSettings()} onOpenBatterySaverSettings={() => void notifications.openBatterySaverSettings()} onOpenBatterySettings={() => void notifications.openBatterySettings()} onOpenNotificationSettings={() => void notifications.openNotificationSettings()} onRefreshStatus={() => void notifications.refreshStatus()} palette={palette} />,
+    },
+    {
+      id: 'voice',
+      icon: 'waveform',
+      title: t('settings:screen.categories.voice'),
+      summary: chatPreferences.autoPlayAssistantReplies ? t('settings:screen.summaries.replyPlaybackOn') : t('settings:screen.summaries.replyPlaybackOff'),
+      onPress: () => setOpenSection('voice'),
+      render: () => <VoiceSection availableSpeechVoices={availableSpeechVoices} chatPreferences={chatPreferences} isRefreshingSpeechVoices={isRefreshingSpeechVoices} palette={palette} selectedResponseScope={selectedResponseScope} selectedSpeechVoiceLabel={selectedSpeechVoiceLabel} selectedWorkingSound={selectedWorkingSound} updateChatPreferences={updateChatPreferences} />,
+    },
+    {
+      id: 'advanced',
+      icon: 'tune',
+      title: t('settings:screen.categories.advanced'),
+      summary: t('settings:screen.summaries.advanced'),
+      onPress: () => setOpenSection('advanced'),
+      render: () => (
+        <>
+          <McpSection configs={currentConfig?.mcp} mcpStatuses={mcpStatuses} onAdd={addMcpServer} onCompleteOAuth={completeMcpOAuth} onConnect={connectMcpServer} onDisconnect={disconnectMcpServer} onRefresh={refreshMcpServers} onSetEnabled={setMcpServerEnabled} onStartOAuth={async (name) => { const url = await startMcpOAuth(name); if (!url) { await refreshMcpServers(); return false; } await WebBrowser.openBrowserAsync(url); return true; }} oauthAvailable={serverCapabilities.mcpOAuth} palette={palette} />
+          <DiagnosticsSection diagnostics={diagnostics} eventStreamStatus={eventStreamStatus} formatterAvailable={serverCapabilities.formatter} lspAvailable={serverCapabilities.lsp} onRefresh={() => void refreshDiagnostics()} palette={palette} />
+        </>
+      ),
+    },
+    {
+      id: 'language',
+      icon: 'translate',
+      title: t('settings:language.title'),
+      summary: selectedLanguageLabel,
+      onPress: () => setOpenSection('language'),
+      render: () => <LanguageSection chatPreferences={chatPreferences} palette={palette} updateChatPreferences={updateChatPreferences} />,
+    },
+    {
+      id: 'setup',
+      icon: 'rocket-launch-outline',
+      title: t('onboarding:settingsAssistant.title'),
+      summary: t('onboarding:settingsAssistant.summary'),
+      // Review mode keeps the tab navigator mounted and seeds each step from the
+      // current configuration, so re-running never wipes anything.
+      onPress: () => {
+        startOnboardingReview();
+        router.push('/onboarding/connect');
+      },
+    },
   ];
 
-  function openSectionById(id: string) {
-    if (id === 'setup') {
-      // Review mode keeps the tab navigator mounted and seeds each step from
-      // the current configuration, so re-running never wipes anything.
-      startOnboardingReview();
-      router.push('/onboarding/connect');
-      return;
-    }
-    setOpenSection(id);
-  }
+  const activeSection = sections.find((section) => section.id === openSection);
 
   return (
     <>
@@ -175,7 +217,7 @@ export default function SettingsScreen() {
       </Appbar.Header>
       <ScrollView style={[styles.screen, { backgroundColor: palette.background }]} contentContainerStyle={styles.content}>
         <View style={[styles.categoryGroup, { backgroundColor: palette.surface, borderColor: palette.border }]}>
-        {sections.map((section, index) => <Pressable key={section.id} accessibilityRole="button" accessibilityLabel={`${section.title}. ${section.summary}`} onPress={() => openSectionById(section.id)} style={[styles.category, index < sections.length - 1 && { borderBottomColor: palette.border, borderBottomWidth: StyleSheet.hairlineWidth }]}>
+        {sections.map((section, index) => <Pressable key={section.id} accessibilityRole="button" accessibilityLabel={`${section.title}. ${section.summary}`} onPress={section.onPress} style={[styles.category, index < sections.length - 1 && { borderBottomColor: palette.border, borderBottomWidth: StyleSheet.hairlineWidth }]}>
           <MaterialCommunityIcons name={section.icon} size={22} color={palette.tint} />
           <View style={styles.categoryText}><Text variant="titleMedium" style={{ color: palette.text }}>{section.title}</Text><Text variant="bodyMedium" numberOfLines={1} style={{ color: palette.muted }}>{section.summary}</Text></View>
           <MaterialCommunityIcons name="chevron-right" size={20} color={palette.muted} />
@@ -183,16 +225,8 @@ export default function SettingsScreen() {
         </View>
       </ScrollView>
 
-      <OverlaySheet visible={Boolean(openSection)} fitContent testID="settings-section-overlay" title={{ connection: t('settings:screen.categories.connection'), ai: t('settings:screen.categories.ai'), notifications: t('settings:screen.categories.notifications'), voice: t('settings:screen.categories.voice'), advanced: t('settings:screen.categories.advanced'), language: t('settings:language.title') }[openSection || ''] || t('common:tabs.settings')} onClose={() => setOpenSection(undefined)}>
-        {openSection === 'connection' ? <ConnectionSection connection={connection} palette={palette} /> : null}
-        {openSection === 'ai' ? <AiDefaultsSection availableModels={availableModels} availableProviders={availableProviders} chatPreferences={chatPreferences} configuredProviders={configuredProviders} enabledModelIds={enabledModelIds} expandedProviderId={expandedProviderId} onExpandedProviderChange={setExpandedProviderId} onModelToggle={handleModelToggle} onRemoveProvider={handleRemoveProvider} onStartProviderConfiguration={providerConfig.startProviderConfiguration} palette={palette} /> : null}
-        {openSection === 'notifications' ? <NotificationsSection isRefreshingNotificationStatus={notifications.isRefreshing} notificationStatus={notifications.status} onEnableNotifications={() => void notifications.enable()} onOpenAppSettings={() => void notifications.openAppSettings()} onOpenBatterySaverSettings={() => void notifications.openBatterySaverSettings()} onOpenBatterySettings={() => void notifications.openBatterySettings()} onOpenNotificationSettings={() => void notifications.openNotificationSettings()} onRefreshStatus={() => void notifications.refreshStatus()} palette={palette} /> : null}
-        {openSection === 'voice' ? <VoiceSection availableSpeechVoices={availableSpeechVoices} chatPreferences={chatPreferences} isRefreshingSpeechVoices={isRefreshingSpeechVoices} palette={palette} selectedResponseScope={selectedResponseScope} selectedSpeechVoiceLabel={selectedSpeechVoiceLabel} selectedWorkingSound={selectedWorkingSound} updateChatPreferences={updateChatPreferences} /> : null}
-        {openSection === 'language' ? <LanguageSection chatPreferences={chatPreferences} palette={palette} updateChatPreferences={updateChatPreferences} /> : null}
-        {openSection === 'advanced' ? <>
-          <McpSection configs={currentConfig?.mcp} mcpStatuses={mcpStatuses} onAdd={addMcpServer} onCompleteOAuth={completeMcpOAuth} onConnect={connectMcpServer} onDisconnect={disconnectMcpServer} onRefresh={refreshMcpServers} onSetEnabled={setMcpServerEnabled} onStartOAuth={async (name) => { const url = await startMcpOAuth(name); if (!url) { await refreshMcpServers(); return false; } await WebBrowser.openBrowserAsync(url); return true; }} oauthAvailable={serverCapabilities.mcpOAuth} palette={palette} />
-          <DiagnosticsSection diagnostics={diagnostics} eventStreamStatus={eventStreamStatus} formatterAvailable={serverCapabilities.formatter} lspAvailable={serverCapabilities.lsp} onRefresh={() => void refreshDiagnostics()} palette={palette} />
-        </> : null}
+      <OverlaySheet visible={Boolean(activeSection)} fitContent testID="settings-section-overlay" title={activeSection?.title ?? t('common:tabs.settings')} onClose={() => setOpenSection(undefined)}>
+        {activeSection?.render?.() ?? null}
       </OverlaySheet>
 
       {providerConfig.dialog}

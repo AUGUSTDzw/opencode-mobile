@@ -8,7 +8,7 @@ import { getProviderCopy, supportsGenericApiKey } from '@/components/settings/se
 import { TextInput } from '@/components/ui/text-input';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useOpencode } from '@/providers/opencode-provider';
+import { useCapabilities, useConnection } from '@/providers/opencode-contexts';
 
 export type ProviderFeedback = { type: 'success' | 'info' | 'error'; message: string };
 
@@ -26,15 +26,8 @@ type PendingOAuth = { providerId: string; methodIndex: number; instructions?: st
 export function useProviderConfiguration() {
   const { t } = useTranslation();
   const palette = Colors[useColorScheme() ?? 'light'];
-  const {
-    availableProviders,
-    providerAuthMethodsById,
-    connect,
-    setProviderAuth,
-    startProviderOAuth,
-    completeProviderOAuth,
-    completeAutomaticProviderOAuth,
-  } = useOpencode();
+  const { availableProviders, providerAuthMethodsById, setProviderAuth, startProviderOAuth, completeProviderOAuth, completeAutomaticProviderOAuth } = useCapabilities();
+  const { connect } = useConnection();
 
   const [selectedProviderId, setSelectedProviderId] = useState<string>();
   const [selectedMethodIndex, setSelectedMethodIndex] = useState(0);

@@ -18,7 +18,7 @@ import {
   saveProfilePassword,
   type ConnectionProfile,
 } from '@/lib/connection-profiles';
-import { useOpencode } from '@/providers/opencode-provider';
+import { useConnection } from '@/providers/opencode-contexts';
 
 type Palette = typeof Colors.light;
 
@@ -39,7 +39,7 @@ function connectionHost(serverUrl: string) {
 
 export function ConnectionProfiles({ palette }: { palette: Palette }) {
   const { t } = useTranslation();
-  const { settings, connection, connect, switchConnection, updateSettings } = useOpencode();
+  const { settings, connection, connect, switchConnection, updateSettings } = useConnection();
   const [profiles, setProfiles] = useState<ConnectionProfile[]>([]);
   const [expandedKey, setExpandedKey] = useState<string>();
   const [switchingProfileId, setSwitchingProfileId] = useState<string>();

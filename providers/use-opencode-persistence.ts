@@ -11,7 +11,7 @@ import {
   ONBOARDING_VERSION_STORAGE_KEY,
   SETTINGS_STORAGE_KEY,
 } from '@/lib/storage-keys';
-import type { ChatPreferences } from '@/providers/opencode-provider-utils';
+import type { ChatPreferences } from '@/providers/opencode-preferences';
 import type { FavoriteSession } from '@/providers/opencode-provider-types';
 import { parseFavoriteSessions, serializeFavoriteSessions } from '@/providers/favorites-storage';
 import {

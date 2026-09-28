@@ -568,8 +568,10 @@ function buildV2Raw(settings: OpencodeConnectionSettings): { client: Record<stri
 
   const ok = (data: unknown): RawResult => ({ data });
 
-  const client: Record<string, unknown> = {
-    __opencode: { directory },
+  // The V2 surface is assembled from per-domain builders. Each builder is a
+  // self-contained translation slice; the composer below only wires them
+  // together, so adding or changing an endpoint touches one builder.
+  const buildProjectApi = () => ({
     path: {
       get: async () => ok(await api.location.get(vcsLocation)),
     },
@@ -580,6 +582,9 @@ function buildV2Raw(settings: OpencodeConnectionSettings): { client: Record<stri
         return ok({ id: location.project.id, worktree: location.project.directory, time: { created: 0, initialized: 0 } });
       },
     },
+  });
+
+  const buildSessionApi = () => ({
     session: {
       list: async () => {
         const response = await api.session.list(directory ? { directory } : {});
@@ -710,6 +715,9 @@ function buildV2Raw(settings: OpencodeConnectionSettings): { client: Record<stri
         return ok((response.data ?? []).map((command) => ({ name: command.name, description: command.description, template: '' })));
       },
     },
+  });
+
+  const buildCapabilitiesApi = () => ({
     config: {
       get: async () => {
         const entries = await api.config.get();
@@ -784,6 +792,9 @@ function buildV2Raw(settings: OpencodeConnectionSettings): { client: Record<stri
         throw new Error('Formatters are not available on OpenCode 2 servers.');
       },
     },
+  });
+
+  const buildFilesystemApi = () => ({
     find: {
       files: async (parameters: { query: string; dirs?: string }) => {
         const includeDirectories = parameters.dirs === 'true';
@@ -801,6 +812,9 @@ function buildV2Raw(settings: OpencodeConnectionSettings): { client: Record<stri
       read: async (parameters: { path: string }) => ok(decodeFile(await api.file.read({ path: parameters.path }))),
       status: async () => ok([]),
     },
+  });
+
+  const buildVcsApi = () => ({
     vcs: {
       get: async () => {
         const response = await api.vcs.get(vcsLocation);
@@ -826,6 +840,9 @@ function buildV2Raw(settings: OpencodeConnectionSettings): { client: Record<stri
         throw new Error('Applying patches is not supported by OpenCode 2 servers.');
       },
     },
+  });
+
+  const buildWorktreeApi = () => ({
     worktree: {
       list: async () => {
         const projectID = await getProjectID();
@@ -849,6 +866,9 @@ function buildV2Raw(settings: OpencodeConnectionSettings): { client: Record<stri
         return ok({});
       },
     },
+  });
+
+  const buildMcpApi = () => ({
     mcp: {
       status: async () => {
         const response = await api.mcp.list();
@@ -884,6 +904,9 @@ function buildV2Raw(settings: OpencodeConnectionSettings): { client: Record<stri
         },
       },
     },
+  });
+
+  const buildPtyApi = () => ({
     pty: {
       shells: async () => {
         const shells = await api.config.shells();
@@ -925,6 +948,9 @@ function buildV2Raw(settings: OpencodeConnectionSettings): { client: Record<stri
         return ok({ ticket: response.data?.ticket });
       },
     },
+  });
+
+  const buildGlobalApi = () => ({
     global: {
       health: async () => {
         const info = await api.server.info();
@@ -932,6 +958,9 @@ function buildV2Raw(settings: OpencodeConnectionSettings): { client: Record<stri
       },
       event: async (parameters?: { signal?: AbortSignal }) => ({ stream: subscribeV2(api, parameters?.signal, ctx) }),
     },
+  });
+
+  const buildInteractionsApi = () => ({
     permission: {
       list: async () => {
         const response = await api.permission.request.list(ctx.directory ? { location: { directory: ctx.directory } } : {});
@@ -959,6 +988,20 @@ function buildV2Raw(settings: OpencodeConnectionSettings): { client: Record<stri
         return ok(undefined);
       },
     },
+  });
+
+  const client: Record<string, unknown> = {
+    __opencode: { directory },
+    ...buildProjectApi(),
+    ...buildSessionApi(),
+    ...buildCapabilitiesApi(),
+    ...buildFilesystemApi(),
+    ...buildVcsApi(),
+    ...buildWorktreeApi(),
+    ...buildMcpApi(),
+    ...buildPtyApi(),
+    ...buildGlobalApi(),
+    ...buildInteractionsApi(),
   };
 
   return { client, ctx };
