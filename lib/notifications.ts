@@ -6,6 +6,7 @@ import * as TaskManager from 'expo-task-manager';
 import { Platform } from 'react-native';
 
 import { resolveConnectionPassword } from '@/lib/connection-profiles';
+import { i18n } from '@/lib/i18n';
 import { buildClient, detectServerContract, type OpencodeConnectionSettings } from '@/lib/opencode/client';
 import {
   parsePendingNotificationSessions,
@@ -104,7 +105,10 @@ async function scheduleLocalNotification(title: string, body: string) {
 }
 
 async function scheduleTaskFinishedNotification(sessionTitle?: string) {
-  await scheduleLocalNotification('OpenCode finished a task', sessionTitle?.trim() || 'Task complete');
+  await scheduleLocalNotification(
+    i18n.t('notifications:taskFinished.title'),
+    sessionTitle?.trim() || i18n.t('notifications:taskFinished.bodyFallback'),
+  );
 }
 
 if (Platform.OS !== 'web' && !TaskManager.isTaskDefined(CHAT_COMPLETION_TASK_NAME)) {
@@ -293,8 +297,10 @@ export async function clearPendingTaskFinishedNotification(connectionScope: stri
   await writePendingNotificationSessions(current);
 }
 
-export async function notifyTaskFinished(title: string, body: string) {
-  await scheduleLocalNotification(title, body);
+// Notification copy is translated here, at the lib boundary, so callers pass
+// only the session title and never render notification strings themselves.
+export async function notifyTaskFinished(sessionTitle?: string) {
+  await scheduleTaskFinishedNotification(sessionTitle);
 }
 
 export async function sendTestNotificationAsync() {

@@ -1,3 +1,4 @@
+import { getFormatLocale } from '@/lib/i18n';
 import type { Message, Part, Session, Todo, ToolPart } from '@/lib/opencode/types';
 
 export type SessionMessageRecord = {
@@ -68,7 +69,7 @@ function compactText(value: string) {
 export function formatTimestamp(value: number) {
   try {
     if (typeof Intl !== 'undefined' && typeof Intl.DateTimeFormat === 'function') {
-      return new Intl.DateTimeFormat(undefined, {
+      return new Intl.DateTimeFormat(getFormatLocale(), {
         dateStyle: 'medium',
         timeStyle: 'short',
       }).format(value);
@@ -104,7 +105,7 @@ export function formatRelativeTime(value: number) {
 function formatRelative(value: number, unit: 'minute' | 'hour' | 'day') {
   try {
     if (typeof Intl !== 'undefined' && typeof Intl.RelativeTimeFormat === 'function') {
-      return new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' }).format(value, unit);
+      return new Intl.RelativeTimeFormat(getFormatLocale(), { numeric: 'auto' }).format(value, unit);
     }
   } catch {
     // Fall back below.

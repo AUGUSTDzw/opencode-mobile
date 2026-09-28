@@ -59,7 +59,10 @@ The `test:i18n` suite guards translations: it checks that every language defines
 exactly the English key set, that interpolation variables match per key, that
 each plural base carries the plural categories required by its locale, and that
 the pure language-resolution helper picks the preference, then the device tag,
-then English.
+then English. It also verifies that the generated `lib/i18n/resources.ts`
+registry matches the locale folders, that `SUPPORTED_LANGUAGES` and the folders
+agree, and that `app.config.ts` exposes the same `supportedLocales`. Regenerate
+the registry with `npm run gen:i18n`.
 
 ## Fake OpenCode Server
 

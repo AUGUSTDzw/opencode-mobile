@@ -109,16 +109,10 @@ export function useOpencodePersistence({
         await loadPersistedValue(AsyncStorage, FAVORITE_SESSIONS_STORAGE_KEY, parseFavoriteSessions, setFavoriteSessions);
 
         // Resolve first-run completion last so `isHydrated` already implies the
-        // onboarding decision is known. Migration is written back immediately so
-        // the decision is made exactly once.
+        // onboarding decision is known. The marker, including the migration
+        // decision, is persisted by the write-back effect below.
         const onboardingStatus = await loadOnboardingStatus(AsyncStorage);
         setOnboardingVersion(onboardingStatus.version);
-        if (onboardingStatus.shouldPersist) {
-          await AsyncStorage.setItem(
-            ONBOARDING_VERSION_STORAGE_KEY,
-            serializeOnboardingVersion(onboardingStatus.version),
-          ).catch(() => undefined);
-        }
       } finally {
         setIsHydrated(true);
       }

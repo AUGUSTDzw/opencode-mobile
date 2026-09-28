@@ -79,6 +79,9 @@ const connectionProfilesStubUri = `data:text/javascript,${encodeURIComponent(`
     return globalThis.__notificationsTestResolver(identity);
   }
 `)}`;
+const i18nStubUri = `data:text/javascript,${encodeURIComponent(`
+  export const i18n = { t: (key) => key };
+`)}`;
 
 const base64Uri = `data:text/javascript,${encodeURIComponent(
   `import base64 from ${JSON.stringify(pathToFileURL(path.join(root, 'node_modules/base-64/base64.js')).href)}; export const encode = base64.encode;`,
@@ -98,6 +101,7 @@ const notificationsUri = await transpileToDataUri('lib/notifications.ts', [
   [/from 'expo-task-manager'/g, `from "${taskManagerStubUri}"`],
   [/from 'react-native'/g, `from "${reactNativeStubUri}"`],
   [/from '@\/lib\/connection-profiles'/g, `from "${connectionProfilesStubUri}"`],
+  [/from '@\/lib\/i18n'/g, `from "${i18nStubUri}"`],
   [/from '@\/lib\/opencode\/client'/g, `from "${clientStubUri}"`],
   [/from '@\/lib\/notification-pending'/g, `from "${notificationPendingUri}"`],
   [/from '@\/lib\/storage-keys'/g, `from "${storageKeysUri}"`],

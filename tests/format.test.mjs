@@ -2,8 +2,12 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import ts from 'typescript';
 
+// Stub the i18n alias so the data-URL import does not pull in the real i18n
+// instance (expo-localization, bundled locale JSON).
+const i18nStubUri = `data:text/javascript,${encodeURIComponent('export function getFormatLocale() { return "en"; }')}`;
 const source = await readFile(new URL('../lib/opencode/format.ts', import.meta.url), 'utf8');
-const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2020 } }).outputText;
+const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2020 } })
+  .outputText.replace(/from '@\/lib\/i18n'/g, `from "${i18nStubUri}"`);
 const { getMessagePreview, toTranscriptEntry, deriveTodosFromMessages } = await import(`data:text/javascript,${encodeURIComponent(output)}`);
 const info = { id: 'message-1', role: 'assistant', sessionID: 'session-1', time: { created: 1 } };
 

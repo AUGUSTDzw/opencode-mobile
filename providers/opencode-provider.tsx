@@ -67,7 +67,7 @@ import {
   saveConnectionProfiles,
 } from '@/lib/connection-profiles';
 import { getConnectionScope } from '@/lib/connection-scope';
-import { changeAppLanguage, i18n } from '@/lib/i18n';
+import { changeAppLanguage } from '@/lib/i18n';
 import { pendingNotificationKey } from '@/lib/notification-pending';
 import {
   clearPendingTaskFinishedNotification,
@@ -2967,8 +2967,7 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
 
         pendingNotificationsRef.current.delete(key);
         busyNotificationsRef.current.delete(key);
-        const title = session.title || i18n.t('notifications:taskFinished.bodyFallback');
-        await notifyTaskFinished(i18n.t('notifications:taskFinished.title'), title);
+        await notifyTaskFinished(session.title);
       }
     }
 

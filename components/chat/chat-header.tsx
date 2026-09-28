@@ -6,7 +6,7 @@ import { Appbar, Portal, ProgressBar, Text } from 'react-native-paper';
 
 import { useDismissOnBack } from '@/hooks/use-dismiss-on-back';
 import { Colors } from '@/constants/theme';
-import { getFormatLocale } from '@/lib/i18n/format';
+import { getFormatLocale } from '@/lib/i18n';
 import type { Session } from '@/lib/opencode/types';
 import { formatEstimatedCost, formatTokenCount, type SessionUsage } from '@/lib/opencode/usage';
 

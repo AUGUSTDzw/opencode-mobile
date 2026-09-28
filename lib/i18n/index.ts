@@ -38,6 +38,12 @@ if (!i18n.isInitialized) {
   });
 }
 
+// Locale-aware formatting helpers read the active language here, so a manual
+// language switch is reflected without threading the locale through call sites.
+export function getFormatLocale(): string {
+  return i18n.resolvedLanguage || i18n.language || 'en';
+}
+
 // Applies the persisted preference (or the OS locale when unset). Called after
 // persistence hydration and whenever the preference changes.
 export function changeAppLanguage(preference?: string) {

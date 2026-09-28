@@ -1,3 +1,11 @@
+// GENERATED FILE - DO NOT EDIT BY HAND.
+//
+// Regenerate with `npm run gen:i18n`. `npm run test:i18n` fails when this
+// file is out of date with lib/i18n/locales/*/*.json.
+//
+// Translation files are committed JSON and bundled at build time. There is no
+// runtime or network loading, so switching languages never depends on I/O.
+
 import enChat from '@/lib/i18n/locales/en/chat.json';
 import enCommon from '@/lib/i18n/locales/en/common.json';
 import enNotifications from '@/lib/i18n/locales/en/notifications.json';
@@ -55,80 +63,78 @@ import zhSettings from '@/lib/i18n/locales/zh/settings.json';
 import zhTerminal from '@/lib/i18n/locales/zh/terminal.json';
 import zhWorkspace from '@/lib/i18n/locales/zh/workspace.json';
 
-// Translation files are committed JSON and bundled at build time. There is no
-// runtime or network loading, so switching languages never depends on I/O.
 export const resources = {
   en: {
-    common: enCommon,
     chat: enChat,
-    workspace: enWorkspace,
-    terminal: enTerminal,
-    settings: enSettings,
+    common: enCommon,
     notifications: enNotifications,
     onboarding: enOnboarding,
-  },
-  es: {
-    common: esCommon,
-    chat: esChat,
-    workspace: esWorkspace,
-    terminal: esTerminal,
-    settings: esSettings,
-    notifications: esNotifications,
-    onboarding: esOnboarding,
-  },
-  hi: {
-    common: hiCommon,
-    chat: hiChat,
-    workspace: hiWorkspace,
-    terminal: hiTerminal,
-    settings: hiSettings,
-    notifications: hiNotifications,
-    onboarding: hiOnboarding,
+    settings: enSettings,
+    terminal: enTerminal,
+    workspace: enWorkspace,
   },
   de: {
-    common: deCommon,
     chat: deChat,
-    workspace: deWorkspace,
-    terminal: deTerminal,
-    settings: deSettings,
+    common: deCommon,
     notifications: deNotifications,
     onboarding: deOnboarding,
+    settings: deSettings,
+    terminal: deTerminal,
+    workspace: deWorkspace,
+  },
+  es: {
+    chat: esChat,
+    common: esCommon,
+    notifications: esNotifications,
+    onboarding: esOnboarding,
+    settings: esSettings,
+    terminal: esTerminal,
+    workspace: esWorkspace,
   },
   fr: {
-    common: frCommon,
     chat: frChat,
-    workspace: frWorkspace,
-    terminal: frTerminal,
-    settings: frSettings,
+    common: frCommon,
     notifications: frNotifications,
     onboarding: frOnboarding,
+    settings: frSettings,
+    terminal: frTerminal,
+    workspace: frWorkspace,
   },
-  zh: {
-    common: zhCommon,
-    chat: zhChat,
-    workspace: zhWorkspace,
-    terminal: zhTerminal,
-    settings: zhSettings,
-    notifications: zhNotifications,
-    onboarding: zhOnboarding,
-  },
-  pt: {
-    common: ptCommon,
-    chat: ptChat,
-    workspace: ptWorkspace,
-    terminal: ptTerminal,
-    settings: ptSettings,
-    notifications: ptNotifications,
-    onboarding: ptOnboarding,
+  hi: {
+    chat: hiChat,
+    common: hiCommon,
+    notifications: hiNotifications,
+    onboarding: hiOnboarding,
+    settings: hiSettings,
+    terminal: hiTerminal,
+    workspace: hiWorkspace,
   },
   ja: {
-    common: jaCommon,
     chat: jaChat,
-    workspace: jaWorkspace,
-    terminal: jaTerminal,
-    settings: jaSettings,
+    common: jaCommon,
     notifications: jaNotifications,
     onboarding: jaOnboarding,
+    settings: jaSettings,
+    terminal: jaTerminal,
+    workspace: jaWorkspace,
+  },
+  pt: {
+    chat: ptChat,
+    common: ptCommon,
+    notifications: ptNotifications,
+    onboarding: ptOnboarding,
+    settings: ptSettings,
+    terminal: ptTerminal,
+    workspace: ptWorkspace,
+  },
+  zh: {
+    chat: zhChat,
+    common: zhCommon,
+    notifications: zhNotifications,
+    onboarding: zhOnboarding,
+    settings: zhSettings,
+    terminal: zhTerminal,
+    workspace: zhWorkspace,
   },
 };
 

@@ -64,22 +64,22 @@ assert.equal(hasExistingConfiguration({ hasStoredSettings: false, hasStoredProfi
 
 assert.deepEqual(
   resolveOnboardingStatus(undefined, { hasStoredSettings: false, hasStoredProfiles: false, hasActiveProject: false }),
-  { completed: false, version: ONBOARDING_VERSION_IN_PROGRESS, shouldPersist: true },
+  { completed: false, version: ONBOARDING_VERSION_IN_PROGRESS },
   'a fresh install starts onboarding and records version 0',
 );
 assert.deepEqual(
   resolveOnboardingStatus(undefined, { hasStoredSettings: true, hasStoredProfiles: false, hasActiveProject: false }),
-  { completed: true, version: CURRENT_ONBOARDING_VERSION, shouldPersist: true },
+  { completed: true, version: CURRENT_ONBOARDING_VERSION },
   'an existing settings key marks onboarding complete',
 );
 assert.deepEqual(
   resolveOnboardingStatus(0, { hasStoredSettings: true, hasStoredProfiles: true, hasActiveProject: true }),
-  { completed: false, version: 0, shouldPersist: false },
+  { completed: false, version: 0 },
   'an explicit in-progress marker is sticky even after configuration exists',
 );
 assert.deepEqual(
   resolveOnboardingStatus(CURRENT_ONBOARDING_VERSION, { hasStoredSettings: false, hasStoredProfiles: false, hasActiveProject: false }),
-  { completed: true, version: CURRENT_ONBOARDING_VERSION, shouldPersist: false },
+  { completed: true, version: CURRENT_ONBOARDING_VERSION },
 );
 
 // --- storage-backed resolution ---------------------------------------------
@@ -102,10 +102,10 @@ function createStorage(initial = new Map(), failedReads = new Set()) {
 }
 
 const fresh = await loadOnboardingStatus(createStorage());
-assert.deepEqual(fresh, { completed: false, version: 0, shouldPersist: true });
+assert.deepEqual(fresh, { completed: false, version: 0 });
 
 const upgraded = await loadOnboardingStatus(createStorage(new Map([[SETTINGS_STORAGE_KEY, '{"serverUrl":"http://x"}']])));
-assert.deepEqual(upgraded, { completed: true, version: CURRENT_ONBOARDING_VERSION, shouldPersist: true });
+assert.deepEqual(upgraded, { completed: true, version: CURRENT_ONBOARDING_VERSION });
 
 const profilesOnly = await loadOnboardingStatus(createStorage(new Map([[CONNECTION_PROFILES_STORAGE_KEY, '[]']])));
 assert.equal(profilesOnly.completed, true);
@@ -117,12 +117,12 @@ const sticky = await loadOnboardingStatus(createStorage(new Map([
   [ONBOARDING_VERSION_STORAGE_KEY, serializeOnboardingVersion(0)],
   [SETTINGS_STORAGE_KEY, '{"serverUrl":"http://x"}'],
 ])));
-assert.deepEqual(sticky, { completed: false, version: 0, shouldPersist: false });
+assert.deepEqual(sticky, { completed: false, version: 0 });
 
 const done = await loadOnboardingStatus(createStorage(new Map([
   [ONBOARDING_VERSION_STORAGE_KEY, serializeOnboardingVersion(CURRENT_ONBOARDING_VERSION)],
 ])));
-assert.deepEqual(done, { completed: true, version: CURRENT_ONBOARDING_VERSION, shouldPersist: false });
+assert.deepEqual(done, { completed: true, version: CURRENT_ONBOARDING_VERSION });
 
 const versionReadFailure = await loadOnboardingStatus(createStorage(
   new Map([[SETTINGS_STORAGE_KEY, '{}']]),
@@ -130,15 +130,15 @@ const versionReadFailure = await loadOnboardingStatus(createStorage(
 ));
 assert.deepEqual(
   versionReadFailure,
-  { completed: true, version: CURRENT_ONBOARDING_VERSION, shouldPersist: false },
-  'a storage failure never onboards an existing user and does not persist a decision',
+  { completed: true, version: CURRENT_ONBOARDING_VERSION },
+  'a storage failure never onboards an existing user',
 );
 
 const evidenceReadFailure = await loadOnboardingStatus(createStorage(new Map(), new Set([SETTINGS_STORAGE_KEY])));
-assert.deepEqual(evidenceReadFailure, { completed: true, version: CURRENT_ONBOARDING_VERSION, shouldPersist: false });
+assert.deepEqual(evidenceReadFailure, { completed: true, version: CURRENT_ONBOARDING_VERSION });
 
 const malformed = await loadOnboardingStatus(createStorage(new Map([[ONBOARDING_VERSION_STORAGE_KEY, '{']])));
-assert.deepEqual(malformed, { completed: false, version: 0, shouldPersist: true });
+assert.deepEqual(malformed, { completed: false, version: 0 });
 
 const malformedStorage = createStorage(new Map([[ONBOARDING_VERSION_STORAGE_KEY, '{']]));
 await loadOnboardingStatus(malformedStorage);

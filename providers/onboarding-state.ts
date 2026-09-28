@@ -67,8 +67,6 @@ export function hasExistingConfiguration({ hasStoredSettings, hasStoredProfiles,
 export type ResolvedOnboardingStatus = {
   completed: boolean;
   version: number;
-  /** True when the decision came from migration and must be written back. */
-  shouldPersist: boolean;
 };
 
 /**
@@ -77,23 +75,24 @@ export type ResolvedOnboardingStatus = {
  * When no version marker exists yet:
  * - an installation that already has any configuration is treated as completed,
  *   so upgrading users never see the assistant;
- * - a fresh installation starts the assistant and persists version 0, which
- *   makes the decision sticky even after the settings write effect later
- *   creates `opencode-mobile.settings`.
+ * - a fresh installation starts the assistant.
+ *
+ * The resolved marker is written back once persistence has hydrated (see
+ * `use-opencode-persistence.ts`), which makes the decision sticky even after the
+ * settings write effect later creates `opencode-mobile.settings`.
  */
 export function resolveOnboardingStatus(
   storedVersion: number | undefined,
   existing: ExistingConfiguration,
 ): ResolvedOnboardingStatus {
   if (typeof storedVersion === 'number') {
-    return { completed: isOnboardingComplete(storedVersion), version: storedVersion, shouldPersist: false };
+    return { completed: isOnboardingComplete(storedVersion), version: storedVersion };
   }
 
   const completed = hasExistingConfiguration(existing);
   return {
     completed,
     version: completed ? CURRENT_ONBOARDING_VERSION : ONBOARDING_VERSION_IN_PROGRESS,
-    shouldPersist: true,
   };
 }
 
@@ -129,13 +128,12 @@ async function readKeyPresence(storage: PersistenceStorage, key: string): Promis
 
 /**
  * Resolves completion for boot. Storage failures never onboard an existing
- * user: they report completed without persisting, so a transient failure cannot
- * gate the app and a later successful read can still run the real migration.
+ * user: they report completed, so a transient failure cannot gate the app.
  */
 export async function loadOnboardingStatus(storage: PersistenceStorage): Promise<ResolvedOnboardingStatus> {
   const versionRead = await readVersion(storage);
   if (versionRead.readFailed) {
-    return { completed: true, version: CURRENT_ONBOARDING_VERSION, shouldPersist: false };
+    return { completed: true, version: CURRENT_ONBOARDING_VERSION };
   }
 
   if (versionRead.storedVersion !== undefined) {
@@ -153,7 +151,7 @@ export async function loadOnboardingStatus(storage: PersistenceStorage): Promise
   ]);
 
   if (hasStoredSettings === undefined || hasStoredProfiles === undefined || hasActiveProject === undefined) {
-    return { completed: true, version: CURRENT_ONBOARDING_VERSION, shouldPersist: false };
+    return { completed: true, version: CURRENT_ONBOARDING_VERSION };
   }
 
   return resolveOnboardingStatus(undefined, { hasStoredSettings, hasStoredProfiles, hasActiveProject });

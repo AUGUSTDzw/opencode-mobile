@@ -131,4 +131,33 @@ assert.equal(resolveLanguage('EN', []), 'en', 'Preference matching is case-insen
 assert.ok(SUPPORTED_LANGUAGE_CODES.includes('en'), 'English must be a supported language.');
 assert.ok(SUPPORTED_LANGUAGE_CODES.length >= 2, 'At least one non-English language must be supported.');
 
+// --- registry and config stay in sync with the locale folders ---------------
+
+const sortedCodes = [...SUPPORTED_LANGUAGE_CODES].sort();
+assert.deepEqual(
+  languages,
+  sortedCodes,
+  'Every SUPPORTED_LANGUAGES entry needs a locales/<code> folder, and vice versa.',
+);
+
+// The bundled registry is generated from the folders, so a stale file means a
+// language or namespace changed without regenerating.
+const { buildResourcesSource } = await import(new URL('../scripts/gen-i18n.mjs', import.meta.url));
+const resourcesSource = await readFile(new URL('lib/i18n/resources.ts', root), 'utf8');
+assert.equal(
+  resourcesSource,
+  await buildResourcesSource(),
+  'lib/i18n/resources.ts is out of date; run `npm run gen:i18n`.',
+);
+
+const appConfigSource = await readFile(new URL('app.config.ts', root), 'utf8');
+const supportedLocalesBlock = appConfigSource.match(/supportedLocales:\s*\{([^}]*)\}/)?.[1];
+assert.ok(supportedLocalesBlock, 'app.config.ts must define supportedLocales.');
+const configLocaleLists = [...supportedLocalesBlock.matchAll(/(?:ios|android):\s*\[([^\]]*)\]/g)]
+  .map((match) => [...match[1].matchAll(/'([^']+)'/g)].map((entry) => entry[1]).sort());
+assert.ok(configLocaleLists.length >= 2, 'app.config.ts must expose ios and android supportedLocales.');
+for (const list of configLocaleLists) {
+  assert.deepEqual(list, sortedCodes, 'app.config.ts supportedLocales must match SUPPORTED_LANGUAGES.');
+}
+
 console.log(`i18n checks passed for ${languages.length} locale(s) and ${namespaces.length} namespace(s).`);

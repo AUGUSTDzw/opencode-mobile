@@ -224,11 +224,13 @@ carousel: welcome, connect, workspace, preferences, permissions, and ready.
 - `lib/i18n/languages.ts`
   Supported language list plus pure preference/device-tag resolution.
 - `lib/i18n/resources.ts`
-  Static, bundled namespace resources per language (no runtime loading).
+  Generated, static namespace registry per language (no runtime loading).
+  Regenerate with `npm run gen:i18n`; `test:i18n` fails when it is stale.
 - `lib/i18n/locales/<lang>/<namespace>.json`
   Committed translation files; English is the source of truth and fallback.
-- `lib/i18n/format.ts`
-  `Intl`-based date, number, currency, and relative-time formatting bound to the active language.
+- `lib/i18n/index.ts`
+  Also exports `getFormatLocale()`, which `lib/opencode/format.ts` uses to render
+  timestamps and relative times in the active language.
 
 UI text is grouped into feature namespaces (`common`, `chat`, `workspace`,
 `terminal`, `settings`, `notifications`). Components translate with
@@ -240,7 +242,9 @@ Domain-generated labels (`lib/opencode/format.ts` detail labels,
 `lib/opencode/transcript.ts` activity summaries, and provider/transport error
 strings) remain English. They are built outside the React tree and are partly
 memoized per message record, so translating them needs a by-kind/enum pass
-rather than an in-place `t()` call.
+rather than an in-place `t()` call. Notification copy is the exception: it is
+translated inside `lib/notifications.ts`, so the provider passes only the
+session title and never builds notification strings itself.
 
 ## Runtime Boot Sequence
 
