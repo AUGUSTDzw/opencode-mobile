@@ -67,6 +67,7 @@ import {
   saveConnectionProfiles,
 } from '@/lib/connection-profiles';
 import { getConnectionScope } from '@/lib/connection-scope';
+import { changeAppLanguage, i18n } from '@/lib/i18n';
 import { pendingNotificationKey } from '@/lib/notification-pending';
 import {
   clearPendingTaskFinishedNotification,
@@ -126,6 +127,10 @@ import {
   type WorkspaceCatalog,
 } from '@/providers/opencode-provider-types';
 import { hydrateSessionCache, persistSessionCache } from '@/providers/session-cache';
+import {
+  CURRENT_ONBOARDING_VERSION,
+  isOnboardingComplete,
+} from '@/providers/onboarding-state';
 import { useConversationKeepAwake } from '@/providers/use-conversation-keep-awake';
 import { useConversationScreenDim } from '@/providers/use-conversation-screen-dim';
 import { useOpencodePersistence } from '@/providers/use-opencode-persistence';
@@ -218,6 +223,12 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
   });
   const [serverContract, setServerContract] = useState<ServerContract>('v1');
   const [activeProjectPath, setActiveProjectPath] = useState<string>();
+  // Completion-only onboarding marker: 0 means started/not completed, and
+  // CURRENT_ONBOARDING_VERSION means done. Never holds configuration.
+  const [onboardingVersion, setOnboardingVersion] = useState(0);
+  // Review mode launched from Settings. It keeps the tab navigator mounted so
+  // re-running the assistant cannot drop the current configuration or session.
+  const [onboardingActive, setOnboardingActive] = useState(false);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [archivedSessions, setArchivedSessions] = useState<GlobalSession[]>([]);
   const [sessionStatuses, setSessionStatuses] = useState<Record<string, SessionStatus>>({});
@@ -342,13 +353,40 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
     chatPreferences,
     favoriteSessions,
     lastSessionByConnection,
+    onboardingVersion,
     setActiveProjectPath,
     setChatPreferences,
     setFavoriteSessions,
     setLastSessionByConnection,
+    setOnboardingVersion,
     setSettings,
     settings,
   });
+
+  const onboardingCompleted = isOnboardingComplete(onboardingVersion);
+
+  const completeOnboarding = useCallback(async () => {
+    setOnboardingVersion(CURRENT_ONBOARDING_VERSION);
+    setOnboardingActive(false);
+  }, []);
+
+  const startOnboardingReview = useCallback(() => {
+    setOnboardingActive(true);
+  }, []);
+
+  const stopOnboardingReview = useCallback(() => {
+    setOnboardingActive(false);
+  }, []);
+
+  // Apply the persisted UI language once hydration finishes, and again whenever
+  // the preference changes. An undefined preference follows the OS locale.
+  useEffect(() => {
+    if (!isHydrated) {
+      return;
+    }
+
+    changeAppLanguage(chatPreferences.language);
+  }, [chatPreferences.language, isHydrated]);
 
   const projects = useMemo<OpencodeProject[]>(() => {
     const entries = new Map<string, OpencodeProject>();
@@ -1378,14 +1416,18 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
   // this directly with the target settings instead of relying on `settingsRef`
   // being updated by a render, so a switch can never connect with the previous
   // server's URL, username, or password.
-  const runConnect = useCallback(async (targetSettings: OpencodeConnectionSettings) => {
+  const runConnect = useCallback(async (targetSettings: OpencodeConnectionSettings): Promise<ConnectionState> => {
+    // Any explicit connect (including the onboarding assistant) satisfies the
+    // one-time boot connect, so completing onboarding never reconnects again.
+    initialConnectStartedRef.current = true;
     if (!isValidServerUrl(targetSettings.serverUrl)) {
-      setConnection({
+      const failed: ConnectionState = {
         status: 'error',
         message: getConnectionError(targetSettings.serverUrl, new Error('Invalid server URL.')),
         checkedAt: Date.now(),
-      });
-      return;
+      };
+      setConnection(failed);
+      return failed;
     }
 
     setConnection({
@@ -1415,7 +1457,7 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
       try {
         const result = await loadWorkspaceCatalog(true, candidateClient);
         if (!isCurrentCatalogClient(candidateClient)) {
-          return;
+          return connectionRef.current;
         }
         catalog = result;
         activeCatalogClient = candidateClient;
@@ -1430,11 +1472,12 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
     }
 
     if (!catalog || !activeCatalogClient || !usedContract) {
-      setConnection({
+      const failed: ConnectionState = {
         status: 'error',
         message: getConnectionError(targetSettings.serverUrl, lastError ?? new Error('Could not reach the OpenCode server.')),
         checkedAt: Date.now(),
-      });
+      };
+      setConnection(failed);
       serverProjectsRef.current = [];
       setServerProjects([]);
       setCurrentProjectPath(undefined);
@@ -1446,7 +1489,7 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
       setProviderAuthMethodsById({});
       setAvailableModels([]);
       setAvailableAgents([]);
-      return;
+      return failed;
     }
 
     if (usedContract !== serverContractRef.current) {
@@ -1455,12 +1498,13 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
     }
 
     const projectDirectory = catalog.currentProjectPath || catalog.serverRootPath;
-    setConnection({
+    const connected: ConnectionState = {
       status: 'connected',
       message: `Connected to ${getNormalizedServerUrl(targetSettings.serverUrl)} (OpenCode ${usedContract === 'v2' ? '2.x' : '1.x'})`,
       checkedAt: Date.now(),
       projectDirectory,
-    });
+    };
+    setConnection(connected);
 
     if (!activeProjectPath && !catalog.currentProjectPath && !catalog.serverProjects[0]?.worktree) {
       setSessions([]);
@@ -1471,6 +1515,8 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
       setAvailableModels([]);
       setAvailableAgents([]);
     }
+
+    return connected;
   }, [activeProjectPath, isCurrentCatalogClient, loadWorkspaceCatalog]);
 
   const connect = useCallback(() => runConnect(settingsRef.current), [runConnect]);
@@ -1541,7 +1587,7 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
       setChatPreferences((current) => ({ ...current, ...modelPreferences }));
     }
 
-    await runConnect(targetSettings);
+    return runConnect(targetSettings);
   }, [captureActiveProfilePreferences, runConnect, updateSettings]);
 
   const ensureActiveSessionRef = useRef(ensureActiveSession);
@@ -1694,13 +1740,15 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
   }, [openDeepLinkSession, switchConnection, waitForConnectionScope]);
 
   useEffect(() => {
-    if (!isHydrated || initialConnectStartedRef.current) {
+    // A fresh installation must not silently connect to the default loopback
+    // URL before the user has entered a server in onboarding.
+    if (!isHydrated || !onboardingCompleted || initialConnectStartedRef.current) {
       return;
     }
 
     initialConnectStartedRef.current = true;
     void connect();
-  }, [connect, isHydrated]);
+  }, [connect, isHydrated, onboardingCompleted]);
 
   useEffect(() => {
     if (connection.status !== 'connected' || !activeProjectPath) return;
@@ -2919,8 +2967,8 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
 
         pendingNotificationsRef.current.delete(key);
         busyNotificationsRef.current.delete(key);
-        const title = session.title || 'Task complete';
-        await notifyTaskFinished('OpenCode finished a task', title);
+        const title = session.title || i18n.t('notifications:taskFinished.bodyFallback');
+        await notifyTaskFinished(i18n.t('notifications:taskFinished.title'), title);
       }
     }
 
@@ -3080,6 +3128,11 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
   const contextValue = useMemo<OpencodeContextValue>(
     () => ({
       isHydrated,
+      onboardingCompleted,
+      onboardingActive,
+      completeOnboarding,
+      startOnboardingReview,
+      stopOnboardingReview,
       settings,
       updateSettings,
       switchConnection,
@@ -3267,6 +3320,11 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
       isBootstrappingChat,
       isRefreshingDiffs,
       isHydrated,
+      onboardingCompleted,
+      onboardingActive,
+      completeOnboarding,
+      startOnboardingReview,
+      stopOnboardingReview,
       isRefreshingMessages,
       isRefreshingWorkspaceCatalog,
       isRefreshingSessions,

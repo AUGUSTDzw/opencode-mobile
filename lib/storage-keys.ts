@@ -2,6 +2,12 @@ export const SETTINGS_STORAGE_KEY = 'opencode-mobile.settings';
 export const CONNECTION_PROFILES_STORAGE_KEY = 'opencode-mobile.connection-profiles';
 export const CHAT_PREFERENCES_STORAGE_KEY = 'opencode-mobile.chat-preferences';
 export const ACTIVE_PROJECT_STORAGE_KEY = 'opencode-mobile.active-project';
+// Completion-only first-run setup marker. It never stores connection,
+// workspace, preference, or permission values; those stay in their existing
+// stores. A value below CURRENT_ONBOARDING_VERSION means the assistant should
+// run; version 0 marks "started but not completed" so a relaunch is not
+// mistaken for a pre-onboarding upgrade. See providers/onboarding-state.ts.
+export const ONBOARDING_VERSION_STORAGE_KEY = 'opencode-mobile.onboarding-version';
 export const LAST_SESSION_BY_PROJECT_STORAGE_KEY = 'opencode-mobile.last-session-by-project';
 export const PENDING_NOTIFICATION_SESSIONS_STORAGE_KEY = 'opencode-mobile.pending-notification-sessions';
 export const FAVORITE_SESSIONS_STORAGE_KEY = 'opencode-mobile.favorite-sessions';

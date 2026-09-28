@@ -1,21 +1,28 @@
 import Constants from 'expo-constants';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { Platform } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
 import { PaperProvider } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { Colors } from '@/constants/theme';
 import { getPaperTheme } from '@/constants/paper-theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { installGlobalErrorHandler } from '@/lib/error-reporting';
-import { OpencodeProvider } from '@/providers/opencode-provider';
+import '@/lib/i18n';
+import { OpencodeProvider, useOpencode } from '@/providers/opencode-provider';
 
 export const unstable_settings = {
   anchor: '(tabs)',
 };
 
 export { ErrorBoundary } from 'expo-router';
+
+// Keep the native splash up until AsyncStorage/SecureStore hydration and the
+// onboarding decision are known, so neither the assistant nor the app flashes.
+void SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -43,10 +50,7 @@ export default function RootLayout() {
       <OpencodeProvider>
         <PaperProvider theme={paperTheme}>
           <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-            <Stack>
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="session/[id]" options={{ headerShown: false }} />
-            </Stack>
+            <RootNavigator />
             <StatusBar style="auto" />
           </ThemeProvider>
         </PaperProvider>
@@ -54,3 +58,44 @@ export default function RootLayout() {
     </SafeAreaProvider>
   );
 }
+
+// The onboarding decision depends on persisted state, so routing waits for
+// hydration. `Stack.Protected` swaps the assistant in and out without mounting
+// the tab navigator behind it, which prevents any onboarding/app flash.
+function RootNavigator() {
+  const colorScheme = useColorScheme();
+  const palette = Colors[colorScheme ?? 'light'];
+  const { isHydrated, onboardingCompleted, onboardingActive } = useOpencode();
+
+  useEffect(() => {
+    if (isHydrated) {
+      void SplashScreen.hideAsync().catch(() => undefined);
+    }
+  }, [isHydrated]);
+
+  if (!isHydrated) {
+    return (
+      <View style={[styles.hydration, { backgroundColor: palette.background }]}>
+        <ActivityIndicator size="large" color={palette.tint} />
+      </View>
+    );
+  }
+
+  const onboardingVisible = !onboardingCompleted || onboardingActive;
+
+  return (
+    <Stack>
+      <Stack.Protected guard={onboardingCompleted}>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="session/[id]" options={{ headerShown: false }} />
+      </Stack.Protected>
+      <Stack.Protected guard={onboardingVisible}>
+        <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+      </Stack.Protected>
+    </Stack>
+  );
+}
+
+const styles = StyleSheet.create({
+  hydration: { alignItems: 'center', flex: 1, justifyContent: 'center' },
+});

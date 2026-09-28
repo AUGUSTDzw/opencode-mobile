@@ -125,12 +125,17 @@ export type WorkspaceCatalog = {
 
 export type OpencodeContextValue = {
   isHydrated: boolean;
+  onboardingCompleted: boolean;
+  onboardingActive: boolean;
+  completeOnboarding: () => Promise<void>;
+  startOnboardingReview: () => void;
+  stopOnboardingReview: () => void;
   settings: OpencodeConnectionSettings;
   updateSettings: (patch: Partial<OpencodeConnectionSettings>) => void;
   switchConnection: (
     next: Pick<OpencodeConnectionSettings, 'serverUrl' | 'username' | 'password'>,
     modelPreferences?: Partial<ChatPreferences>,
-  ) => Promise<void>;
+  ) => Promise<ConnectionState>;
   connection: ConnectionState;
   serverCapabilities: ServerCapabilities;
   projects: OpencodeProject[];
@@ -197,7 +202,7 @@ export type OpencodeContextValue = {
   };
   promptError?: { message: string; occurredAt: number; sessionId?: string };
   clearPromptError: () => void;
-  connect: () => Promise<void>;
+  connect: () => Promise<ConnectionState>;
   refreshSessions: (silent?: boolean) => Promise<void>;
   openSession: (sessionId: string) => Promise<void>;
   refreshCurrentSession: (silent?: boolean) => Promise<void>;

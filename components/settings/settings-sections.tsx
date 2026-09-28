@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, StyleSheet, Switch as NativeSwitch, Text as NativeText, View } from 'react-native';
 import {
   Button,
@@ -20,7 +21,7 @@ import type { SpeechVoiceOption } from '@/lib/voice/speech-output';
 import type { WorkingSoundVariant } from '@/lib/voice/working-sound';
 import type { ChatPreferences, ModelOption, ProviderOption, ResponseScope } from '@/providers/opencode-provider';
 import type { Diagnostics } from '@/providers/services/diagnostics-service';
-import { getProviderCopy, RESPONSE_SCOPE_OPTIONS, WORKING_SOUND_OPTIONS } from '@/components/settings/settings-utils';
+import { getProviderCopy, LANGUAGE_OPTIONS, RESPONSE_SCOPE_OPTIONS, WORKING_SOUND_OPTIONS } from '@/components/settings/settings-utils';
 
 type Palette = typeof Colors.light;
 
@@ -39,20 +40,22 @@ export function DiagnosticsSection({
   onRefresh: () => void;
   palette: Palette;
 }) {
+  const { t } = useTranslation();
   const health = diagnostics?.health.available ? diagnostics.health.data : undefined;
   const mcpCount = diagnostics?.mcp.available ? Object.keys(diagnostics.mcp.data).length : undefined;
   const lspCount = lspAvailable && diagnostics?.lsp.available ? diagnostics.lsp.data.length : undefined;
   const formatterCount = formatterAvailable && diagnostics?.formatter.available ? diagnostics.formatter.data.length : undefined;
-  const subsystemParts = [`MCP ${mcpCount ?? 'n/a'}`];
-  if (lspAvailable) subsystemParts.push(`LSP ${lspCount ?? 'n/a'}`);
-  if (formatterAvailable) subsystemParts.push(`Formatters ${formatterCount ?? 'n/a'}`);
+  const notAvailable = t('settings:diagnostics.notAvailable');
+  const subsystemParts = [t('settings:diagnostics.subsystemsMcp', { value: mcpCount ?? notAvailable })];
+  if (lspAvailable) subsystemParts.push(t('settings:diagnostics.subsystemsLsp', { value: lspCount ?? notAvailable }));
+  if (formatterAvailable) subsystemParts.push(t('settings:diagnostics.subsystemsFormatters', { value: formatterCount ?? notAvailable }));
   return (
     <View style={styles.section}>
-        <Text variant="titleLarge" style={[styles.title, { color: palette.text }]}>Server diagnostics</Text>
-        <List.Item title="Server" description={health ? `OpenCode ${health.version}` : 'Health endpoint unavailable'} right={() => <Chip compact>{health?.healthy ? 'Healthy' : 'Unknown'}</Chip>} />
-        <List.Item title="Realtime updates" description={eventStreamStatus === 'connected' ? 'Global event stream connected' : 'Polling fallback active'} right={() => <Chip compact>{eventStreamStatus}</Chip>} />
-        <List.Item title="Subsystems" description={subsystemParts.join(' • ')} />
-        <Button mode="outlined" onPress={onRefresh}>Refresh diagnostics</Button>
+        <Text variant="titleLarge" style={[styles.title, { color: palette.text }]}>{t('settings:diagnostics.title')}</Text>
+        <List.Item title={t('settings:diagnostics.server')} description={health ? t('settings:diagnostics.openCodeVersion', { version: health.version }) : t('settings:diagnostics.healthUnavailable')} right={() => <Chip compact>{health?.healthy ? t('settings:diagnostics.healthy') : t('common:labels.unknown')}</Chip>} />
+        <List.Item title={t('settings:diagnostics.realtimeUpdates')} description={eventStreamStatus === 'connected' ? t('settings:diagnostics.eventStreamConnected') : t('settings:diagnostics.pollingFallback')} right={() => <Chip compact>{eventStreamStatus}</Chip>} />
+        <List.Item title={t('settings:diagnostics.subsystems')} description={subsystemParts.join(' • ')} />
+        <Button mode="outlined" onPress={onRefresh}>{t('settings:diagnostics.refresh')}</Button>
     </View>
   );
 }
@@ -63,10 +66,11 @@ type ConnectionSectionProps = {
 };
 
 export function ConnectionSection({ connection, palette }: ConnectionSectionProps) {
+  const { t } = useTranslation();
   return (
     <View style={styles.section}>
         <Text variant="bodyMedium" style={{ color: palette.muted }}>{connection.message}</Text>
-        {connection.checkedAt ? <Text variant="bodySmall" style={{ color: palette.muted }}>Last checked {formatTimestamp(connection.checkedAt)}</Text> : null}
+        {connection.checkedAt ? <Text variant="bodySmall" style={{ color: palette.muted }}>{t('settings:connection.lastChecked', { time: formatTimestamp(connection.checkedAt) })}</Text> : null}
         <ConnectionProfiles palette={palette} />
     </View>
   );
@@ -99,6 +103,7 @@ export function AiDefaultsSection({
   onStartProviderConfiguration,
   palette,
 }: AiDefaultsSectionProps) {
+  const { t } = useTranslation();
   const configuredModels = availableModels.filter((model) => configuredProviders.some((provider) => provider.id === model.providerID));
   const configuredProviderModels = configuredProviders
     .map((provider) => ({
@@ -111,19 +116,19 @@ export function AiDefaultsSection({
   return (
     <View style={styles.section}>
         <Text variant="bodyMedium" style={{ color: palette.muted }}>
-          Choose which configured models appear in chat. The last model you pick in chat stays selected for new chats.
+          {t('settings:providers.chooseModels')}
         </Text>
         <View style={styles.providerHeader}>
-          <Text variant="labelLarge" style={{ color: palette.text }}>Configured providers</Text>
+          <Text variant="labelLarge" style={{ color: palette.text }}>{t('settings:providers.configuredProviders')}</Text>
           {unconfiguredProviders.length > 0 ? (
             <NativeSelect
               onValueChange={onStartProviderConfiguration}
               options={unconfiguredProviders.map((provider) => ({
-                label: getProviderCopy(provider.id, provider.label).label,
+                label: getProviderCopy(provider.id, provider.label, t).label,
                 leadingIcon: (props) => renderProviderIcon(provider.id, props.size, props.color),
                 value: provider.id,
               }))}
-              title="Add provider"
+              title={t('settings:providers.addProvider')}
               renderTrigger={({ disabled, open, openState }) => (
                 <Pressable
                   accessibilityRole="button"
@@ -138,7 +143,7 @@ export function AiDefaultsSection({
                       opacity: disabled ? 0.45 : pressed ? 0.82 : 1,
                     },
                   ]}>
-                  <NativeText style={[styles.inlineSelectButtonLabel, { color: palette.text }]}>Add provider</NativeText>
+                  <NativeText style={[styles.inlineSelectButtonLabel, { color: palette.text }]}>{t('settings:providers.addProvider')}</NativeText>
                 </Pressable>
               )}
             />
@@ -148,13 +153,13 @@ export function AiDefaultsSection({
         <View style={styles.chipWrap}>
           {configuredProviders.map((provider) => (
             <Chip key={provider.id} icon={({ size, color }) => renderProviderIcon(provider.id, size, color)} compact onClose={() => onRemoveProvider(provider.id)}>
-              {getProviderCopy(provider.id, provider.label).label}
+              {getProviderCopy(provider.id, provider.label, t).label}
             </Chip>
           ))}
         </View>
-        {availableProviders.length === 0 ? <HelperText type="info">Connect first to load providers.</HelperText> : null}
+        {availableProviders.length === 0 ? <HelperText type="info">{t('settings:providers.connectFirst')}</HelperText> : null}
         {availableProviders.length > 0 && configuredProviders.length === 0 ? (
-          <HelperText type="info">Configure at least one provider to pick defaults.</HelperText>
+          <HelperText type="info">{t('settings:providers.configureAtLeastOne')}</HelperText>
         ) : null}
         <List.Section style={styles.modelListSection}>
           <List.AccordionGroup expandedId={expandedProviderId} onAccordionPress={(id) => onExpandedProviderChange(expandedProviderId === String(id) ? undefined : String(id))}>
@@ -165,8 +170,8 @@ export function AiDefaultsSection({
                 <List.Accordion
                   key={provider.id}
                   id={provider.id}
-                  title={getProviderCopy(provider.id, provider.label).label}
-                  description={`${selectedCount} of ${models.length} selected`}
+                  title={getProviderCopy(provider.id, provider.label, t).label}
+                  description={t('settings:providers.selectedCount', { selected: selectedCount, total: models.length })}
                   left={() => (
                     <View style={[styles.providerAccordionIconWrap, { backgroundColor: palette.surfaceAlt, borderColor: palette.border }]}>
                       {renderProviderIcon(provider.id, 20, palette.tint)}
@@ -182,7 +187,7 @@ export function AiDefaultsSection({
                       <List.Item
                         key={model.id}
                         title={model.label}
-                        description={model.supportsReasoning ? 'Reasoning supported' : 'Standard model'}
+                        description={model.supportsReasoning ? t('settings:providers.reasoningSupported') : t('settings:providers.standardModel')}
                         titleStyle={{ color: palette.text }}
                         descriptionStyle={{ color: palette.muted }}
                         onPress={() => onModelToggle(model.id, checked)}
@@ -196,7 +201,7 @@ export function AiDefaultsSection({
             })}
           </List.AccordionGroup>
         </List.Section>
-        {configuredModels.length === 0 ? <HelperText type="info">No models found for your configured providers.</HelperText> : null}
+        {configuredModels.length === 0 ? <HelperText type="info">{t('settings:providers.noModels')}</HelperText> : null}
     </View>
   );
 }
@@ -224,17 +229,20 @@ export function NotificationsSection({
   onRefreshStatus,
   palette,
 }: NotificationsSectionProps) {
+  const { t } = useTranslation();
   const notificationsEnabled = Boolean(notificationStatus?.permissionGranted);
-  const notificationStatusLabel = !notificationStatus ? 'Checking' : notificationsEnabled ? 'Enabled' : 'Needs setup';
+  const notificationStatusKey = !notificationStatus ? 'checking' : notificationsEnabled ? 'enabled' : 'needsSetup';
   const notificationStatusTone = !notificationStatus ? palette.icon : notificationsEnabled ? palette.success : palette.warning;
-  const backgroundStatusLabel = !notificationStatus
-    ? 'Checking'
+  const backgroundStatusKey = !notificationStatus
+    ? 'checking'
     : notificationStatus.backgroundMonitoringSupported
       ? notificationStatus.backgroundTaskRegistered
-        ? 'Ready'
-        : 'Limited'
-      : 'Limited';
-  const notificationSummary = `${notificationsEnabled ? 'Notifications enabled' : 'Notifications off'}${backgroundStatusLabel === 'Checking' ? '' : ` • Background ${backgroundStatusLabel.toLowerCase()}`}`;
+        ? 'ready'
+        : 'limited'
+      : 'limited';
+  const notificationStatusLabel = t(`settings:notifications.status.${notificationStatusKey}`);
+  const backgroundStatusLabel = t(`settings:notifications.background.${backgroundStatusKey}`);
+  const notificationSummary = `${t(notificationsEnabled ? 'settings:notifications.summary.enabled' : 'settings:notifications.summary.off')}${backgroundStatusKey === 'checking' ? '' : ` • ${t('settings:notifications.summary.background', { status: backgroundStatusLabel.toLowerCase() })}`}`;
 
   return (
     <View style={styles.section}>
@@ -249,41 +257,41 @@ export function NotificationsSection({
         </View>
         <View style={styles.actionRow}>
           <Button mode="contained" disabled={notificationsEnabled} onPress={onEnableNotifications}>
-            Enable notifications
+            {t('settings:notifications.enable')}
           </Button>
           <Button mode="outlined" onPress={onOpenNotificationSettings}>
-            Notification settings
+            {t('settings:notifications.settings')}
           </Button>
         </View>
         <List.Section style={styles.infoListSection}>
           <List.Item
-            title="App settings"
-            description="Review system settings for this app."
+            title={t('settings:notifications.appSettings')}
+            description={t('settings:notifications.appSettingsDescription')}
             titleStyle={{ color: palette.text }}
             descriptionStyle={{ color: palette.muted }}
-            right={() => <Button onPress={onOpenAppSettings}>Open</Button>}
+            right={() => <Button onPress={onOpenAppSettings}>{t('common:actions.open')}</Button>}
           />
           {Platform.OS === 'android' ? (
             <List.Item
-              title="Battery optimization"
-              description="Allow the app to run more reliably in the background."
+              title={t('settings:notifications.batteryOptimization')}
+              description={t('settings:notifications.batteryOptimizationDescription')}
               titleStyle={{ color: palette.text }}
               descriptionStyle={{ color: palette.muted }}
-              right={() => <Button disabled={!notificationsEnabled} onPress={onOpenBatterySettings}>Open</Button>}
+              right={() => <Button disabled={!notificationsEnabled} onPress={onOpenBatterySettings}>{t('common:actions.open')}</Button>}
             />
           ) : null}
           {Platform.OS === 'android' ? (
             <List.Item
-              title="Battery saver"
-              description="Battery saver can delay reminders."
+              title={t('settings:notifications.batterySaver')}
+              description={t('settings:notifications.batterySaverDescription')}
               titleStyle={{ color: palette.text }}
               descriptionStyle={{ color: palette.muted }}
-              right={() => <Button disabled={!notificationsEnabled} onPress={onOpenBatterySaverSettings}>Open</Button>}
+              right={() => <Button disabled={!notificationsEnabled} onPress={onOpenBatterySaverSettings}>{t('common:actions.open')}</Button>}
             />
           ) : null}
         </List.Section>
         <Button mode="text" loading={isRefreshingNotificationStatus} onPress={onRefreshStatus}>
-          Refresh status
+          {t('settings:notifications.refreshStatus')}
         </Button>
     </View>
   );
@@ -294,9 +302,9 @@ type VoiceSectionProps = {
   chatPreferences: ChatPreferences;
   isRefreshingSpeechVoices: boolean;
   palette: Palette;
-  selectedResponseScope: { value: ResponseScope; label: string; description: string };
+  selectedResponseScope: { value: ResponseScope };
   selectedSpeechVoiceLabel: string;
-  selectedWorkingSound: { value: WorkingSoundVariant; label: string; description: string };
+  selectedWorkingSound: { value: WorkingSoundVariant };
   updateChatPreferences: (patch: Partial<ChatPreferences>) => void;
 };
 
@@ -310,19 +318,20 @@ export function VoiceSection({
   selectedWorkingSound,
   updateChatPreferences,
 }: VoiceSectionProps) {
+  const { t } = useTranslation();
   const responseScopeOptions: NativeSelectOption<ResponseScope>[] = RESPONSE_SCOPE_OPTIONS.map((option) => ({
-    description: option.description,
-    label: option.label,
+    description: t(`settings:voice.responseScope.${option.value}.description`),
+    label: t(`settings:voice.responseScope.${option.value}.label`),
     value: option.value,
   }));
   const workingSoundOptions: NativeSelectOption<WorkingSoundVariant>[] = WORKING_SOUND_OPTIONS.map((option) => ({
-    description: option.description,
-    label: option.label,
+    description: t(`settings:voice.workingSoundVariant.${option.value}.description`),
+    label: t(`settings:voice.workingSoundVariant.${option.value}.label`),
     value: option.value,
   }));
   const speechVoiceOptions: NativeSelectOption<string>[] = [
     {
-      label: 'System default',
+      label: t('common:labels.systemDefault'),
       value: '__system__',
     },
     ...availableSpeechVoices.map((voice) => ({
@@ -336,46 +345,46 @@ export function VoiceSection({
     <View style={styles.section}>
         <List.Section style={styles.infoListSection}>
           <SettingSwitchRow
-            description="Prefer local speech recognition and avoid cloud fallback when possible."
+            description={t('settings:voice.onDeviceInput.description')}
             onValueChange={(value) => updateChatPreferences({ preferOnDeviceRecognition: value })}
             palette={palette}
-            title="On-device voice input"
+            title={t('settings:voice.onDeviceInput.title')}
             value={chatPreferences.preferOnDeviceRecognition}
           />
           <SettingSwitchRow
-            description="Read the latest assistant response aloud when it finishes."
+            description={t('settings:voice.autoPlay.description')}
             onValueChange={(value) => updateChatPreferences({ autoPlayAssistantReplies: value })}
             palette={palette}
-            title="Auto-play assistant replies"
+            title={t('settings:voice.autoPlay.title')}
             value={chatPreferences.autoPlayAssistantReplies}
           />
           <SettingSwitchRow
-            description="Play a calm loop while the assistant is still working on a reply."
+            description={t('settings:voice.workingSound.description')}
             onValueChange={(value) => updateChatPreferences({ workingSoundEnabled: value })}
             palette={palette}
-            title="Working sound"
+            title={t('settings:voice.workingSound.title')}
             value={chatPreferences.workingSoundEnabled}
           />
           <SettingSwitchRow
-            description="In conversation mode, start listening again after spoken playback ends."
+            description={t('settings:voice.resumeListening.description')}
             onValueChange={(value) => updateChatPreferences({ resumeListeningAfterReply: value })}
             palette={palette}
-            title="Resume listening after reply"
+            title={t('settings:voice.resumeListening.title')}
             value={chatPreferences.resumeListeningAfterReply}
           />
         </List.Section>
-        <TextInput mode="outlined" label="Speech locale" placeholder="en-US" value={chatPreferences.speechLocale || ''} autoCapitalize="none" autoCorrect={false} onChangeText={(value) => updateChatPreferences({ speechLocale: value.trim() || undefined })} />
-        <HelperText type="info">Leave empty to use the system default language for voice input and playback.</HelperText>
-        <SettingSelectField label="Response scope" onValueChange={(value) => updateChatPreferences({ responseScope: value })} options={responseScopeOptions} palette={palette} selectedValue={selectedResponseScope.value} valueLabel={selectedResponseScope.label} />
-        <HelperText type="info">{selectedResponseScope.description}</HelperText>
-        <SettingSwitchRow description="End replies with a short recommendation when there is a clear next move." onValueChange={(value) => updateChatPreferences({ includeNextActions: value })} palette={palette} title="Simple next actions" value={chatPreferences.includeNextActions} />
-        <NumericSlider label="Speech rate" minimum={0.5} maximum={1.5} step={0.1} value={chatPreferences.speechRate} valueLabel={`${chatPreferences.speechRate.toFixed(1)}x`} onValueChange={(speechRate) => updateChatPreferences({ speechRate })} palette={palette} />
-        <SettingSelectField label="Working sound" onValueChange={(value) => updateChatPreferences({ workingSoundVariant: value })} options={workingSoundOptions} palette={palette} selectedValue={selectedWorkingSound.value} valueLabel={selectedWorkingSound.label} />
-        <HelperText type="info">{selectedWorkingSound.description}</HelperText>
-        <NumericSlider label="Working sound volume" minimum={0} maximum={1} step={0.05} value={chatPreferences.workingSoundVolume} valueLabel={`${Math.round(chatPreferences.workingSoundVolume * 100)}%`} onValueChange={(workingSoundVolume) => updateChatPreferences({ workingSoundVolume })} palette={palette} />
+        <TextInput mode="outlined" label={t('settings:voice.speechLocale.label')} placeholder="en-US" value={chatPreferences.speechLocale || ''} autoCapitalize="none" autoCorrect={false} onChangeText={(value) => updateChatPreferences({ speechLocale: value.trim() || undefined })} />
+        <HelperText type="info">{t('settings:voice.speechLocale.helper')}</HelperText>
+        <SettingSelectField label={t('settings:voice.responseScope.label')} onValueChange={(value) => updateChatPreferences({ responseScope: value })} options={responseScopeOptions} palette={palette} selectedValue={selectedResponseScope.value} valueLabel={t(`settings:voice.responseScope.${selectedResponseScope.value}.label`)} />
+        <HelperText type="info">{t(`settings:voice.responseScope.${selectedResponseScope.value}.description`)}</HelperText>
+        <SettingSwitchRow description={t('settings:voice.nextActions.description')} onValueChange={(value) => updateChatPreferences({ includeNextActions: value })} palette={palette} title={t('settings:voice.nextActions.title')} value={chatPreferences.includeNextActions} />
+        <NumericSlider label={t('settings:voice.speechRate.label')} minimum={0.5} maximum={1.5} step={0.1} value={chatPreferences.speechRate} valueLabel={`${chatPreferences.speechRate.toFixed(1)}x`} onValueChange={(speechRate) => updateChatPreferences({ speechRate })} palette={palette} />
+        <SettingSelectField label={t('settings:voice.workingSoundVariant.label')} onValueChange={(value) => updateChatPreferences({ workingSoundVariant: value })} options={workingSoundOptions} palette={palette} selectedValue={selectedWorkingSound.value} valueLabel={t(`settings:voice.workingSoundVariant.${selectedWorkingSound.value}.label`)} />
+        <HelperText type="info">{t(`settings:voice.workingSoundVariant.${selectedWorkingSound.value}.description`)}</HelperText>
+        <NumericSlider label={t('settings:voice.workingSoundVolume.label')} minimum={0} maximum={1} step={0.05} value={chatPreferences.workingSoundVolume} valueLabel={`${Math.round(chatPreferences.workingSoundVolume * 100)}%`} onValueChange={(workingSoundVolume) => updateChatPreferences({ workingSoundVolume })} palette={palette} />
         <SettingSelectField
           disabled={isRefreshingSpeechVoices}
-          label="Voice"
+          label={t('settings:voice.voiceSelect.label')}
           onValueChange={(value) => {
             if (value === '__system__') {
               updateChatPreferences({ speechVoiceId: undefined });
@@ -395,8 +404,41 @@ export function VoiceSection({
           valueLabel={selectedSpeechVoiceLabel}
         />
         <HelperText type="info">
-          Android can periodically check running sessions in the background and post a completion notification. Background speech and continuous microphone capture are not supported.
+          {t('settings:voice.footer')}
         </HelperText>
+    </View>
+  );
+}
+
+export function LanguageSection({
+  chatPreferences,
+  palette,
+  updateChatPreferences,
+}: {
+  chatPreferences: ChatPreferences;
+  palette: Palette;
+  updateChatPreferences: (patch: Partial<ChatPreferences>) => void;
+}) {
+  const { t } = useTranslation();
+  const languageOptions: NativeSelectOption<string>[] = [
+    { label: t('common:labels.systemDefault'), value: 'system' },
+    ...LANGUAGE_OPTIONS.map((option) => ({ label: option.label, value: option.value })),
+  ];
+  const selectedValue = chatPreferences.language ?? 'system';
+  const valueLabel = languageOptions.find((option) => option.value === selectedValue)?.label
+    || t('common:labels.systemDefault');
+
+  return (
+    <View style={styles.section}>
+      <SettingSelectField
+        label={t('settings:language.title')}
+        onValueChange={(value) => updateChatPreferences({ language: value === 'system' ? undefined : value })}
+        options={languageOptions}
+        palette={palette}
+        selectedValue={selectedValue}
+        valueLabel={valueLabel}
+      />
+      <HelperText type="info">{t('settings:language.description')}</HelperText>
     </View>
   );
 }
@@ -452,7 +494,7 @@ function NumericSlider({
   );
 }
 
-function SettingSwitchRow({
+export function SettingSwitchRow({
   description,
   onValueChange,
   palette,
@@ -484,7 +526,7 @@ function SettingSwitchRow({
   );
 }
 
-function SettingSelectField<T extends string>({
+export function SettingSelectField<T extends string>({
   disabled = false,
   label,
   onValueChange,

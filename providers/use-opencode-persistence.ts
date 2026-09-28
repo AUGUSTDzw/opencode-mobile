@@ -8,11 +8,16 @@ import {
   CHAT_PREFERENCES_STORAGE_KEY,
   FAVORITE_SESSIONS_STORAGE_KEY,
   LAST_SESSION_BY_PROJECT_STORAGE_KEY,
+  ONBOARDING_VERSION_STORAGE_KEY,
   SETTINGS_STORAGE_KEY,
 } from '@/lib/storage-keys';
 import type { ChatPreferences } from '@/providers/opencode-provider-utils';
 import type { FavoriteSession } from '@/providers/opencode-provider-types';
 import { parseFavoriteSessions, serializeFavoriteSessions } from '@/providers/favorites-storage';
+import {
+  loadOnboardingStatus,
+  serializeOnboardingVersion,
+} from '@/providers/onboarding-state';
 import {
   parseLastSessionByConnection,
   serializeLastSessionByConnection,
@@ -37,10 +42,12 @@ export function useOpencodePersistence({
   chatPreferences,
   favoriteSessions,
   lastSessionByConnection,
+  onboardingVersion,
   setActiveProjectPath,
   setChatPreferences,
   setFavoriteSessions,
   setLastSessionByConnection,
+  setOnboardingVersion,
   setSettings,
   settings,
 }: {
@@ -50,10 +57,12 @@ export function useOpencodePersistence({
   chatPreferences: ChatPreferences;
   favoriteSessions: FavoriteSession[];
   lastSessionByConnection: LastSessionByConnection;
+  onboardingVersion: number;
   setActiveProjectPath: (value?: string) => void;
   setChatPreferences: Dispatch<SetStateAction<ChatPreferences>>;
   setFavoriteSessions: Dispatch<SetStateAction<FavoriteSession[]>>;
   setLastSessionByConnection: Dispatch<SetStateAction<LastSessionByConnection>>;
+  setOnboardingVersion: Dispatch<SetStateAction<number>>;
   setSettings: Dispatch<SetStateAction<OpencodeConnectionSettings>>;
   settings: OpencodeConnectionSettings;
 }) {
@@ -98,13 +107,25 @@ export function useOpencodePersistence({
         await loadPersistedValue(AsyncStorage, LAST_SESSION_BY_PROJECT_STORAGE_KEY, parseLastSessionByConnection, setLastSessionByConnection);
 
         await loadPersistedValue(AsyncStorage, FAVORITE_SESSIONS_STORAGE_KEY, parseFavoriteSessions, setFavoriteSessions);
+
+        // Resolve first-run completion last so `isHydrated` already implies the
+        // onboarding decision is known. Migration is written back immediately so
+        // the decision is made exactly once.
+        const onboardingStatus = await loadOnboardingStatus(AsyncStorage);
+        setOnboardingVersion(onboardingStatus.version);
+        if (onboardingStatus.shouldPersist) {
+          await AsyncStorage.setItem(
+            ONBOARDING_VERSION_STORAGE_KEY,
+            serializeOnboardingVersion(onboardingStatus.version),
+          ).catch(() => undefined);
+        }
       } finally {
         setIsHydrated(true);
       }
     }
 
     void hydrateState();
-  }, [defaultChatPreferences, defaultSettings, setActiveProjectPath, setChatPreferences, setFavoriteSessions, setLastSessionByConnection, setSettings]);
+  }, [defaultChatPreferences, defaultSettings, setActiveProjectPath, setChatPreferences, setFavoriteSessions, setLastSessionByConnection, setOnboardingVersion, setSettings]);
 
   useEffect(() => {
     if (!isHydrated) {
@@ -151,6 +172,14 @@ export function useOpencodePersistence({
 
     void AsyncStorage.setItem(FAVORITE_SESSIONS_STORAGE_KEY, serializeFavoriteSessions(favoriteSessions));
   }, [favoriteSessions, isHydrated]);
+
+  useEffect(() => {
+    if (!isHydrated) {
+      return;
+    }
+
+    void AsyncStorage.setItem(ONBOARDING_VERSION_STORAGE_KEY, serializeOnboardingVersion(onboardingVersion));
+  }, [isHydrated, onboardingVersion]);
 
   return { isHydrated };
 }

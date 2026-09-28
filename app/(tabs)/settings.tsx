@@ -1,45 +1,36 @@
-import * as IntentLauncher from 'expo-intent-launcher';
-import * as Linking from 'expo-linking';
-import Constants from 'expo-constants';
+import * as WebBrowser from 'expo-web-browser';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Alert, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import * as WebBrowser from 'expo-web-browser';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Appbar,
-  Button,
-  Dialog,
-  HelperText,
-  Portal,
   Snackbar,
   Text,
 } from 'react-native-paper';
 
 import { Colors, Fonts } from '@/constants/theme';
-import { ProviderConfigDialog } from '@/components/settings/provider-config-dialog';
 import { McpSection } from '@/components/settings/mcp-section';
 import {
   AiDefaultsSection,
   ConnectionSection,
   DiagnosticsSection,
+  LanguageSection,
   NotificationsSection,
   VoiceSection,
 } from '@/components/settings/settings-sections';
+import { useNotificationSetup } from '@/components/settings/use-notification-setup';
+import { useProviderConfiguration } from '@/components/settings/use-provider-configuration';
 import {
   getProviderCopy,
-  supportsGenericApiKey,
+  LANGUAGE_OPTIONS,
   RESPONSE_SCOPE_OPTIONS,
   WORKING_SOUND_OPTIONS,
 } from '@/components/settings/settings-utils';
-import { TextInput } from '@/components/ui/text-input';
 import { OverlaySheet } from '@/components/ui/overlay-sheet';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import {
-  ensureNotificationPermissionsAsync,
-  getNotificationDebugStatusAsync,
-  type NotificationDebugStatus,
-} from '@/lib/notifications';
 import { getSpeechVoiceOptions, type SpeechVoiceOption } from '@/lib/voice/speech-output';
 import { useOpencode } from '@/providers/opencode-provider';
 
@@ -47,21 +38,17 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
+  const { t } = useTranslation();
   const {
     availableModels,
     availableProviders,
     addMcpServer,
     chatPreferences,
-    completeAutomaticProviderOAuth,
-    completeProviderOAuth,
     completeMcpOAuth,
     configuredProviders,
     connectMcpServer,
     currentConfig,
-    providerAuthMethodsById,
     removeProvider,
-    setProviderAuth,
-    startProviderOAuth,
     connect,
     connection,
     diagnostics,
@@ -73,76 +60,19 @@ export default function SettingsScreen() {
     serverCapabilities,
     setMcpServerEnabled,
     startMcpOAuth,
+    startOnboardingReview,
     updateChatPreferences,
   } = useOpencode();
+  const router = useRouter();
+  const notifications = useNotificationSetup();
+  const providerConfig = useProviderConfiguration();
   const [isConnecting, setIsConnecting] = useState(false);
   const [openSection, setOpenSection] = useState<string>();
-  const [selectedProviderId, setSelectedProviderId] = useState<string>();
-  const [selectedMethodIndex, setSelectedMethodIndex] = useState(0);
-  const [authValues, setAuthValues] = useState<Record<string, string>>({});
-  const [isConfiguringProvider, setIsConfiguringProvider] = useState(false);
-  const [providerDialogError, setProviderDialogError] = useState<string>();
-  const [providerFeedback, setProviderFeedback] = useState<{ type: 'success' | 'info' | 'error'; message: string }>();
   const [expandedProviderId, setExpandedProviderId] = useState<string>();
-  const [notificationStatus, setNotificationStatus] = useState<NotificationDebugStatus>();
-  const [isRefreshingNotificationStatus, setIsRefreshingNotificationStatus] = useState(false);
-  const [notificationFeedback, setNotificationFeedback] = useState<string>();
   const [availableSpeechVoices, setAvailableSpeechVoices] = useState<SpeechVoiceOption[]>([]);
   const [isRefreshingSpeechVoices, setIsRefreshingSpeechVoices] = useState(false);
-  const [pendingOAuth, setPendingOAuth] = useState<{ providerId: string; methodIndex: number; instructions?: string }>();
-  const [oauthCode, setOAuthCode] = useState('');
-  const [oauthError, setOAuthError] = useState<string>();
-  const applicationId = useMemo(
-    () => Constants.expoConfig?.android?.package || Constants.expoConfig?.ios?.bundleIdentifier,
-    [],
-  );
 
   const enabledModelIds = useMemo(() => new Set(chatPreferences.enabledModelIds), [chatPreferences.enabledModelIds]);
-  const selectedProvider = useMemo(
-    () => availableProviders.find((provider) => provider.id === selectedProviderId),
-    [availableProviders, selectedProviderId],
-  );
-  const selectedProviderCopy = useMemo(
-    () => (selectedProvider ? getProviderCopy(selectedProvider.id, selectedProvider.label) : undefined),
-    [selectedProvider],
-  );
-  const authMethods = useMemo(
-    () => (selectedProviderId ? providerAuthMethodsById[selectedProviderId] || [] : []),
-    [providerAuthMethodsById, selectedProviderId],
-  );
-  const effectiveAuthMethods = useMemo(
-    () =>
-      (authMethods.length > 0
-        ? authMethods
-        : supportsGenericApiKey(selectedProviderId)
-          ? [{ type: 'api' as const, label: 'API key' }]
-          : [])
-        .map((method) => method.type === 'api' && !method.prompts?.length
-        ? {
-            ...method,
-            prompts: [{
-              type: 'text' as const,
-              key: 'key',
-              message: 'API key',
-              placeholder: 'Paste your API key',
-            }],
-          }
-        : method),
-    [authMethods, selectedProviderId],
-  );
-  const selectedMethod = effectiveAuthMethods[selectedMethodIndex];
-  const visiblePrompts = useMemo(
-    () =>
-      (selectedMethod?.prompts || []).filter((prompt) => {
-        if (!prompt.when) {
-          return true;
-        }
-
-        const value = authValues[prompt.when.key];
-        return prompt.when.op === 'eq' ? value === prompt.when.value : value !== prompt.when.value;
-      }),
-    [authValues, selectedMethod],
-  );
 
   async function handleConnect() {
     setIsConnecting(true);
@@ -150,15 +80,6 @@ export default function SettingsScreen() {
       await connect();
     } finally {
       setIsConnecting(false);
-    }
-  }
-
-  async function refreshNotificationStatus() {
-    setIsRefreshingNotificationStatus(true);
-    try {
-      setNotificationStatus(await getNotificationDebugStatusAsync());
-    } finally {
-      setIsRefreshingNotificationStatus(false);
     }
   }
 
@@ -173,74 +94,14 @@ export default function SettingsScreen() {
     }
   }
 
-  async function handleEnableNotifications() {
-    const permissions = await ensureNotificationPermissionsAsync();
-    await refreshNotificationStatus();
-
-    if (permissions?.granted) {
-      setNotificationFeedback('Notifications are enabled on this device.');
-      return;
-    }
-
-    setNotificationFeedback('Notifications are still disabled. Open system settings to enable them manually.');
-  }
-
-  async function handleOpenAppSettings() {
-    await Linking.openSettings();
-  }
-
-  async function handleOpenNotificationSettings() {
-    if (Platform.OS !== 'android') {
-      await Linking.openSettings();
-      return;
-    }
-
-    try {
-      await IntentLauncher.startActivityAsync(IntentLauncher.ActivityAction.APP_NOTIFICATION_SETTINGS, {
-        extra: applicationId
-          ? {
-              'android.provider.extra.APP_PACKAGE': applicationId,
-            }
-          : undefined,
-      });
-    } catch {
-      await Linking.openSettings();
-    }
-  }
-
-  async function handleOpenBatterySettings() {
-    if (Platform.OS !== 'android') {
-      return;
-    }
-
-    try {
-      await IntentLauncher.startActivityAsync(IntentLauncher.ActivityAction.IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
-    } catch {
-      await Linking.openSettings();
-    }
-  }
-
-  async function handleOpenBatterySaverSettings() {
-    if (Platform.OS !== 'android') {
-      return;
-    }
-
-    try {
-      await IntentLauncher.startActivityAsync(IntentLauncher.ActivityAction.BATTERY_SAVER_SETTINGS);
-    } catch {
-      await Linking.openSettings();
-    }
-  }
-
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate notification/speech status once on mount.
-    void refreshNotificationStatus();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate speech status once on mount.
     void refreshSpeechVoices();
   }, []);
 
   const selectedSpeechVoiceLabel = useMemo(
-    () => availableSpeechVoices.find((voice) => voice.id === chatPreferences.speechVoiceId)?.label || 'System default',
-    [availableSpeechVoices, chatPreferences.speechVoiceId],
+    () => availableSpeechVoices.find((voice) => voice.id === chatPreferences.speechVoiceId)?.label || t('common:labels.systemDefault'),
+    [availableSpeechVoices, chatPreferences.speechVoiceId, t],
   );
   const selectedResponseScope = useMemo(
     () => RESPONSE_SCOPE_OPTIONS.find((option) => option.value === chatPreferences.responseScope) || RESPONSE_SCOPE_OPTIONS[0],
@@ -250,88 +111,10 @@ export default function SettingsScreen() {
     () => WORKING_SOUND_OPTIONS.find((option) => option.value === chatPreferences.workingSoundVariant) || WORKING_SOUND_OPTIONS[0],
     [chatPreferences.workingSoundVariant],
   );
-  function resetProviderDialog() {
-    setSelectedProviderId(undefined);
-    setSelectedMethodIndex(0);
-    setAuthValues({});
-    setProviderDialogError(undefined);
-  }
-
-  function dismissPendingOAuth() {
-    setPendingOAuth(undefined);
-    setOAuthCode('');
-    setOAuthError(undefined);
-  }
-
-  function startProviderConfiguration(providerId: string) {
-    setProviderDialogError(undefined);
-    setSelectedMethodIndex(0);
-
-    const methods = providerAuthMethodsById[providerId] || [];
-    const initialValues: Record<string, string> = {};
-    const initialMethod = methods[0];
-    initialMethod?.prompts?.forEach((prompt) => {
-      if (prompt.type === 'select') {
-        initialValues[prompt.key] = prompt.options?.[0]?.value || '';
-      }
-    });
-
-    setSelectedProviderId(providerId);
-    setAuthValues(initialValues);
-  }
-
-  async function submitProviderConfiguration() {
-    if (!selectedProviderId || !selectedMethod) {
-      return;
-    }
-
-    const providerLabel = selectedProviderCopy?.label || selectedProviderId;
-    setIsConfiguringProvider(true);
-    setProviderDialogError(undefined);
-
-    try {
-      if (selectedMethod.type === 'oauth') {
-        const authorization = await startProviderOAuth(selectedProviderId, selectedMethodIndex, authValues);
-        await WebBrowser.openBrowserAsync(authorization.url);
-        if (authorization.method === 'code') {
-          setPendingOAuth({ providerId: selectedProviderId, methodIndex: selectedMethodIndex, instructions: authorization.instructions });
-          setSelectedProviderId(undefined);
-          return;
-        }
-        await completeAutomaticProviderOAuth(selectedProviderId);
-        await connect();
-        setProviderFeedback(
-          authorization.instructions
-            ? { type: 'info', message: authorization.instructions }
-            : { type: 'success', message: `${providerLabel} sign-in finished. Provider status has been refreshed.` },
-        );
-      } else {
-        await setProviderAuth(selectedProviderId, authValues);
-        setProviderFeedback({
-          type: 'success',
-          message: `${providerLabel} was configured successfully.`,
-        });
-      }
-
-      resetProviderDialog();
-    } catch (error) {
-      setProviderDialogError(error instanceof Error ? error.message : 'Could not configure provider.');
-    } finally {
-      setIsConfiguringProvider(false);
-    }
-  }
-
-  function handleProviderMethodChange(nextIndex: number) {
-    const nextMethod = effectiveAuthMethods[nextIndex];
-    const nextValues: Record<string, string> = {};
-    nextMethod?.prompts?.forEach((prompt) => {
-      if (prompt.type === 'select') {
-        nextValues[prompt.key] = prompt.options?.[0]?.value || '';
-      }
-    });
-    setSelectedMethodIndex(nextIndex);
-    setAuthValues(nextValues);
-  }
+  const selectedLanguageLabel = useMemo(
+    () => LANGUAGE_OPTIONS.find((option) => option.value === chatPreferences.language)?.label || t('common:labels.systemDefault'),
+    [chatPreferences.language, t],
+  );
 
   function handleModelToggle(modelId: string, checked: boolean) {
     const nextEnabledModelIds = checked
@@ -342,18 +125,39 @@ export default function SettingsScreen() {
   }
 
   function handleRemoveProvider(providerId: string) {
-    const label = getProviderCopy(providerId, providerId).label;
+    const label = getProviderCopy(providerId, providerId, t).label;
     const remove = () => void removeProvider(providerId)
-      .then(() => setProviderFeedback({ type: 'success', message: `${label} credentials were removed.` }))
-      .catch((error) => setProviderFeedback({ type: 'error', message: error instanceof Error ? error.message : 'Could not remove provider credentials.' }));
+      .then(() => providerConfig.setFeedback({ type: 'success', message: t('settings:providers.credentialsRemoved', { provider: label }) }))
+      .catch((error) => providerConfig.setFeedback({ type: 'error', message: error instanceof Error ? error.message : t('settings:providers.couldNotRemove') }));
     if (Platform.OS === 'web') {
-      if (globalThis.confirm(`Remove ${label}?\n\nStored credentials and provider configuration will be removed.`)) remove();
+      if (globalThis.confirm(t('settings:providers.removeWebConfirm', { provider: label }))) remove();
       return;
     }
-    Alert.alert(`Remove ${label}?`, 'Stored credentials and provider configuration will be removed.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: remove },
+    Alert.alert(t('settings:providers.removeTitle', { provider: label }), t('settings:providers.removeMessage'), [
+      { text: t('common:actions.cancel'), style: 'cancel' },
+      { text: t('common:actions.remove'), style: 'destructive', onPress: remove },
     ]);
+  }
+
+  const sections = [
+    { id: 'connection', title: t('settings:screen.categories.connection'), summary: connection.status === 'connected' ? t('common:labels.connected') : connection.message, icon: 'server-network' as const },
+    { id: 'ai', title: t('settings:screen.categories.ai'), summary: t('settings:screen.summaries.configuredCount', { value: configuredProviders.length }), icon: 'creation' as const },
+    { id: 'notifications', title: t('settings:screen.categories.notifications'), summary: notifications.status?.permissionGranted ? t('common:labels.enabled') : t('common:labels.off'), icon: 'bell-outline' as const },
+    { id: 'voice', title: t('settings:screen.categories.voice'), summary: chatPreferences.autoPlayAssistantReplies ? t('settings:screen.summaries.replyPlaybackOn') : t('settings:screen.summaries.replyPlaybackOff'), icon: 'waveform' as const },
+    { id: 'advanced', title: t('settings:screen.categories.advanced'), summary: t('settings:screen.summaries.advanced'), icon: 'tune' as const },
+    { id: 'language', title: t('settings:language.title'), summary: selectedLanguageLabel, icon: 'translate' as const },
+    { id: 'setup', title: t('onboarding:settingsAssistant.title'), summary: t('onboarding:settingsAssistant.summary'), icon: 'rocket-launch-outline' as const },
+  ];
+
+  function openSectionById(id: string) {
+    if (id === 'setup') {
+      // Review mode keeps the tab navigator mounted and seeds each step from
+      // the current configuration, so re-running never wipes anything.
+      startOnboardingReview();
+      router.push('/onboarding/connect');
+      return;
+    }
+    setOpenSection(id);
   }
 
   return (
@@ -363,21 +167,15 @@ export default function SettingsScreen() {
         statusBarHeight={0}
         elevated>
         <View style={styles.headerMain}>
-          <Text variant="titleMedium" style={[styles.headerTitle, { color: palette.text }]}>Settings</Text>
+          <Text variant="titleMedium" style={[styles.headerTitle, { color: palette.text }]}>{t('common:tabs.settings')}</Text>
         </View>
         <View style={styles.headerActions}>
-          <Appbar.Action icon="refresh" accessibilityLabel="Reconnect" loading={isConnecting} disabled={isConnecting} onPress={() => void handleConnect()} />
+          <Appbar.Action icon="refresh" accessibilityLabel={t('common:actions.reconnect')} loading={isConnecting} disabled={isConnecting} onPress={() => void handleConnect()} />
         </View>
       </Appbar.Header>
       <ScrollView style={[styles.screen, { backgroundColor: palette.background }]} contentContainerStyle={styles.content}>
         <View style={[styles.categoryGroup, { backgroundColor: palette.surface, borderColor: palette.border }]}>
-        {[
-          { id: 'connection', title: 'Connection', summary: connection.status === 'connected' ? 'Connected' : connection.message, icon: 'server-network' as const },
-          { id: 'ai', title: 'AI & providers', summary: `${configuredProviders.length} configured`, icon: 'creation' as const },
-          { id: 'notifications', title: 'Notifications', summary: notificationStatus?.permissionGranted ? 'Enabled' : 'Off', icon: 'bell-outline' as const },
-          { id: 'voice', title: 'Voice & responses', summary: chatPreferences.autoPlayAssistantReplies ? 'Reply playback on' : 'Reply playback off', icon: 'waveform' as const },
-          { id: 'advanced', title: 'Advanced', summary: 'MCP servers and diagnostics', icon: 'tune' as const },
-        ].map((section, index) => <Pressable key={section.id} accessibilityRole="button" accessibilityLabel={`${section.title}. ${section.summary}`} onPress={() => setOpenSection(section.id)} style={[styles.category, index < 4 && { borderBottomColor: palette.border, borderBottomWidth: StyleSheet.hairlineWidth }]}>
+        {sections.map((section, index) => <Pressable key={section.id} accessibilityRole="button" accessibilityLabel={`${section.title}. ${section.summary}`} onPress={() => openSectionById(section.id)} style={[styles.category, index < sections.length - 1 && { borderBottomColor: palette.border, borderBottomWidth: StyleSheet.hairlineWidth }]}>
           <MaterialCommunityIcons name={section.icon} size={22} color={palette.tint} />
           <View style={styles.categoryText}><Text variant="titleMedium" style={{ color: palette.text }}>{section.title}</Text><Text variant="bodyMedium" numberOfLines={1} style={{ color: palette.muted }}>{section.summary}</Text></View>
           <MaterialCommunityIcons name="chevron-right" size={20} color={palette.muted} />
@@ -385,69 +183,31 @@ export default function SettingsScreen() {
         </View>
       </ScrollView>
 
-      <OverlaySheet visible={Boolean(openSection)} fitContent testID="settings-section-overlay" title={{ connection: 'Connection', ai: 'AI & providers', notifications: 'Notifications', voice: 'Voice & responses', advanced: 'Advanced' }[openSection || ''] || 'Settings'} onClose={() => setOpenSection(undefined)}>
+      <OverlaySheet visible={Boolean(openSection)} fitContent testID="settings-section-overlay" title={{ connection: t('settings:screen.categories.connection'), ai: t('settings:screen.categories.ai'), notifications: t('settings:screen.categories.notifications'), voice: t('settings:screen.categories.voice'), advanced: t('settings:screen.categories.advanced'), language: t('settings:language.title') }[openSection || ''] || t('common:tabs.settings')} onClose={() => setOpenSection(undefined)}>
         {openSection === 'connection' ? <ConnectionSection connection={connection} palette={palette} /> : null}
-        {openSection === 'ai' ? <AiDefaultsSection availableModels={availableModels} availableProviders={availableProviders} chatPreferences={chatPreferences} configuredProviders={configuredProviders} enabledModelIds={enabledModelIds} expandedProviderId={expandedProviderId} onExpandedProviderChange={setExpandedProviderId} onModelToggle={handleModelToggle} onRemoveProvider={handleRemoveProvider} onStartProviderConfiguration={startProviderConfiguration} palette={palette} /> : null}
-        {openSection === 'notifications' ? <NotificationsSection isRefreshingNotificationStatus={isRefreshingNotificationStatus} notificationStatus={notificationStatus} onEnableNotifications={() => void handleEnableNotifications()} onOpenAppSettings={() => void handleOpenAppSettings()} onOpenBatterySaverSettings={() => void handleOpenBatterySaverSettings()} onOpenBatterySettings={() => void handleOpenBatterySettings()} onOpenNotificationSettings={() => void handleOpenNotificationSettings()} onRefreshStatus={() => void refreshNotificationStatus()} palette={palette} /> : null}
+        {openSection === 'ai' ? <AiDefaultsSection availableModels={availableModels} availableProviders={availableProviders} chatPreferences={chatPreferences} configuredProviders={configuredProviders} enabledModelIds={enabledModelIds} expandedProviderId={expandedProviderId} onExpandedProviderChange={setExpandedProviderId} onModelToggle={handleModelToggle} onRemoveProvider={handleRemoveProvider} onStartProviderConfiguration={providerConfig.startProviderConfiguration} palette={palette} /> : null}
+        {openSection === 'notifications' ? <NotificationsSection isRefreshingNotificationStatus={notifications.isRefreshing} notificationStatus={notifications.status} onEnableNotifications={() => void notifications.enable()} onOpenAppSettings={() => void notifications.openAppSettings()} onOpenBatterySaverSettings={() => void notifications.openBatterySaverSettings()} onOpenBatterySettings={() => void notifications.openBatterySettings()} onOpenNotificationSettings={() => void notifications.openNotificationSettings()} onRefreshStatus={() => void notifications.refreshStatus()} palette={palette} /> : null}
         {openSection === 'voice' ? <VoiceSection availableSpeechVoices={availableSpeechVoices} chatPreferences={chatPreferences} isRefreshingSpeechVoices={isRefreshingSpeechVoices} palette={palette} selectedResponseScope={selectedResponseScope} selectedSpeechVoiceLabel={selectedSpeechVoiceLabel} selectedWorkingSound={selectedWorkingSound} updateChatPreferences={updateChatPreferences} /> : null}
+        {openSection === 'language' ? <LanguageSection chatPreferences={chatPreferences} palette={palette} updateChatPreferences={updateChatPreferences} /> : null}
         {openSection === 'advanced' ? <>
           <McpSection configs={currentConfig?.mcp} mcpStatuses={mcpStatuses} onAdd={addMcpServer} onCompleteOAuth={completeMcpOAuth} onConnect={connectMcpServer} onDisconnect={disconnectMcpServer} onRefresh={refreshMcpServers} onSetEnabled={setMcpServerEnabled} onStartOAuth={async (name) => { const url = await startMcpOAuth(name); if (!url) { await refreshMcpServers(); return false; } await WebBrowser.openBrowserAsync(url); return true; }} oauthAvailable={serverCapabilities.mcpOAuth} palette={palette} />
           <DiagnosticsSection diagnostics={diagnostics} eventStreamStatus={eventStreamStatus} formatterAvailable={serverCapabilities.formatter} lspAvailable={serverCapabilities.lsp} onRefresh={() => void refreshDiagnostics()} palette={palette} />
         </> : null}
       </OverlaySheet>
 
-      <Portal>
-        <Dialog visible={Boolean(pendingOAuth)} onDismiss={dismissPendingOAuth}>
-          <Dialog.Title>Complete provider sign-in</Dialog.Title>
-          <Dialog.Content>
-            {pendingOAuth?.instructions ? <TextInput mode="flat" disabled value={pendingOAuth.instructions} /> : null}
-            <TextInput mode="outlined" label="Authorization code" value={oauthCode} onChangeText={setOAuthCode} autoCapitalize="none" />
-            {oauthError ? <HelperText type="error">{oauthError}</HelperText> : null}
-          </Dialog.Content>
-          <Dialog.Actions>
-            <Button onPress={dismissPendingOAuth}>Cancel</Button>
-            <Button disabled={!oauthCode.trim()} onPress={() => {
-              if (!pendingOAuth) return;
-              void completeProviderOAuth(pendingOAuth.providerId, pendingOAuth.methodIndex, oauthCode).then(() => {
-                setPendingOAuth(undefined);
-                setOAuthCode('');
-                setOAuthError(undefined);
-                resetProviderDialog();
-              }).catch((error) => setOAuthError(error instanceof Error ? error.message : 'Could not complete sign-in.'));
-            }}>Complete</Button>
-          </Dialog.Actions>
-        </Dialog>
-        {selectedProvider ? (
-          <ProviderConfigDialog
-            authValues={authValues}
-            effectiveAuthMethods={effectiveAuthMethods}
-            isConfiguringProvider={isConfiguringProvider}
-            onAuthValueChange={(key, value) => setAuthValues((current) => ({ ...current, [key]: value }))}
-            onDismiss={resetProviderDialog}
-            onMethodChange={handleProviderMethodChange}
-            onSubmit={() => void submitProviderConfiguration()}
-            palette={palette}
-            providerDialogError={providerDialogError}
-            selectedMethod={selectedMethod}
-            selectedMethodIndex={selectedMethodIndex}
-            selectedProviderDescription={selectedProviderCopy?.description}
-            selectedProviderLabel={selectedProviderCopy?.label || selectedProvider.id}
-            visiblePrompts={visiblePrompts}
-          />
-        ) : null}
-      </Portal>
+      {providerConfig.dialog}
 
       <Snackbar
-        visible={Boolean(providerFeedback)}
-        onDismiss={() => setProviderFeedback(undefined)}
+        visible={Boolean(providerConfig.feedback)}
+        onDismiss={providerConfig.clearFeedback}
         duration={4000}>
-        {providerFeedback?.message}
+        {providerConfig.feedback?.message}
       </Snackbar>
       <Snackbar
-        visible={Boolean(notificationFeedback)}
-        onDismiss={() => setNotificationFeedback(undefined)}
+        visible={Boolean(notifications.feedback)}
+        onDismiss={notifications.clearFeedback}
         duration={4000}>
-        {notificationFeedback}
+        {notifications.feedback}
       </Snackbar>
     </>
   );
