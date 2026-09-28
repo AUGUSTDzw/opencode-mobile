@@ -1,5 +1,12 @@
 import { expect, test } from '@playwright/test';
 
+// Seed a completed onboarding marker so this probe boots straight into chat.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    globalThis.localStorage.setItem('opencode-mobile.onboarding-version', JSON.stringify({ version: 1 }));
+  });
+});
+
 // TEMPORARY probe (delete after the demo): shows whether the V1 plan
 // overlay appears after a happy-path prompt completes.
 async function resetScenario(request, scenario) {

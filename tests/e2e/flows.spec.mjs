@@ -3,6 +3,15 @@ import { spawn } from 'node:child_process';
 import net from 'node:net';
 import { setTimeout as sleep } from 'node:timers/promises';
 
+// Existing flows assume the app boots straight into chat. Seed a completed
+// onboarding marker so first-run setup is skipped; the dedicated onboarding
+// spec intentionally omits this so the assistant is exercised.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    globalThis.localStorage.setItem('opencode-mobile.onboarding-version', JSON.stringify({ version: 1 }));
+  });
+});
+
 // Fixed ports collide with anything else bound on the CI runner. Ask the OS for
 // an ephemeral port instead so self-spawned fake servers never hit EADDRINUSE.
 async function getFreePort() {
