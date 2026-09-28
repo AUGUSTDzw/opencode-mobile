@@ -1,0 +1,242 @@
+{
+  "screen": {
+    "categories": {
+      "connection": "Conexão",
+      "ai": "IA e provedores",
+      "notifications": "Notificações",
+      "voice": "Voz e respostas",
+      "advanced": "Avançado"
+    },
+    "summaries": {
+      "configuredCount": "{{value}} configurados",
+      "replyPlaybackOn": "Reprodução de respostas ativada",
+      "replyPlaybackOff": "Reprodução de respostas desativada",
+      "advanced": "Servidores MCP e diagnósticos"
+    }
+  },
+  "connection": {
+    "currentConnection": "Conexão atual",
+    "noServerUrl": "Nenhuma URL de servidor definida",
+    "notSavedYet": "Ainda não salvo. Adicione uma conexão para mantê-la para depois.",
+    "lastChecked": "Última verificação {{time}}",
+    "serverUrlValue": "URL do servidor: {{url}}",
+    "usernameValue": "Nome de usuário: {{username}}",
+    "usernameEmpty": "(nenhum)",
+    "addConnection": "Adicionar conexão",
+    "editConnection": "Editar conexão",
+    "addDescription": "Adicione conexões para alternar entre servidores sem digitar a URL e a senha de novo.",
+    "saveAndConnect": "Salvar e conectar",
+    "deleteTitle": "Excluir conexão",
+    "deleteMessage": "Remover \"{{name}}\" das conexões salvas?",
+    "deleteWebConfirm": "Excluir conexão\n\n{{message}}",
+    "fields": {
+      "name": "Nome",
+      "serverUrl": "URL do servidor",
+      "username": "Nome de usuário",
+      "password": "Senha"
+    },
+    "errors": {
+      "name": "Informe um nome para esta conexão.",
+      "serverUrl": "Informe a URL do servidor.",
+      "invalidUrl": "Informe uma URL de servidor completa, como http://192.168.1.10:4096.",
+      "save": "Não foi possível salvar esta conexão."
+    }
+  },
+  "providers": {
+    "apiKey": "Chave de API",
+    "pasteApiKey": "Cole sua chave de API",
+    "chooseModels": "Escolha quais modelos configurados aparecem no chat. O último modelo que você escolher no chat continua selecionado para novos chats.",
+    "configuredProviders": "Provedores configurados",
+    "addProvider": "Adicionar provedor",
+    "connectFirst": "Conecte-se primeiro para carregar os provedores.",
+    "configureAtLeastOne": "Configure pelo menos um provedor para escolher os padrões.",
+    "selectedCount": "{{selected}} de {{total}} selecionados",
+    "reasoningSupported": "Com suporte a raciocínio",
+    "standardModel": "Modelo padrão",
+    "noModels": "Nenhum modelo encontrado para os provedores configurados.",
+    "configuredSuccess": "{{provider}} foi configurado com sucesso.",
+    "signInFinished": "Login em {{provider}} concluído. O status do provedor foi atualizado.",
+    "couldNotConfigure": "Não foi possível configurar o provedor.",
+    "couldNotRemove": "Não foi possível remover as credenciais do provedor.",
+    "credentialsRemoved": "As credenciais de {{provider}} foram removidas.",
+    "removeTitle": "Remover {{provider}}?",
+    "removeMessage": "As credenciais armazenadas e a configuração do provedor serão removidas.",
+    "removeWebConfirm": "Remover {{provider}}?\n\nAs credenciais armazenadas e a configuração do provedor serão removidas.",
+    "signInTitle": "Concluir login no provedor",
+    "authorizationCode": "Código de autorização",
+    "complete": "Concluir",
+    "continue": "Continuar",
+    "cancelSetup": "Cancelar configuração do provedor",
+    "configureProvider": "Configurar {{provider}}",
+    "oauthHint": "Isso abre o fluxo de login do provedor no seu navegador.",
+    "setupUnavailable": "Os detalhes de configuração deste provedor estão indisponíveis no momento.",
+    "couldNotComplete": "Não foi possível concluir o login."
+  },
+  "providerCopy": {
+    "openai": {
+      "label": "OpenAI",
+      "description": "Modelos GPT da OpenAI, incluindo as opções mais recentes de raciocínio e multimodais."
+    },
+    "anthropic": {
+      "label": "Anthropic",
+      "description": "Modelos Claude da Anthropic para programação, análise e tarefas com contexto longo."
+    },
+    "github-copilot": {
+      "label": "GitHub Copilot",
+      "description": "Use seu acesso ao GitHub Copilot para entrar e habilitar os modelos de base compatíveis."
+    },
+    "google": {
+      "label": "Google",
+      "description": "Modelos Gemini do Google para tarefas multimodais e de contexto amplo."
+    },
+    "groq": {
+      "label": "Groq",
+      "description": "Inferência hospedada rápida para modelos abertos e de ponta compatíveis."
+    },
+    "openrouter": {
+      "label": "OpenRouter",
+      "description": "Encaminhe requisições entre vários provedores e famílias de modelos usando uma única conta."
+    },
+    "mistral": {
+      "label": "Mistral",
+      "description": "Modelos hospedados da Mistral AI para cargas de trabalho gerais e de programação."
+    },
+    "xai": {
+      "label": "xAI",
+      "description": "Modelos Grok da xAI."
+    },
+    "azure": {
+      "label": "Azure OpenAI",
+      "description": "Modelos compatíveis com OpenAI implantados pelo Azure."
+    }
+  },
+  "notifications": {
+    "status": {
+      "checking": "Verificando",
+      "enabled": "Ativado",
+      "needsSetup": "Precisa de configuração"
+    },
+    "background": {
+      "checking": "Verificando",
+      "ready": "Pronto",
+      "limited": "Limitado"
+    },
+    "summary": {
+      "enabled": "Notificações ativadas",
+      "off": "Notificações desativadas",
+      "background": "Em segundo plano: {{status}}"
+    },
+    "enable": "Ativar notificações",
+    "settings": "Configurações de notificações",
+    "appSettings": "Configurações do app",
+    "appSettingsDescription": "Revise as configurações do sistema para este app.",
+    "batteryOptimization": "Otimização de bateria",
+    "batteryOptimizationDescription": "Permita que o app funcione de forma mais confiável em segundo plano.",
+    "batterySaver": "Economia de bateria",
+    "batterySaverDescription": "A economia de bateria pode atrasar os lembretes.",
+    "refreshStatus": "Atualizar status",
+    "enabledFeedback": "As notificações estão ativadas neste dispositivo.",
+    "disabledFeedback": "As notificações ainda estão desativadas. Abra as configurações do sistema para ativá-las manualmente."
+  },
+  "voice": {
+    "onDeviceInput": {
+      "title": "Entrada de voz no dispositivo",
+      "description": "Prefira reconhecimento de fala local e evite o uso da nuvem quando possível."
+    },
+    "autoPlay": {
+      "title": "Reproduzir respostas do assistente automaticamente",
+      "description": "Leia em voz alta a resposta mais recente do assistente quando ela terminar."
+    },
+    "workingSound": {
+      "title": "Som de trabalho",
+      "description": "Reproduza um som calmo em repetição enquanto o assistente ainda está preparando uma resposta."
+    },
+    "resumeListening": {
+      "title": "Voltar a ouvir após a resposta",
+      "description": "No modo conversa, volte a ouvir depois que a reprodução em voz terminar."
+    },
+    "speechLocale": {
+      "label": "Idioma da fala",
+      "helper": "Deixe em branco para usar o idioma padrão do sistema na entrada de voz e na reprodução."
+    },
+    "responseScope": {
+      "label": "Escopo das respostas",
+      "brief": {
+        "label": "Breve",
+        "description": "Respostas curtas e bem focadas para um diálogo natural."
+      },
+      "balanced": {
+        "label": "Equilibrado",
+        "description": "Respostas concisas com um pouco mais de contexto quando for útil."
+      },
+      "detailed": {
+        "label": "Detalhado",
+        "description": "Explicações mais longas e mais detalhes de apoio."
+      }
+    },
+    "nextActions": {
+      "title": "Próximas ações simples",
+      "description": "Termine as respostas com uma recomendação curta quando houver um próximo passo claro."
+    },
+    "speechRate": {
+      "label": "Velocidade da fala"
+    },
+    "workingSoundVariant": {
+      "label": "Som de trabalho",
+      "soft": {
+        "label": "Toque suave",
+        "description": "Tom em camadas, aconchegante, com pulsação suave."
+      },
+      "glass": {
+        "label": "Tom cristalino",
+        "description": "Som ambiente mais brilhante e leve."
+      }
+    },
+    "workingSoundVolume": {
+      "label": "Volume do som de trabalho"
+    },
+    "voiceSelect": {
+      "label": "Voz"
+    },
+    "footer": "O Android pode verificar periodicamente as sessões em execução em segundo plano e publicar uma notificação de conclusão. Fala em segundo plano e captura contínua do microfone não são compatíveis."
+  },
+  "diagnostics": {
+    "title": "Diagnósticos do servidor",
+    "server": "Servidor",
+    "openCodeVersion": "OpenCode {{version}}",
+    "healthUnavailable": "Endpoint de integridade indisponível",
+    "healthy": "Saudável",
+    "realtimeUpdates": "Atualizações em tempo real",
+    "eventStreamConnected": "Stream de eventos global conectado",
+    "pollingFallback": "Fallback de polling ativo",
+    "subsystems": "Subsistemas",
+    "subsystemsMcp": "MCP {{value}}",
+    "subsystemsLsp": "LSP {{value}}",
+    "subsystemsFormatters": "Formatadores {{value}}",
+    "notAvailable": "n/d",
+    "refresh": "Atualizar diagnósticos"
+  },
+  "mcp": {
+    "title": "Servidores MCP",
+    "couldNotUpdate": "Não foi possível atualizar os servidores MCP.",
+    "configurationUnavailable": "Detalhes de configuração indisponíveis",
+    "invalidCommand": "Informe o comando local como um array de strings JSON.",
+    "local": "Local",
+    "remote": "Remoto",
+    "serverName": "Nome do servidor",
+    "commandArguments": "Argumentos do comando (JSON)",
+    "url": "URL",
+    "addLocalServer": "Adicionar servidor local",
+    "addRemoteServer": "Adicionar servidor remoto",
+    "noServers": "Nenhum servidor MCP configurado.",
+    "statusConfigured": "configurado",
+    "statusDisabled": "desativado",
+    "oauth": "OAuth",
+    "authorizationCode": "Código de autorização (opcional)",
+    "completeOAuth": "Concluir OAuth"
+  },
+  "language": {
+    "title": "Idioma",
+    "description": "Use o idioma do sistema ou escolha um para a interface do app."
+  }
+}

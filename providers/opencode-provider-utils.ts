@@ -63,6 +63,9 @@ export type ResponseScope = 'brief' | 'balanced' | 'detailed';
 
 export type ChatPreferences = {
   mode: string;
+  // App UI language preference. `undefined` follows the OS locale; it is stored
+  // alongside chat preferences because it is global and not connection-scoped.
+  language?: string;
   providerId?: string;
   modelId?: string;
   enabledModelIds: string[];

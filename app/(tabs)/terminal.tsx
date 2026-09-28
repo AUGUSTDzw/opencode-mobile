@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -30,6 +31,7 @@ import type { Pty } from '@/lib/opencode/types';
 import { useOpencode } from '@/providers/opencode-provider';
 
 export default function TerminalScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme() ?? 'light';
@@ -57,9 +59,9 @@ export default function TerminalScreen() {
 
   useEffect(() => {
     if (connection.status === 'connected' && activeProject) {
-      void refreshTerminals().catch((reason) => setError(message(reason, 'Could not load terminals.')));
+      void refreshTerminals().catch((reason) => setError(message(reason, t('terminal:errors.load'))));
     }
-  }, [activeProject, connection.status, refreshTerminals]);
+  }, [activeProject, connection.status, refreshTerminals, t]);
 
   useEffect(() => {
     outputRef.current?.scrollToEnd({ animated: false });
@@ -70,7 +72,7 @@ export default function TerminalScreen() {
     try {
       await createTerminal();
     } catch (reason) {
-      setError(message(reason, 'Could not create the terminal.'));
+      setError(message(reason, t('terminal:errors.create')));
     } finally {
       setIsCreating(false);
     }
@@ -81,7 +83,7 @@ export default function TerminalScreen() {
     try {
       await openTerminal(id);
     } catch (reason) {
-      setError(message(reason, 'Could not open the terminal.'));
+      setError(message(reason, t('terminal:errors.open')));
     } finally {
       setBusyId(undefined);
     }
@@ -92,7 +94,7 @@ export default function TerminalScreen() {
     try {
       await closeTerminal(id);
     } catch (reason) {
-      setError(message(reason, 'Could not terminate the terminal.'));
+      setError(message(reason, t('terminal:errors.terminate')));
     } finally {
       setBusyId(undefined);
     }
@@ -101,12 +103,12 @@ export default function TerminalScreen() {
   function confirmTerminate(terminal: Pty) {
     const run = () => void handleTerminate(terminal.id);
     if (Platform.OS === 'web') {
-      if (globalThis.confirm(`Terminate ${terminal.title || terminal.command}?`)) run();
+      if (globalThis.confirm(t('terminal:console.terminateMessage', { title: terminal.title || terminal.command }))) run();
       return;
     }
-    Alert.alert('Terminate terminal?', terminal.title || terminal.command, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Terminate', style: 'destructive', onPress: run },
+    Alert.alert(t('terminal:console.terminateTitle'), terminal.title || terminal.command, [
+      { text: t('common:actions.cancel'), style: 'cancel' },
+      { text: t('terminal:console.terminateAction'), style: 'destructive', onPress: run },
     ]);
   }
 
@@ -116,7 +118,7 @@ export default function TerminalScreen() {
       sendTerminalInput(`${line}\n`);
       setLine('');
     } catch (reason) {
-      setError(message(reason, 'Could not send terminal input.'));
+      setError(message(reason, t('terminal:errors.send')));
     }
   }
 
@@ -125,21 +127,21 @@ export default function TerminalScreen() {
       <View style={[styles.emptyScreen, { backgroundColor: palette.background }]}>
         <Surface style={[styles.emptyPanel, { backgroundColor: palette.surface }]} elevation={1}>
           <Text variant="headlineSmall" style={{ color: palette.text }}>
-            {connection.status !== 'connected' ? 'Connect to OpenCode' : 'Choose a workspace'}
+            {connection.status !== 'connected' ? t('terminal:screen.connectTitle') : t('terminal:screen.chooseWorkspace')}
           </Text>
           <Text variant="bodyMedium" style={{ color: palette.muted }}>
             {connection.status !== 'connected'
               ? connection.message
-              : 'Select a project before opening a terminal.'}
+              : t('terminal:screen.selectProject')}
           </Text>
           <Button
             mode="contained"
             loading={connection.status === 'connecting'}
             onPress={() => {
               const action = connection.status !== 'connected' ? connect() : Promise.resolve(router.push('/(tabs)/workspace'));
-              void action.catch((reason) => setError(message(reason, 'Could not connect.')));
+              void action.catch((reason) => setError(message(reason, t('terminal:errors.connect'))));
             }}>
-            {connection.status !== 'connected' ? 'Reconnect' : 'Open Workspaces'}
+            {connection.status !== 'connected' ? t('common:actions.reconnect') : t('terminal:screen.openWorkspaces')}
           </Button>
         </Surface>
         <Snackbar visible={Boolean(error)} onDismiss={() => setError(undefined)}>{error}</Snackbar>
@@ -163,12 +165,12 @@ export default function TerminalScreen() {
             <Pressable
               testID="terminal-selector"
               accessibilityRole="button"
-              accessibilityLabel="Select terminal"
+              accessibilityLabel={t('terminal:console.selectTerminal')}
               onPress={() => setTerminalPickerVisible(true)}
               style={({ pressed }) => [styles.headerSelector, pressed && styles.headerSelectorPressed]}>
               <View style={styles.headerCopy}>
                 <Text numberOfLines={1} variant="titleMedium" style={[styles.headerTitle, { color: palette.text }]}>
-                  {activeTerminal?.title || activeTerminal?.command || 'Select terminal'}
+                  {activeTerminal?.title || activeTerminal?.command || t('terminal:console.selectTerminal')}
                 </Text>
                 <Text numberOfLines={1} variant="bodySmall" style={{ color: palette.muted }}>
                   {activeProject.path}  |  {terminalConnection}
@@ -181,24 +183,24 @@ export default function TerminalScreen() {
             <Appbar.Action
               testID="terminal-create-button"
               icon="plus"
-              accessibilityLabel="Create terminal"
+              accessibilityLabel={t('terminal:console.create')}
               disabled={isCreating || Boolean(busyId)}
               onPress={() => void handleCreate()}
             />
             <Appbar.Action
               icon="refresh"
-              accessibilityLabel="Refresh terminals"
+              accessibilityLabel={t('terminal:console.refresh')}
               disabled={Boolean(busyId) || isCreating}
-              onPress={() => void refreshTerminals().catch((reason) => setError(message(reason, 'Could not refresh terminals.')))}
+              onPress={() => void refreshTerminals().catch((reason) => setError(message(reason, t('terminal:errors.refresh'))))}
             />
           </View>
         </Appbar.Header>
 
         <ScrollView ref={outputRef} style={styles.output} contentContainerStyle={styles.outputContent} keyboardDismissMode="on-drag" nestedScrollEnabled>
-          {activeTerminalId ? <Text testID="terminal-output" selectable style={[styles.outputText, { color: palette.text }]}>{terminalOutput || 'Connected. Waiting for output...'}</Text> : (
+          {activeTerminalId ? <Text testID="terminal-output" selectable style={[styles.outputText, { color: palette.text }]}>{terminalOutput || t('terminal:console.connectedWaiting')}</Text> : (
             <Card mode="contained" style={{ backgroundColor: palette.surface, borderRadius: 16 }}>
-              <Card.Title title="Terminal" subtitle={activeProject.label} />
-              <Card.Content><Text style={{ color: palette.muted }}>Open or create a terminal to begin.</Text></Card.Content>
+              <Card.Title title={t('terminal:screen.title')} subtitle={activeProject.label} />
+              <Card.Content><Text style={{ color: palette.muted }}>{t('terminal:console.openOrCreate')}</Text></Card.Content>
             </Card>
           )}
         </ScrollView>
@@ -210,7 +212,7 @@ export default function TerminalScreen() {
                 testID="terminal-line-input"
                 mode="flat"
                 dense
-                placeholder="Enter a command"
+                placeholder={t('terminal:console.commandPlaceholder')}
                 value={line}
                 onChangeText={setLine}
                 onSubmitEditing={handleSend}
@@ -231,17 +233,17 @@ export default function TerminalScreen() {
               style={styles.sendButton}
               containerColor={palette.tint}
               iconColor={palette.surface}
-              accessibilityLabel="Send command"
+              accessibilityLabel={t('terminal:console.send')}
               disabled={!line || terminalConnection !== 'connected'}
               onPress={handleSend}
             />
           </View>
         </Surface>
       </KeyboardAvoidingView>
-      <OverlaySheet visible={terminalPickerVisible} fitContent testID="terminal-picker" title="Terminals" onClose={() => setTerminalPickerVisible(false)}>
-        {terminals.length === 0 ? <Text style={{ color: palette.muted }}>No terminals yet. Use + to create one.</Text> : null}
-        {terminals.map((terminal) => <SwipeRow key={terminal.id} title={`${terminal.title || terminal.command}, ${terminal.id.slice(0, 8)}`} actions={[{ label: 'Close', icon: 'close', onPress: () => confirmTerminate(terminal) }]}>
-          <Pressable accessibilityRole="button" accessibilityLabel={`Open ${terminal.title || terminal.command}, ${terminal.id.slice(0, 8)}`} accessibilityHint="Swipe left to close terminal" accessibilityState={{ selected: terminal.id === activeTerminalId }} onPress={() => { setTerminalPickerVisible(false); void handleOpen(terminal.id); }} style={[styles.terminalOption, { borderColor: terminal.id === activeTerminalId ? palette.tint : palette.border }]}>
+      <OverlaySheet visible={terminalPickerVisible} fitContent testID="terminal-picker" title={t('terminal:sessions.title')} onClose={() => setTerminalPickerVisible(false)}>
+        {terminals.length === 0 ? <Text style={{ color: palette.muted }}>{t('terminal:sessions.empty')}</Text> : null}
+        {terminals.map((terminal) => <SwipeRow key={terminal.id} title={`${terminal.title || terminal.command}, ${terminal.id.slice(0, 8)}`} actions={[{ label: t('common:actions.close'), icon: 'close', onPress: () => confirmTerminate(terminal) }]}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('terminal:sessions.openLabel', { terminal: `${terminal.title || terminal.command}, ${terminal.id.slice(0, 8)}` })} accessibilityHint={t('terminal:sessions.closeHint')} accessibilityState={{ selected: terminal.id === activeTerminalId }} onPress={() => { setTerminalPickerVisible(false); void handleOpen(terminal.id); }} style={[styles.terminalOption, { borderColor: terminal.id === activeTerminalId ? palette.tint : palette.border }]}>
             <MaterialCommunityIcons name={terminal.id === activeTerminalId ? 'check-circle' : 'console'} size={20} color={terminal.id === activeTerminalId ? palette.tint : palette.muted} />
             <View style={styles.terminalOptionText}><Text numberOfLines={1} variant="titleSmall">{terminal.title || terminal.command}</Text><Text numberOfLines={1} variant="bodySmall" style={{ color: palette.muted }}>{terminal.command} · {terminal.id.slice(0, 8)}</Text></View>
           </Pressable>

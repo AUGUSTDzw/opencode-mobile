@@ -104,6 +104,18 @@ const config: ExpoConfig = {
     'expo-notifications',
     'expo-background-task',
     'expo-web-browser',
+    [
+      // Exposes the shipped app languages to the OS so iOS/Android surface the
+      // correct per-app language choices. Extend both lists with every language
+      // added under lib/i18n/locales.
+      'expo-localization',
+      {
+        supportedLocales: {
+          ios: ['en', 'es', 'hi', 'de', 'fr', 'zh', 'pt', 'ja'],
+          android: ['en', 'es', 'hi', 'de', 'fr', 'zh', 'pt', 'ja'],
+        },
+      },
+    ],
     ...(isDevelopmentVariant ? [] : [androidReleaseBuildPropertiesPlugin]),
     [
       'expo-speech-recognition',

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Button, Chip, List, Text } from 'react-native-paper';
 
@@ -37,6 +38,7 @@ function connectionHost(serverUrl: string) {
 }
 
 export function ConnectionProfiles({ palette }: { palette: Palette }) {
+  const { t } = useTranslation();
   const { settings, connection, connect, switchConnection, updateSettings } = useOpencode();
   const [profiles, setProfiles] = useState<ConnectionProfile[]>([]);
   const [expandedKey, setExpandedKey] = useState<string>();
@@ -77,7 +79,7 @@ export function ConnectionProfiles({ palette }: { palette: Palette }) {
   }
 
   function handleDelete(profile: ConnectionProfile) {
-    const message = `Remove "${profile.name}" from saved connections?`;
+    const message = t('settings:connection.deleteMessage', { name: profile.name });
     const confirmRemoval = () => {
       void deleteProfilePassword(profile.id);
       void persist(profiles.filter((item) => item.id !== profile.id));
@@ -86,15 +88,15 @@ export function ConnectionProfiles({ palette }: { palette: Palette }) {
     // React Native Web has no Alert, so follow the app's existing pattern of a
     // browser confirm dialog for web.
     if (Platform.OS === 'web') {
-      if (globalThis.confirm(`Delete connection\n\n${message}`)) {
+      if (globalThis.confirm(t('settings:connection.deleteWebConfirm', { message }))) {
         confirmRemoval();
       }
       return;
     }
 
-    Alert.alert('Delete connection', message, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: confirmRemoval },
+    Alert.alert(t('settings:connection.deleteTitle'), message, [
+      { text: t('common:actions.cancel'), style: 'cancel' },
+      { text: t('common:actions.delete'), style: 'destructive', onPress: confirmRemoval },
     ]);
   }
 
@@ -182,7 +184,7 @@ export function ConnectionProfiles({ palette }: { palette: Palette }) {
             <Text numberOfLines={1} variant="bodySmall" style={{ color: palette.muted }}>{subtitle}</Text>
           </View>
           {isSwitching || isActive ? (
-            <Chip compact mode="flat">{isSwitching || isReconnecting ? 'Connecting' : 'Active'}</Chip>
+            <Chip compact mode="flat">{isSwitching || isReconnecting ? t('common:labels.connecting') : t('common:labels.active')}</Chip>
           ) : null}
         </Pressable>
         {expanded ? (
@@ -203,8 +205,8 @@ export function ConnectionProfiles({ palette }: { palette: Palette }) {
     rows.push(renderRow({
       rowKey: CURRENT_CONNECTION_KEY,
       testIDKey: CURRENT_CONNECTION_KEY,
-      name: 'Current connection',
-      subtitle: settings.serverUrl.trim() ? connectionHost(settings.serverUrl) : 'No server URL set',
+      name: t('settings:connection.currentConnection'),
+      subtitle: settings.serverUrl.trim() ? connectionHost(settings.serverUrl) : t('settings:connection.noServerUrl'),
       isActive: true,
       actions: (
         <>
@@ -214,18 +216,18 @@ export function ConnectionProfiles({ palette }: { palette: Palette }) {
             loading={isReconnecting}
             disabled={isReconnecting || !settings.serverUrl.trim()}
             onPress={() => void connect()}>
-            Reconnect
+            {t('common:actions.reconnect')}
           </Button>
           <Button testID="connection-edit-current" mode="outlined" onPress={() => setDialog({ mode: 'edit-current' })}>
-            Edit
+            {t('common:actions.edit')}
           </Button>
         </>
       ),
       body: (
         <>
-          <Text variant="bodySmall" style={{ color: palette.muted }}>Server URL: {settings.serverUrl.trim() || 'not set'}</Text>
-          <Text variant="bodySmall" style={{ color: palette.muted }}>Username: {settings.username.trim() || '(none)'}</Text>
-          <Text variant="bodySmall" style={{ color: palette.muted }}>Not saved yet. Add a connection to keep it for later.</Text>
+          <Text variant="bodySmall" style={{ color: palette.muted }}>{t('settings:connection.serverUrlValue', { url: settings.serverUrl.trim() || t('common:labels.notSet') })}</Text>
+          <Text variant="bodySmall" style={{ color: palette.muted }}>{t('settings:connection.usernameValue', { username: settings.username.trim() || t('settings:connection.usernameEmpty') })}</Text>
+          <Text variant="bodySmall" style={{ color: palette.muted }}>{t('settings:connection.notSavedYet')}</Text>
         </>
       ),
     }));
@@ -249,10 +251,10 @@ export function ConnectionProfiles({ palette }: { palette: Palette }) {
             loading={isReconnecting}
             disabled={isReconnecting || isSwitching}
             onPress={() => void connect()}>
-            Reconnect
+            {t('common:actions.reconnect')}
           </Button>
           <Button testID={`connection-edit-${profile.id}`} mode="outlined" onPress={() => void handleEditProfile(profile)}>
-            Edit
+            {t('common:actions.edit')}
           </Button>
         </>
       ) : (
@@ -263,20 +265,20 @@ export function ConnectionProfiles({ palette }: { palette: Palette }) {
             loading={isSwitching}
             disabled={Boolean(switchingProfileId) || isSwitching}
             onPress={() => void handleConnect(profile)}>
-            Connect
+            {t('common:actions.connect')}
           </Button>
           <Button testID={`connection-edit-${profile.id}`} mode="outlined" onPress={() => void handleEditProfile(profile)}>
-            Edit
+            {t('common:actions.edit')}
           </Button>
           <Button testID={`connection-delete-${profile.id}`} mode="text" textColor={palette.danger} onPress={() => handleDelete(profile)}>
-            Delete
+            {t('common:actions.delete')}
           </Button>
         </>
       ),
       body: (
         <>
-          <Text variant="bodySmall" style={{ color: palette.muted }}>Server URL: {profile.serverUrl}</Text>
-          <Text variant="bodySmall" style={{ color: palette.muted }}>Username: {profile.username || '(none)'}</Text>
+          <Text variant="bodySmall" style={{ color: palette.muted }}>{t('settings:connection.serverUrlValue', { url: profile.serverUrl })}</Text>
+          <Text variant="bodySmall" style={{ color: palette.muted }}>{t('settings:connection.usernameValue', { username: profile.username || t('settings:connection.usernameEmpty') })}</Text>
         </>
       ),
     }));
@@ -286,17 +288,17 @@ export function ConnectionProfiles({ palette }: { palette: Palette }) {
     <>
       <View style={styles.list}>{rows}</View>
       <Button testID="connection-add-button" mode="outlined" icon="plus" onPress={() => setDialog({ mode: 'add' })}>
-        Add connection
+        {t('settings:connection.addConnection')}
       </Button>
       {profiles.length === 0 ? (
         <Text variant="bodySmall" style={{ color: palette.muted }}>
-          Add connections to switch between servers without retyping the URL and password.
+          {t('settings:connection.addDescription')}
         </Text>
       ) : null}
       {dialog ? (
         <ConnectionProfileDialog
-          title={dialog.mode === 'add' ? 'Add connection' : 'Edit connection'}
-          submitLabel={dialog.mode === 'add' ? 'Save & connect' : 'Save'}
+          title={dialog.mode === 'add' ? t('settings:connection.addConnection') : t('settings:connection.editConnection')}
+          submitLabel={dialog.mode === 'add' ? t('settings:connection.saveAndConnect') : t('common:actions.save')}
           showName={dialog.mode !== 'edit-current'}
           initial={dialog.mode === 'add' ? undefined : dialog.mode === 'edit-current' ? {
             serverUrl: settings.serverUrl,

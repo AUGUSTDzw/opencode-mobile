@@ -1,0 +1,242 @@
+{
+  "screen": {
+    "categories": {
+      "connection": "Connexion",
+      "ai": "IA et fournisseurs",
+      "notifications": "Notifications",
+      "voice": "Voix et réponses",
+      "advanced": "Avancé"
+    },
+    "summaries": {
+      "configuredCount": "{{value}} configurés",
+      "replyPlaybackOn": "Lecture des réponses activée",
+      "replyPlaybackOff": "Lecture des réponses désactivée",
+      "advanced": "Serveurs MCP et diagnostics"
+    }
+  },
+  "connection": {
+    "currentConnection": "Connexion actuelle",
+    "noServerUrl": "Aucune URL de serveur définie",
+    "notSavedYet": "Pas encore enregistrée. Ajoute une connexion pour la conserver.",
+    "lastChecked": "Dernière vérification {{time}}",
+    "serverUrlValue": "URL du serveur : {{url}}",
+    "usernameValue": "Nom d'utilisateur : {{username}}",
+    "usernameEmpty": "(aucun)",
+    "addConnection": "Ajouter une connexion",
+    "editConnection": "Modifier la connexion",
+    "addDescription": "Ajoute des connexions pour passer d'un serveur à l'autre sans ressaisir l'URL et le mot de passe.",
+    "saveAndConnect": "Enregistrer et se connecter",
+    "deleteTitle": "Supprimer la connexion",
+    "deleteMessage": "Retirer « {{name}} » des connexions enregistrées ?",
+    "deleteWebConfirm": "Supprimer la connexion\n\n{{message}}",
+    "fields": {
+      "name": "Nom",
+      "serverUrl": "URL du serveur",
+      "username": "Nom d'utilisateur",
+      "password": "Mot de passe"
+    },
+    "errors": {
+      "name": "Saisis un nom pour cette connexion.",
+      "serverUrl": "Saisis l'URL du serveur.",
+      "invalidUrl": "Saisis une URL de serveur complète, comme http://192.168.1.10:4096.",
+      "save": "Impossible d'enregistrer cette connexion."
+    }
+  },
+  "providers": {
+    "apiKey": "Clé API",
+    "pasteApiKey": "Colle ta clé API",
+    "chooseModels": "Choisis les modèles configurés à afficher dans le chat. Le dernier modèle choisi dans le chat reste sélectionné pour les nouveaux chats.",
+    "configuredProviders": "Fournisseurs configurés",
+    "addProvider": "Ajouter un fournisseur",
+    "connectFirst": "Connecte-toi d'abord pour charger les fournisseurs.",
+    "configureAtLeastOne": "Configure au moins un fournisseur pour choisir les valeurs par défaut.",
+    "selectedCount": "{{selected}} sur {{total}} sélectionnés",
+    "reasoningSupported": "Raisonnement pris en charge",
+    "standardModel": "Modèle standard",
+    "noModels": "Aucun modèle trouvé pour tes fournisseurs configurés.",
+    "configuredSuccess": "{{provider}} a été configuré avec succès.",
+    "signInFinished": "Connexion à {{provider}} terminée. L'état du fournisseur a été actualisé.",
+    "couldNotConfigure": "Impossible de configurer le fournisseur.",
+    "couldNotRemove": "Impossible de supprimer les identifiants du fournisseur.",
+    "credentialsRemoved": "Les identifiants de {{provider}} ont été supprimés.",
+    "removeTitle": "Retirer {{provider}} ?",
+    "removeMessage": "Les identifiants enregistrés et la configuration du fournisseur seront supprimés.",
+    "removeWebConfirm": "Retirer {{provider}} ?\n\nLes identifiants enregistrés et la configuration du fournisseur seront supprimés.",
+    "signInTitle": "Terminer la connexion au fournisseur",
+    "authorizationCode": "Code d'autorisation",
+    "complete": "Terminer",
+    "continue": "Continuer",
+    "cancelSetup": "Annuler la configuration du fournisseur",
+    "configureProvider": "Configurer {{provider}}",
+    "oauthHint": "Cela ouvre le flux de connexion du fournisseur dans ton navigateur.",
+    "setupUnavailable": "Les détails de configuration de ce fournisseur sont indisponibles pour le moment.",
+    "couldNotComplete": "Impossible de terminer la connexion."
+  },
+  "providerCopy": {
+    "openai": {
+      "label": "OpenAI",
+      "description": "Modèles GPT d'OpenAI, y compris les options de raisonnement et multimodales les plus récentes."
+    },
+    "anthropic": {
+      "label": "Anthropic",
+      "description": "Modèles Claude d'Anthropic pour le code, l'analyse et le travail sur de longs contextes."
+    },
+    "github-copilot": {
+      "label": "GitHub Copilot",
+      "description": "Utilise ton accès GitHub Copilot pour te connecter et activer les modèles de base pris en charge."
+    },
+    "google": {
+      "label": "Google",
+      "description": "Modèles Gemini de Google pour les tâches multimodales et à grand contexte."
+    },
+    "groq": {
+      "label": "Groq",
+      "description": "Inférence hébergée rapide pour les modèles ouverts et de pointe pris en charge."
+    },
+    "openrouter": {
+      "label": "OpenRouter",
+      "description": "Achemine les requêtes vers plusieurs fournisseurs et familles de modèles depuis un seul compte."
+    },
+    "mistral": {
+      "label": "Mistral",
+      "description": "Modèles hébergés de Mistral AI pour les charges de travail générales et de code."
+    },
+    "xai": {
+      "label": "xAI",
+      "description": "Modèles Grok de xAI."
+    },
+    "azure": {
+      "label": "Azure OpenAI",
+      "description": "Modèles compatibles OpenAI déployés via Azure."
+    }
+  },
+  "notifications": {
+    "status": {
+      "checking": "Vérification",
+      "enabled": "Activées",
+      "needsSetup": "Configuration requise"
+    },
+    "background": {
+      "checking": "Vérification",
+      "ready": "Prêt",
+      "limited": "Limité"
+    },
+    "summary": {
+      "enabled": "Notifications activées",
+      "off": "Notifications désactivées",
+      "background": "Arrière-plan {{status}}"
+    },
+    "enable": "Activer les notifications",
+    "settings": "Réglages des notifications",
+    "appSettings": "Réglages de l'app",
+    "appSettingsDescription": "Consulte les réglages système de cette app.",
+    "batteryOptimization": "Optimisation de la batterie",
+    "batteryOptimizationDescription": "Permets à l'app de fonctionner plus fiablement en arrière-plan.",
+    "batterySaver": "Économiseur de batterie",
+    "batterySaverDescription": "L'économiseur de batterie peut retarder les rappels.",
+    "refreshStatus": "Actualiser l'état",
+    "enabledFeedback": "Les notifications sont activées sur cet appareil.",
+    "disabledFeedback": "Les notifications sont toujours désactivées. Ouvre les réglages système pour les activer manuellement."
+  },
+  "voice": {
+    "onDeviceInput": {
+      "title": "Saisie vocale sur l'appareil",
+      "description": "Privilégie la reconnaissance vocale locale et évite le recours au cloud quand c'est possible."
+    },
+    "autoPlay": {
+      "title": "Lecture automatique des réponses de l'assistant",
+      "description": "Lit à voix haute la dernière réponse de l'assistant lorsqu'elle est terminée."
+    },
+    "workingSound": {
+      "title": "Son de travail",
+      "description": "Joue une boucle apaisante pendant que l'assistant prépare encore une réponse."
+    },
+    "resumeListening": {
+      "title": "Reprendre l'écoute après la réponse",
+      "description": "En mode conversation, relance l'écoute une fois la lecture vocale terminée."
+    },
+    "speechLocale": {
+      "label": "Langue de la synthèse vocale",
+      "helper": "Laisse vide pour utiliser la langue par défaut du système pour la saisie et la lecture vocales."
+    },
+    "responseScope": {
+      "label": "Étendue des réponses",
+      "brief": {
+        "label": "Bref",
+        "description": "Réponses courtes et ciblées pour un échange naturel."
+      },
+      "balanced": {
+        "label": "Équilibré",
+        "description": "Réponses concises avec un peu plus de contexte quand c'est utile."
+      },
+      "detailed": {
+        "label": "Détaillé",
+        "description": "Explications plus longues et davantage de détails."
+      }
+    },
+    "nextActions": {
+      "title": "Actions suivantes simples",
+      "description": "Termine les réponses par une courte recommandation quand la prochaine étape est claire."
+    },
+    "speechRate": {
+      "label": "Débit de parole"
+    },
+    "workingSoundVariant": {
+      "label": "Son de travail",
+      "soft": {
+        "label": "Carillon doux",
+        "description": "Tonalité chaude et superposée avec une pulsation légère."
+      },
+      "glass": {
+        "label": "Tonalité cristalline",
+        "description": "Boucle d'ambiance plus claire et plus légère."
+      }
+    },
+    "workingSoundVolume": {
+      "label": "Volume du son de travail"
+    },
+    "voiceSelect": {
+      "label": "Voix"
+    },
+    "footer": "Android peut vérifier périodiquement les sessions en cours en arrière-plan et publier une notification de fin. La parole en arrière-plan et la capture continue du microphone ne sont pas prises en charge."
+  },
+  "diagnostics": {
+    "title": "Diagnostics du serveur",
+    "server": "Serveur",
+    "openCodeVersion": "OpenCode {{version}}",
+    "healthUnavailable": "Point de contrôle d'état indisponible",
+    "healthy": "Opérationnel",
+    "realtimeUpdates": "Mises à jour en temps réel",
+    "eventStreamConnected": "Flux d'événements global connecté",
+    "pollingFallback": "Repli par interrogation actif",
+    "subsystems": "Sous-systèmes",
+    "subsystemsMcp": "MCP {{value}}",
+    "subsystemsLsp": "LSP {{value}}",
+    "subsystemsFormatters": "Formateurs {{value}}",
+    "notAvailable": "n/d",
+    "refresh": "Actualiser les diagnostics"
+  },
+  "mcp": {
+    "title": "Serveurs MCP",
+    "couldNotUpdate": "Impossible de mettre à jour les serveurs MCP.",
+    "configurationUnavailable": "Détails de configuration indisponibles",
+    "invalidCommand": "Saisis la commande locale sous forme de tableau JSON de chaînes.",
+    "local": "Local",
+    "remote": "Distant",
+    "serverName": "Nom du serveur",
+    "commandArguments": "Arguments de la commande (JSON)",
+    "url": "URL",
+    "addLocalServer": "Ajouter un serveur local",
+    "addRemoteServer": "Ajouter un serveur distant",
+    "noServers": "Aucun serveur MCP configuré.",
+    "statusConfigured": "configuré",
+    "statusDisabled": "désactivé",
+    "oauth": "OAuth",
+    "authorizationCode": "Code d'autorisation (facultatif)",
+    "completeOAuth": "Terminer OAuth"
+  },
+  "language": {
+    "title": "Langue",
+    "description": "Utilise la langue du système ou choisis-en une pour l'interface de l'app."
+  }
+}

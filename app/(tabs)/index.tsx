@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 import { ActivityIndicator, Surface, Text } from 'react-native-paper';
 
@@ -8,6 +9,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useOpencode } from '@/providers/opencode-provider';
 
 export default function ChatLandingScreen() {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
   const {
@@ -35,8 +37,8 @@ export default function ChatLandingScreen() {
     return (
       <View style={[styles.center, { backgroundColor: palette.background }]}>
         <Surface style={[styles.panel, { backgroundColor: palette.surface }]} elevation={1}>
-          <Text variant="headlineSmall" style={[styles.title, { color: palette.text }]}>Choose a workspace</Text>
-          <Text variant="bodyMedium" style={[styles.copy, { color: palette.muted }]}>Select a project in the Workspaces tab to open its chat context.</Text>
+          <Text variant="headlineSmall" style={[styles.title, { color: palette.text }]}>{t('chat:session.chooseWorkspace')}</Text>
+          <Text variant="bodyMedium" style={[styles.copy, { color: palette.muted }]}>{t('chat:session.selectWorkspace')}</Text>
         </Surface>
       </View>
     );
@@ -46,9 +48,9 @@ export default function ChatLandingScreen() {
     <View style={[styles.center, { backgroundColor: palette.background }]}>
       <Surface style={[styles.panel, { backgroundColor: palette.surface }]} elevation={1}>
         <ActivityIndicator size="large" color={palette.tint} />
-        <Text variant="headlineSmall" style={[styles.title, { color: palette.text }]}>Opening OpenCode Mobile</Text>
+        <Text variant="headlineSmall" style={[styles.title, { color: palette.text }]}>{t('chat:session.opening')}</Text>
         <Text variant="bodyMedium" style={[styles.copy, { color: palette.muted }]}>
-          {connection.status === 'error' ? connection.message : 'Loading the latest session for this OpenCode Mobile workspace.'}
+          {connection.status === 'error' ? connection.message : t('chat:session.loading')}
         </Text>
       </Surface>
     </View>

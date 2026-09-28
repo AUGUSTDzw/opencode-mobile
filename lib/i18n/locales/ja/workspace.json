@@ -1,0 +1,55 @@
+{
+  "screen": {
+    "syncProjects": "プロジェクトを同期",
+    "refreshWorkspace": "ワークスペースを更新",
+    "filesTab": "ファイル",
+    "worktreesTab": "ワークツリー"
+  },
+  "files": {
+    "title": "ワークスペースのファイル",
+    "branch": "ブランチ: {{branch}}",
+    "searchAndInspect": "ファイルを検索して表示",
+    "searchPlaceholder": "ファイルを検索",
+    "search": "検索",
+    "changedFiles": "{{value}} 件の変更ファイル",
+    "close": "ファイルを閉じる",
+    "savingNotice": "保存すると、編集内容が VCS パッチとして作業ツリーに適用されます。続行する前に変更を確認してください。",
+    "savePatch": "パッチを保存",
+    "editingUnavailable": "このサーバーでは編集を利用できません。"
+  },
+  "worktrees": {
+    "title": "ワークツリー",
+    "subtitle": "分離された作業ディレクトリを作成したり、既存のものを管理したりできます。",
+    "refresh": "ワークツリーを更新",
+    "nameLabel": "名前（任意）",
+    "startCommandLabel": "開始コマンド（任意）",
+    "empty": "利用可能なワークツリーはありません。",
+    "resetLabel": "{{name}}をリセット",
+    "removeLabel": "{{name}}を削除",
+    "resetTitle": "ワークツリーをリセットしますか？",
+    "resetMessage": "{{directory}} の未コミットの変更が破棄されます。",
+    "resetAction": "リセット",
+    "removeTitle": "ワークツリーを削除しますか？",
+    "removeMessage": "{{directory}} が削除されます。これは元に戻せません。"
+  },
+  "picker": {
+    "title": "ワークスペースを選択",
+    "changeWorkspace": "ワークスペースを変更",
+    "enterPath": "OpenCode サーバー上のフォルダーパスを入力してください。",
+    "serverDirectory": "サーバーディレクトリ",
+    "add": "ワークスペースを追加",
+    "selectLabel": "{{name}}を選択",
+    "empty": "利用可能なワークスペースはありません。"
+  },
+  "errors": {
+    "refreshWorkspace": "ワークスペースを更新できませんでした。",
+    "searchFiles": "ワークスペースのファイルを検索できませんでした。",
+    "openFile": "ファイルを開けませんでした。",
+    "saveFile": "ファイルを保存できませんでした。",
+    "refreshWorktrees": "ワークツリーを更新できませんでした。",
+    "createWorktree": "ワークツリーを作成できませんでした。",
+    "resetWorktree": "ワークツリーをリセットできませんでした。",
+    "removeWorktree": "ワークツリーを削除できませんでした。",
+    "addWorkspace": "ワークスペースを追加できませんでした。"
+  }
+}

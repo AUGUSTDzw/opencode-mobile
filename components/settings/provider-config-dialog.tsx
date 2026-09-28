@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { Appbar, Button, Chip, HelperText, RadioButton, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -43,12 +44,13 @@ export function ProviderConfigDialog({
   visiblePrompts,
 }: ProviderConfigDialogProps) {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   return (
     <Modal visible animationType="slide" presentationStyle="fullScreen" onRequestClose={onDismiss}>
       <KeyboardAvoidingView style={[styles.screen, { backgroundColor: palette.background }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <Appbar.Header statusBarHeight={0} style={{ backgroundColor: palette.surface, paddingTop: insets.top, height: 64 + insets.top }}>
-        <Appbar.BackAction accessibilityLabel="Cancel provider setup" onPress={onDismiss} />
-        <Appbar.Content title={`Configure ${selectedProviderLabel}`} />
+        <Appbar.BackAction accessibilityLabel={t('settings:providers.cancelSetup')} onPress={onDismiss} />
+        <Appbar.Content title={t('settings:providers.configureProvider', { provider: selectedProviderLabel })} />
       </Appbar.Header>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.dialogContent}>
         {selectedProviderDescription ? (
@@ -100,17 +102,17 @@ export function ProviderConfigDialog({
         )}
 
         {selectedMethod?.type === 'oauth' ? (
-          <HelperText type="info">This opens the provider sign-in flow in your browser.</HelperText>
+          <HelperText type="info">{t('settings:providers.oauthHint')}</HelperText>
         ) : null}
         {!selectedMethod && effectiveAuthMethods.length === 0 ? (
-          <HelperText type="error">Setup details for this provider are unavailable right now.</HelperText>
+          <HelperText type="error">{t('settings:providers.setupUnavailable')}</HelperText>
         ) : null}
         {providerDialogError ? <HelperText type="error">{providerDialogError}</HelperText> : null}
       </ScrollView>
       <View style={[styles.actions, { backgroundColor: palette.surface, borderTopColor: palette.border, paddingBottom: Math.max(insets.bottom, 12) }]}>
-        <Button onPress={onDismiss}>Cancel</Button>
+        <Button onPress={onDismiss}>{t('common:actions.cancel')}</Button>
         <Button mode="contained" testID="settings-provider-save-button" disabled={!selectedMethod} loading={isConfiguringProvider} onPress={onSubmit}>
-          {selectedMethod?.type === 'oauth' ? 'Continue' : 'Save'}
+          {selectedMethod?.type === 'oauth' ? t('settings:providers.continue') : t('common:actions.save')}
         </Button>
       </View>
       </KeyboardAvoidingView>

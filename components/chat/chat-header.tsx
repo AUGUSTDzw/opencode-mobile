@@ -1,10 +1,12 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Pressable, Text as NativeText, View } from 'react-native';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Pressable, Text as NativeText, View } from 'react-native';
 import { Appbar, Portal, ProgressBar, Text } from 'react-native-paper';
 
 import { useDismissOnBack } from '@/hooks/use-dismiss-on-back';
 import { Colors } from '@/constants/theme';
+import { getFormatLocale } from '@/lib/i18n/format';
 import type { Session } from '@/lib/opencode/types';
 import { formatEstimatedCost, formatTokenCount, type SessionUsage } from '@/lib/opencode/usage';
 
@@ -54,10 +56,12 @@ export function ChatHeader({
   latestAssistantTurnUsage,
   usage,
 }: ChatHeaderProps) {
+  const { t } = useTranslation();
+  const formatCost = (value: number) => formatEstimatedCost(value, 'USD', getFormatLocale());
   const [usageVisible, setUsageVisible] = useState(false);
   // Android back stops conversation mode instead of leaving the screen.
   useDismissOnBack(conversation.active, onConfirmStopConversation);
-  const usageLabel = usage.costStatus === 'pricing-unavailable' ? 'Pricing unavailable' : `Estimated API cost ${formatEstimatedCost(usage.cost)}`;
+  const usageLabel = usage.costStatus === 'pricing-unavailable' ? t('chat:header.pricingUnavailable') : t('chat:header.estimatedCost', { cost: formatCost(usage.cost) });
   const contextProgress = contextLimit && contextTokens !== undefined ? Math.min(contextTokens / contextLimit, 1) : undefined;
   const usageIcon = contextProgress === undefined
     ? 'circle-outline'
@@ -75,14 +79,14 @@ export function ChatHeader({
         statusBarHeight={0}
         elevated>
         <View style={styles.headerMain}>
-          <Pressable accessibilityRole="button" accessibilityLabel={`Open chats. ${selectedSession?.title || 'Untitled chat'}`} onPress={onOpenSessionMenu} style={({ pressed }) => [styles.headerSessionAnchor, pressed && styles.headerSessionAnchorPressed]}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('chat:header.openChats', { title: selectedSession?.title || t('chat:header.untitledChat') })} onPress={onOpenSessionMenu} style={({ pressed }) => [styles.headerSessionAnchor, pressed && styles.headerSessionAnchorPressed]}>
             <View style={styles.headerSessionContent}>
               <View style={styles.headerSessionTextWrap}>
                 <Text numberOfLines={1} variant="titleMedium" style={[styles.headerTitle, { color: palette.text }]}> 
-                  {selectedSession?.title || 'Untitled chat'}
+                  {selectedSession?.title || t('chat:header.untitledChat')}
                 </Text>
                 <NativeText numberOfLines={1} style={[styles.headerUsage, { color: palette.muted }]}>
-                  {activeProjectLabel || 'Choose a workspace'}
+                  {activeProjectLabel || t('chat:header.chooseWorkspace')}
                 </NativeText>
               </View>
               <MaterialCommunityIcons name="chevron-down" size={20} color={palette.muted} />
@@ -90,11 +94,11 @@ export function ChatHeader({
           </Pressable>
         </View>
         <View style={styles.headerActions}>
-          <Appbar.Action icon="plus" accessibilityLabel="New chat" onPress={onCreateSession} disabled={isCreatingSession || connectionStatus !== 'connected'} />
-          <Appbar.Action icon={usageIcon} onPress={() => setUsageVisible(true)} accessibilityLabel="Show session usage details" />
+          <Appbar.Action icon="plus" accessibilityLabel={t('chat:header.newChat')} onPress={onCreateSession} disabled={isCreatingSession || connectionStatus !== 'connected'} />
+          <Appbar.Action icon={usageIcon} onPress={() => setUsageVisible(true)} accessibilityLabel={t('chat:header.showUsage')} />
           <Appbar.Action
             icon={conversation.active ? 'phone-hangup' : 'headset'}
-            accessibilityLabel={conversation.active ? 'Stop conversation mode' : 'Start conversation mode'}
+            accessibilityLabel={conversation.active ? t('chat:header.stopConversationMode') : t('chat:header.startConversationMode')}
             onPress={onToggleConversationMode}
             disabled={connectionStatus !== 'connected' || isCreatingSession}
           />
@@ -108,26 +112,26 @@ export function ChatHeader({
             latestUserText={conversation.latestHeardText}
             onStop={onConfirmStopConversation}
             phase={conversation.phase}
-            sessionTitle={selectedSession?.title || 'Untitled chat'}
+            sessionTitle={selectedSession?.title || t('chat:header.untitledChat')}
           />
         ) : null}
       </Portal>
-      <OverlaySheet visible={usageVisible} title="Session usage" testID="session-usage-overlay" fitContent onClose={() => setUsageVisible(false)}>
+      <OverlaySheet visible={usageVisible} title={t('chat:header.sessionUsage')} testID="session-usage-overlay" fitContent onClose={() => setUsageVisible(false)}>
         <Text accessibilityLabel={usageLabel} variant="bodySmall" style={{ color: palette.muted }}>{usageLabel}</Text>
-        {latestAssistantTurnUsage ? <Text variant="bodySmall" style={{ color: palette.muted }}>{latestAssistantTurnUsage.costStatus === 'pricing-unavailable' ? 'Last response: Pricing unavailable' : `Last response: ${formatEstimatedCost(latestAssistantTurnUsage.cost)}`}</Text> : null}
+        {latestAssistantTurnUsage ? <Text variant="bodySmall" style={{ color: palette.muted }}>{latestAssistantTurnUsage.costStatus === 'pricing-unavailable' ? t('chat:header.lastResponsePricing') : t('chat:header.lastResponseCost', { cost: formatCost(latestAssistantTurnUsage.cost) })}</Text> : null}
         <View style={[styles.usageProvider, { borderColor: palette.border }]}>
-          <View style={styles.usageRow}><Text variant="titleSmall" style={{ color: palette.text }}>Context utilization</Text><Text accessibilityLabel={contextProgress === undefined ? 'Context utilization unavailable' : `${Math.round(contextProgress * 100)} percent context utilization`} variant="titleSmall" style={{ color: palette.text }}>{contextProgress === undefined ? 'Unavailable' : `${Math.round(contextProgress * 100)}%`}</Text></View>
-          {contextProgress === undefined ? <Text variant="bodySmall" style={{ color: palette.muted }}>OpenCode did not provide a context limit for this model.</Text> : <><View style={{ height: 8, overflow: 'hidden' }}><ProgressBar progress={contextProgress} color={palette.tint} style={styles.contextProgress} /></View><Text variant="bodySmall" style={{ color: palette.muted }}>{`${formatTokenCount(contextTokens || 0)} of ${formatTokenCount(contextLimit || 0)} input tokens`}</Text></>}
+          <View style={styles.usageRow}><Text variant="titleSmall" style={{ color: palette.text }}>{t('chat:header.contextUtilization')}</Text><Text accessibilityLabel={contextProgress === undefined ? t('chat:header.contextUnavailable') : t('chat:header.contextPercent', { percent: Math.round(contextProgress * 100) })} variant="titleSmall" style={{ color: palette.text }}>{contextProgress === undefined ? t('common:labels.unavailable') : `${Math.round(contextProgress * 100)}%`}</Text></View>
+          {contextProgress === undefined ? <Text variant="bodySmall" style={{ color: palette.muted }}>{t('chat:header.noContextLimit')}</Text> : <><View style={{ height: 8, overflow: 'hidden' }}><ProgressBar progress={contextProgress} color={palette.tint} style={styles.contextProgress} /></View><Text variant="bodySmall" style={{ color: palette.muted }}>{t('chat:header.inputTokens', { used: formatTokenCount(contextTokens || 0), limit: formatTokenCount(contextLimit || 0) })}</Text></>}
         </View>
-        {usage.completedSteps === 0 ? <Text variant="bodyMedium" style={{ color: palette.muted }}>No completed inference steps yet.</Text> : null}
+        {usage.completedSteps === 0 ? <Text variant="bodyMedium" style={{ color: palette.muted }}>{t('chat:header.noSteps')}</Text> : null}
         {usage.providers.map((provider) => (
           <View key={provider.providerId} style={[styles.usageProvider, { borderColor: palette.border }]}>
-            <View style={styles.usageRow}><Text variant="titleSmall" style={{ color: palette.text }}>{provider.providerId}</Text><Text variant="titleSmall" style={{ color: palette.text }}>{provider.models.some((model) => model.costStatus === 'pricing-unavailable') ? 'Pricing unavailable' : formatEstimatedCost(provider.cost)}</Text></View>
+            <View style={styles.usageRow}><Text variant="titleSmall" style={{ color: palette.text }}>{provider.providerId}</Text><Text variant="titleSmall" style={{ color: palette.text }}>{provider.models.some((model) => model.costStatus === 'pricing-unavailable') ? t('chat:header.pricingUnavailable') : formatCost(provider.cost)}</Text></View>
             {provider.models.map((model) => (
               <View key={model.modelId} style={styles.usageModel}>
-                <View style={styles.usageRow}><Text variant="bodyMedium" style={{ color: palette.text }}>{model.modelId}</Text><Text accessibilityLabel={`${model.modelId} cost ${model.costStatus === 'pricing-unavailable' ? 'pricing unavailable' : formatEstimatedCost(model.cost)}`} variant="bodyMedium" style={{ color: palette.text }}>{model.costStatus === 'pricing-unavailable' ? 'Included or unpriced' : formatEstimatedCost(model.cost)}</Text></View>
-                <Text accessibilityLabel={`${formatTokenCount(model.inputTokens)} input tokens, ${formatTokenCount(model.outputTokens)} output tokens, ${formatTokenCount(model.reasoningTokens)} reasoning tokens, ${formatTokenCount(model.cacheReadTokens)} cache read tokens, ${formatTokenCount(model.cacheWriteTokens)} cache write tokens, ${model.completedSteps} completed steps`} variant="bodySmall" style={{ color: palette.muted }}>
-                  {`${formatTokenCount(model.inputTokens)} in  ${formatTokenCount(model.outputTokens)} out  ${formatTokenCount(model.reasoningTokens)} reasoning  ${formatTokenCount(model.cacheReadTokens)} cache read  ${formatTokenCount(model.cacheWriteTokens)} cache write  ${model.completedSteps} steps`}
+                <View style={styles.usageRow}><Text variant="bodyMedium" style={{ color: palette.text }}>{model.modelId}</Text><Text accessibilityLabel={t('chat:header.modelCostLabel', { model: model.modelId, cost: model.costStatus === 'pricing-unavailable' ? t('chat:header.pricingUnavailableLower') : formatCost(model.cost) })} variant="bodyMedium" style={{ color: palette.text }}>{model.costStatus === 'pricing-unavailable' ? t('chat:header.includedOrUnpriced') : formatCost(model.cost)}</Text></View>
+                <Text accessibilityLabel={t('chat:header.modelTokensLabel', { input: formatTokenCount(model.inputTokens), output: formatTokenCount(model.outputTokens), reasoning: formatTokenCount(model.reasoningTokens), cacheRead: formatTokenCount(model.cacheReadTokens), cacheWrite: formatTokenCount(model.cacheWriteTokens), steps: model.completedSteps })} variant="bodySmall" style={{ color: palette.muted }}>
+                  {t('chat:header.modelTokens', { input: formatTokenCount(model.inputTokens), output: formatTokenCount(model.outputTokens), reasoning: formatTokenCount(model.reasoningTokens), cacheRead: formatTokenCount(model.cacheReadTokens), cacheWrite: formatTokenCount(model.cacheWriteTokens), steps: model.completedSteps })}
                 </Text>
               </View>
             ))}

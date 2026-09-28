@@ -1,0 +1,55 @@
+{
+  "screen": {
+    "syncProjects": "Sync projects",
+    "refreshWorkspace": "Refresh workspace",
+    "filesTab": "Files",
+    "worktreesTab": "Worktrees"
+  },
+  "files": {
+    "title": "Workspace files",
+    "branch": "Branch: {{branch}}",
+    "searchAndInspect": "Search and inspect files",
+    "searchPlaceholder": "Search files",
+    "search": "Search",
+    "changedFiles": "{{value}} changed files",
+    "close": "Close file",
+    "savingNotice": "Saving applies your edits as a VCS patch to the working tree. Review the changes before continuing.",
+    "savePatch": "Save patch",
+    "editingUnavailable": "Editing is not available on this server."
+  },
+  "worktrees": {
+    "title": "Worktrees",
+    "subtitle": "Create isolated working directories or manage existing ones.",
+    "refresh": "Refresh worktrees",
+    "nameLabel": "Name (optional)",
+    "startCommandLabel": "Start command (optional)",
+    "empty": "No worktrees available.",
+    "resetLabel": "Reset {{name}}",
+    "removeLabel": "Remove {{name}}",
+    "resetTitle": "Reset worktree?",
+    "resetMessage": "This discards uncommitted changes in {{directory}}.",
+    "resetAction": "Reset",
+    "removeTitle": "Remove worktree?",
+    "removeMessage": "{{directory}} will be removed. This cannot be undone."
+  },
+  "picker": {
+    "title": "Choose workspace",
+    "changeWorkspace": "Change workspace",
+    "enterPath": "Enter a folder path on the OpenCode server.",
+    "serverDirectory": "Server directory",
+    "add": "Add workspace",
+    "selectLabel": "Select {{name}}",
+    "empty": "No workspaces available."
+  },
+  "errors": {
+    "refreshWorkspace": "Could not refresh the workspace.",
+    "searchFiles": "Could not search workspace files.",
+    "openFile": "Could not open the file.",
+    "saveFile": "Could not save the file.",
+    "refreshWorktrees": "Could not refresh worktrees.",
+    "createWorktree": "Could not create the worktree.",
+    "resetWorktree": "Could not reset the worktree.",
+    "removeWorktree": "Could not remove the worktree.",
+    "addWorkspace": "Could not add workspace."
+  }
+}

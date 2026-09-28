@@ -127,11 +127,11 @@ export function getLatestContextTokens(messages: SessionMessageRecord[]) {
   return undefined;
 }
 
-export function formatEstimatedCost(value: number, currency = 'USD') {
+export function formatEstimatedCost(value: number, currency = 'USD', locale = 'en-US') {
   // OpenCode's SDK exposes no response currency, so USD is the explicit fallback.
   const fractionDigits = value < 0.01 ? 6 : value < 1 ? 3 : 2;
   try {
-    return new Intl.NumberFormat('en-US', { currency, currencyDisplay: 'narrowSymbol', maximumFractionDigits: fractionDigits, minimumFractionDigits: value < 0.01 && value > 0 ? Math.min(4, fractionDigits) : fractionDigits, style: 'currency' }).format(value);
+    return new Intl.NumberFormat(locale, { currency, currencyDisplay: 'narrowSymbol', maximumFractionDigits: fractionDigits, minimumFractionDigits: value < 0.01 && value > 0 ? Math.min(4, fractionDigits) : fractionDigits, style: 'currency' }).format(value);
   } catch {
     return `${currency} ${value.toFixed(fractionDigits)}`;
   }

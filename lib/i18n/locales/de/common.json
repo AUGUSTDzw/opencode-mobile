@@ -1,0 +1,48 @@
+{
+  "tabs": {
+    "chat": "Chat",
+    "terminal": "Terminal",
+    "workspace": "Arbeitsbereich",
+    "settings": "Einstellungen"
+  },
+  "actions": {
+    "cancel": "Abbrechen",
+    "save": "Speichern",
+    "close": "Schließen",
+    "back": "Zurück",
+    "next": "Weiter",
+    "done": "Fertig",
+    "retry": "Erneut versuchen",
+    "delete": "Löschen",
+    "dismiss": "Verwerfen",
+    "create": "Erstellen",
+    "refresh": "Aktualisieren",
+    "remove": "Entfernen",
+    "open": "Öffnen",
+    "copy": "Kopieren",
+    "connect": "Verbinden",
+    "reconnect": "Neu verbinden",
+    "disconnect": "Trennen",
+    "edit": "Bearbeiten",
+    "add": "Hinzufügen",
+    "submit": "Senden",
+    "stop": "Stopp",
+    "select": "Auswählen",
+    "closeWithName": "{{title}} schließen"
+  },
+  "select": {
+    "chooseOption": "Wähle eine Option"
+  },
+  "labels": {
+    "connected": "Verbunden",
+    "connecting": "Verbindung wird hergestellt",
+    "enabled": "Aktiviert",
+    "off": "Aus",
+    "active": "Aktiv",
+    "unavailable": "Nicht verfügbar",
+    "unknown": "Unbekannt",
+    "none": "Keine",
+    "notSet": "nicht festgelegt",
+    "systemDefault": "Systemstandard"
+  }
+}

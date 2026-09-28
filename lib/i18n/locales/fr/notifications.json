@@ -1,0 +1,6 @@
+{
+  "taskFinished": {
+    "title": "OpenCode a terminé une tâche",
+    "bodyFallback": "Tâche terminée"
+  }
+}

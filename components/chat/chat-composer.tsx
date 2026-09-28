@@ -1,6 +1,7 @@
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { Chip, IconButton, Surface, Text } from 'react-native-paper';
-import { useState } from 'react';
 
 import { Colors } from '@/constants/theme';
 import { TextInput } from '@/components/ui/text-input';
@@ -74,6 +75,7 @@ export function ChatComposer({
   updateChatPreferences,
   visibleModels,
 }: ChatComposerProps) {
+  const { t } = useTranslation();
   const minInputHeight = 24;
   const maxInputHeight = 110;
   const hasComposerContent = Boolean(draft.trim()) || attachments.length > 0;
@@ -107,7 +109,7 @@ export function ChatComposer({
           onValueChange={(value) => updateChatPreferences({ mode: value })}
           options={availableAgents.map((agent) => ({ value: agent.id, label: agent.label }))}
           selectedValue={chatPreferences.mode}
-          title="Choose assistant mode"
+          title={t('chat:composer.chooseAssistantMode')}
         />
         <ModelPicker
           disabled={visibleModels.length === 0}
@@ -123,13 +125,13 @@ export function ChatComposer({
           iconName="brain"
           label={chatPreferences.reasoning}
           onValueChange={(value) => updateChatPreferences({ reasoning: value })}
-          options={REASONING_OPTIONS.map((option) => ({ value: option.id, label: option.label }))}
+          options={REASONING_OPTIONS.map((option) => ({ value: option.id, label: t(option.labelKey) }))}
           selectedValue={chatPreferences.reasoning}
-          title="Choose reasoning level"
+          title={t('chat:composer.chooseReasoningLevel')}
         />
         {autoApproveAvailable ? (
           <ControlButton active={chatPreferences.autoApprove} iconName={getAutoApproveIcon(chatPreferences.autoApprove)} iconOnly loading={isUpdatingAutoApprove} onPress={onToggleAutoApprove}>
-            {chatPreferences.autoApprove ? 'Auto approve enabled' : 'Ask permission'}
+            {chatPreferences.autoApprove ? t('chat:composer.autoApproveEnabled') : t('chat:composer.askPermission')}
           </ControlButton>
         ) : null}
       </View>
@@ -137,11 +139,11 @@ export function ChatComposer({
       {conversation.active ? (
         <View style={[styles.conversationBanner, { backgroundColor: `${palette.tint}10`, borderColor: `${palette.tint}28` }]}>
           <View style={styles.conversationBannerHeader}>
-            <Text variant="labelLarge" style={{ color: palette.text }}>Conversation mode</Text>
-            <Chip compact icon={conversation.phase === 'speaking' ? 'volume-high' : 'microphone'}>{conversation.statusLabel || 'Active'}</Chip>
+            <Text variant="labelLarge" style={{ color: palette.text }}>{t('chat:composer.conversationMode')}</Text>
+            <Chip compact icon={conversation.phase === 'speaking' ? 'volume-high' : 'microphone'}>{conversation.statusLabel || t('common:labels.active')}</Chip>
           </View>
           <Text variant="bodySmall" style={{ color: palette.muted }}>
-            Keep talking naturally while the app stays open. It listens, sends your turn, reads the reply, and then listens again.
+            {t('chat:composer.conversationHint')}
           </Text>
         </View>
       ) : null}
@@ -154,7 +156,7 @@ export function ChatComposer({
                 {att.filename || att.uri}
               </Text>
               <IconButton
-                accessibilityLabel={`Remove ${att.filename || 'attachment'}`}
+                accessibilityLabel={t('chat:composer.removeAttachment', { name: att.filename || t('chat:composer.attachment') })}
                 icon="close"
                 size={18}
                 style={styles.attachmentRemoveButton}
@@ -178,7 +180,7 @@ export function ChatComposer({
       {isSpeechInputListening || conversation.isListening ? (
         <View style={styles.voiceStatusRow}>
           <Chip compact icon="microphone" style={[styles.voiceStatusChip, { backgroundColor: `${palette.tint}14` }]}>
-            {conversation.active ? 'Conversation active' : 'Listening'}
+            {conversation.active ? t('chat:composer.conversationActive') : t('chat:composer.listening')}
           </Chip>
         </View>
       ) : null}
@@ -199,7 +201,7 @@ export function ChatComposer({
                editable={!isSpeechInputListening}
                multiline
                scrollEnabled={false}
-               placeholder="Ask anything..."
+               placeholder={t('chat:composer.placeholder')}
                placeholderTextColor={palette.muted}
                style={[styles.input, { height: inputHeight, backgroundColor: 'transparent', color: palette.text }]}
                contentStyle={styles.inputContentCompact}

@@ -1,0 +1,48 @@
+{
+  "tabs": {
+    "chat": "Chat",
+    "terminal": "Terminal",
+    "workspace": "Espaço de trabalho",
+    "settings": "Configurações"
+  },
+  "actions": {
+    "cancel": "Cancelar",
+    "save": "Salvar",
+    "close": "Fechar",
+    "back": "Voltar",
+    "next": "Próximo",
+    "done": "Concluir",
+    "retry": "Tentar novamente",
+    "delete": "Excluir",
+    "dismiss": "Dispensar",
+    "create": "Criar",
+    "refresh": "Atualizar",
+    "remove": "Remover",
+    "open": "Abrir",
+    "copy": "Copiar",
+    "connect": "Conectar",
+    "reconnect": "Reconectar",
+    "disconnect": "Desconectar",
+    "edit": "Editar",
+    "add": "Adicionar",
+    "submit": "Enviar",
+    "stop": "Parar",
+    "select": "Selecionar",
+    "closeWithName": "Fechar {{title}}"
+  },
+  "select": {
+    "chooseOption": "Escolha uma opção"
+  },
+  "labels": {
+    "connected": "Conectado",
+    "connecting": "Conectando",
+    "enabled": "Ativado",
+    "off": "Desativado",
+    "active": "Ativo",
+    "unavailable": "Indisponível",
+    "unknown": "Desconhecido",
+    "none": "Nenhum",
+    "notSet": "não definido",
+    "systemDefault": "Padrão do sistema"
+  }
+}

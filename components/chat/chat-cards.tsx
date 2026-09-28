@@ -1,5 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { memo, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { KeyboardAvoidingView, Linking, Modal, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { Appbar, Button, Card, Chip, Divider, IconButton, List, Surface, Switch, Text, TouchableRipple } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -30,6 +31,7 @@ export function PendingInteractionsCard({
   onPermissionReply: (requestId: string, reply: 'once' | 'always' | 'reject') => Promise<void>;
   permissions: PendingPermissionRequest[];
 }) {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
 
@@ -38,10 +40,10 @@ export function PendingInteractionsCard({
       <Card.Content style={styles.pendingInteractionsContent}>
         <View style={styles.waitingNoticeHeader}>
           <MaterialCommunityIcons name="message-alert-outline" size={18} color={palette.warning} />
-          <Text variant="titleMedium" style={{ color: palette.text }}>Respond to continue</Text>
+          <Text variant="titleMedium" style={{ color: palette.text }}>{t('chat:cards.respondToContinue')}</Text>
         </View>
         <Text variant="bodySmall" style={{ color: palette.muted }}>
-          OpenCode is waiting for your answer before it can continue.
+          {t('chat:cards.waitingForAnswer')}
         </Text>
         {permissions.map((request) => (
           <PermissionRequestCard
@@ -68,6 +70,7 @@ export function QuestionFlow({
   request: PendingQuestionRequest;
   visible: boolean;
 }) {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
   const insets = useSafeAreaInsets();
@@ -140,7 +143,7 @@ export function QuestionFlow({
     }
     setSubmitting('reply');
     setError(undefined);
-    void onReply(resolvedAnswers).catch((reason) => setError(reason instanceof Error ? reason.message : 'Could not submit answer.')).finally(() => setSubmitting(undefined));
+    void onReply(resolvedAnswers).catch((reason) => setError(reason instanceof Error ? reason.message : t('chat:cards.couldNotSubmitAnswer'))).finally(() => setSubmitting(undefined));
   };
 
   const handleReject = () => {
@@ -149,19 +152,19 @@ export function QuestionFlow({
     }
     setSubmitting('reject');
     setError(undefined);
-    void onReject().catch((reason) => setError(reason instanceof Error ? reason.message : 'Could not reject question.')).finally(() => setSubmitting(undefined));
+    void onReject().catch((reason) => setError(reason instanceof Error ? reason.message : t('chat:cards.couldNotRejectQuestion'))).finally(() => setSubmitting(undefined));
   };
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onDismiss}>
       <KeyboardAvoidingView style={{ flex: 1, backgroundColor: palette.background }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <Appbar.Header statusBarHeight={0} style={{ backgroundColor: palette.surface, paddingTop: insets.top, height: 64 + insets.top }}>
-          <Appbar.BackAction accessibilityLabel="Return to chat" onPress={onDismiss} />
-          <Appbar.Content title="Assistant question" subtitle={`${currentStep + 1} of ${visibleIndexes.length}`} />
+          <Appbar.BackAction accessibilityLabel={t('chat:cards.returnToChat')} onPress={onDismiss} />
+          <Appbar.Content title={t('chat:cards.assistantQuestion')} subtitle={t('chat:cards.stepOfTotal', { current: currentStep + 1, total: visibleIndexes.length })} />
         </Appbar.Header>
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 20, gap: 18 }}>
-        <Text variant="labelLarge" style={{ color: palette.warning }}>OpenCode is waiting for your answer</Text>
-        <Text variant="bodySmall" style={{ color: palette.muted }}>{`Question ${currentStep + 1} of ${visibleIndexes.length}`}</Text>
+        <Text variant="labelLarge" style={{ color: palette.warning }}>{t('chat:cards.waitingForAnswerBanner')}</Text>
+        <Text variant="bodySmall" style={{ color: palette.muted }}>{t('chat:cards.questionOfTotal', { current: currentStep + 1, total: visibleIndexes.length })}</Text>
         {request.title ? <Text variant="bodySmall" style={{ color: palette.muted }}>{request.title}</Text> : null}
         {request.questions.map((prompt, questionIndex) => {
           if (questionIndex !== currentIndex) {
@@ -182,7 +185,7 @@ export function QuestionFlow({
 
               {prompt.type === 'boolean' ? (
                 <View style={styles.questionBooleanRow}>
-                  <Text variant="bodyMedium" style={{ color: palette.text }}>{selected.includes('true') ? 'Yes' : 'No'}</Text>
+                  <Text variant="bodyMedium" style={{ color: palette.text }}>{selected.includes('true') ? t('chat:cards.yes') : t('chat:cards.no')}</Text>
                   <Switch
                     value={selected.includes('true')}
                     onValueChange={(value) => {
@@ -194,7 +197,7 @@ export function QuestionFlow({
 
               {prompt.type === 'external' && prompt.url ? (
                 <Button mode="outlined" icon="open-in-new" onPress={() => { void Linking.openURL(prompt.url as string).catch(() => undefined); }}>
-                  Open link
+                  {t('chat:cards.openLink')}
                 </Button>
               ) : null}
 
@@ -231,7 +234,7 @@ export function QuestionFlow({
                 <TextInput
                   dense
                   mode="outlined"
-                  label={prompt.placeholder || 'Custom answer'}
+                  label={prompt.placeholder || t('chat:cards.customAnswer')}
                   keyboardType={prompt.type === 'number' || prompt.type === 'integer' ? 'numeric' : 'default'}
                   value={customAnswers[questionIndex]}
                   onChangeText={(value) => {
@@ -248,15 +251,15 @@ export function QuestionFlow({
         {error ? <Text style={{ color: palette.danger }}>{error}</Text> : null}
         </ScrollView>
         <View style={[styles.questionFooter, { backgroundColor: palette.surface, borderTopColor: palette.border, paddingBottom: Math.max(insets.bottom, 12) }]}>
-          <Button mode="outlined" disabled={currentStep === 0 || Boolean(submitting)} onPress={() => setStep((value) => Math.max(0, value - 1))}>Back</Button>
-          {currentStep < visibleIndexes.length - 1 ? <Button mode="contained" disabled={!canAdvance || Boolean(submitting)} onPress={() => setStep((value) => value + 1)}>Next</Button> : <Button
+          <Button mode="outlined" disabled={currentStep === 0 || Boolean(submitting)} onPress={() => setStep((value) => Math.max(0, value - 1))}>{t('common:actions.back')}</Button>
+          {currentStep < visibleIndexes.length - 1 ? <Button mode="contained" disabled={!canAdvance || Boolean(submitting)} onPress={() => setStep((value) => value + 1)}>{t('common:actions.next')}</Button> : <Button
             mode="contained"
             disabled={!canSubmit || Boolean(submitting)}
             loading={submitting === 'reply'}
             onPress={handleReply}>
-            Submit answer
+            {t('chat:cards.submitAnswer')}
           </Button>}
-          <Button mode="text" textColor={palette.danger} disabled={Boolean(submitting)} loading={submitting === 'reject'} onPress={handleReject}>Reject</Button>
+          <Button mode="text" textColor={palette.danger} disabled={Boolean(submitting)} loading={submitting === 'reject'} onPress={handleReject}>{t('chat:cards.reject')}</Button>
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -264,6 +267,7 @@ export function QuestionFlow({
 }
 
 export function SessionDiffCard({ diff, expanded, onPress }: { diff: FileDiff; expanded: boolean; onPress: () => void }) {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
   const diffLines = useMemo(() => (expanded ? buildPatchDiff(diff.patch || '') : []), [diff.patch, expanded]);
@@ -273,7 +277,7 @@ export function SessionDiffCard({ diff, expanded, onPress }: { diff: FileDiff; e
     <List.Accordion
       expanded={expanded}
       onPress={onPress}
-      title={diff.file || 'Unknown file'}
+      title={diff.file || t('chat:cards.unknownFile')}
       description={`+${diff.additions} / -${diff.deletions}`}
       titleStyle={{ color: palette.text }}
       descriptionStyle={{ color: palette.muted }}
@@ -284,12 +288,12 @@ export function SessionDiffCard({ diff, expanded, onPress }: { diff: FileDiff; e
         {expanded ? (
           <ScrollView horizontal showsHorizontalScrollIndicator>
             <View style={styles.diffViewer}>
-              {diffBlocks.length === 0 ? <Text variant="bodySmall" style={{ color: palette.muted }}>No line changes available.</Text> : diffBlocks.map((block, blockIndex) => {
+              {diffBlocks.length === 0 ? <Text variant="bodySmall" style={{ color: palette.muted }}>{t('chat:cards.noLineChanges')}</Text> : diffBlocks.map((block, blockIndex) => {
                 if (block.type === 'collapsed') {
                   return (
                     <View key={`${diff.file}-collapsed-${blockIndex}`} style={[styles.diffCollapsedRow, { backgroundColor: palette.background, borderColor: palette.border }]}> 
                       <Text variant="bodySmall" style={[styles.code, { color: palette.muted }]}> 
-                        ... {block.hiddenCount} unchanged line{block.hiddenCount === 1 ? '' : 's'}
+                        {t('chat:cards.hiddenLines', { count: block.hiddenCount })}
                         {block.startLine && block.endLine ? ` (${block.startLine}-${block.endLine})` : ''}
                       </Text>
                     </View>
@@ -327,7 +331,7 @@ export function SessionDiffCard({ diff, expanded, onPress }: { diff: FileDiff; e
             </View>
           </ScrollView>
         ) : (
-          <Text variant="bodySmall" style={{ color: palette.muted }}>Expand to load the diff preview.</Text>
+          <Text variant="bodySmall" style={{ color: palette.muted }}>{t('chat:cards.expandDiffPreview')}</Text>
         )}
       </View>
     </List.Accordion>
@@ -335,6 +339,7 @@ export function SessionDiffCard({ diff, expanded, onPress }: { diff: FileDiff; e
 }
 
 export function DiffCard({ detail, expanded, onPress }: { detail: Extract<TranscriptDetail, { kind: 'patch' }>; expanded: boolean; onPress: () => void }) {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
 
@@ -343,7 +348,7 @@ export function DiffCard({ detail, expanded, onPress }: { detail: Extract<Transc
       expanded={expanded}
       onPress={onPress}
       title={detail.label}
-      description="Files changed"
+      description={t('chat:cards.filesChanged')}
       titleStyle={{ color: palette.text }}
       descriptionStyle={{ color: palette.muted }}
       style={[styles.diffAccordion, { borderColor: palette.border }]}
@@ -353,7 +358,7 @@ export function DiffCard({ detail, expanded, onPress }: { detail: Extract<Transc
         {expanded ? (
           <Text variant="bodySmall" style={[styles.code, { color: palette.muted }]}>{detail.body}</Text>
         ) : (
-          <Text variant="bodySmall" style={{ color: palette.muted }}>Expand to load the patch preview.</Text>
+          <Text variant="bodySmall" style={{ color: palette.muted }}>{t('chat:cards.expandPatchPreview')}</Text>
         )}
       </View>
     </List.Accordion>
@@ -381,6 +386,7 @@ function TranscriptMessageImpl({
   onToggleSpeak,
   speaking = false,
 }: TranscriptMessageProps) {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
   const isUser = entry.role === 'user';
@@ -401,12 +407,12 @@ function TranscriptMessageImpl({
           ]}
           elevation={1}>
           <View style={styles.messageMeta}>
-            <Text variant="labelMedium" style={{ color: isUser ? palette.onBubbleUser : palette.muted }}>{isUser ? 'You' : 'OpenCode'}</Text>
+            <Text variant="labelMedium" style={{ color: isUser ? palette.onBubbleUser : palette.muted }}>{isUser ? t('chat:cards.you') : t('chat:cards.opencode')}</Text>
             <View style={styles.messageMetaRight}>
               {copied ? (
                 <View style={[styles.copiedPill, { backgroundColor: isUser ? `${palette.onBubbleUser}20` : `${palette.tint}18` }]}> 
                   <MaterialCommunityIcons name="check" size={12} color={isUser ? palette.onBubbleUser : palette.tint} />
-                  <Text variant="labelSmall" style={{ color: isUser ? palette.onBubbleUser : palette.tint }}>Copied</Text>
+                  <Text variant="labelSmall" style={{ color: isUser ? palette.onBubbleUser : palette.tint }}>{t('chat:cards.copied')}</Text>
                 </View>
               ) : null}
               {canSpeak ? (
@@ -471,6 +477,7 @@ function PermissionRequestCard({
   onReply: (reply: 'once' | 'always' | 'reject') => Promise<void>;
   request: PendingPermissionRequest;
 }) {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
   const [submitting, setSubmitting] = useState<'once' | 'always' | 'reject' | undefined>(undefined);
@@ -486,15 +493,15 @@ function PermissionRequestCard({
   return (
     <Card mode="contained" style={[styles.requestCard, compact && styles.requestCardCompact, { backgroundColor: palette.background }]}> 
       <Card.Content style={styles.requestCardContent}>
-        <Text variant="labelLarge" style={{ color: palette.warning }}>Permission request</Text>
+        <Text variant="labelLarge" style={{ color: palette.warning }}>{t('chat:cards.permissionRequest')}</Text>
         <Text variant="titleMedium" style={{ color: palette.text }}>{getPermissionTitle(request)}</Text>
         {request.patterns.length > 0 ? (
           <Text variant="bodySmall" style={{ color: palette.muted }}>{request.patterns.join('\n')}</Text>
         ) : null}
         <View style={styles.requestActionsRow}>
-          <Button mode="contained" compact disabled={Boolean(submitting)} loading={submitting === 'once'} onPress={() => handleReply('once')}>Allow once</Button>
-          <Button mode="contained-tonal" compact disabled={Boolean(submitting)} loading={submitting === 'always'} onPress={() => handleReply('always')}>Always allow</Button>
-          <Button mode="text" compact textColor={palette.danger} disabled={Boolean(submitting)} loading={submitting === 'reject'} onPress={() => handleReply('reject')}>Deny</Button>
+          <Button mode="contained" compact disabled={Boolean(submitting)} loading={submitting === 'once'} onPress={() => handleReply('once')}>{t('chat:cards.allowOnce')}</Button>
+          <Button mode="contained-tonal" compact disabled={Boolean(submitting)} loading={submitting === 'always'} onPress={() => handleReply('always')}>{t('chat:cards.alwaysAllow')}</Button>
+          <Button mode="text" compact textColor={palette.danger} disabled={Boolean(submitting)} loading={submitting === 'reject'} onPress={() => handleReply('reject')}>{t('chat:cards.deny')}</Button>
         </View>
       </Card.Content>
     </Card>

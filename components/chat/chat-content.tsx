@@ -1,6 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Animated, Easing, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { ActivityIndicator, Button, Card, IconButton, ProgressBar, Text, TouchableRipple } from 'react-native-paper';
 
@@ -13,7 +14,7 @@ import type { DiffScope, DiffTurn } from '@/providers/opencode-provider-types';
 import type { PendingPermissionRequest, PendingQuestionAnswer, PendingQuestionRequest } from '@/lib/opencode/client';
 
 import { styles } from '@/components/chat/chat-view-styles';
-import { STARTER_PROMPTS } from '@/components/chat/chat-view-utils';
+import { STARTER_PROMPT_KEYS } from '@/components/chat/chat-view-utils';
 
 type Palette = typeof Colors.light;
 
@@ -68,10 +69,10 @@ const MAINTAIN_VISIBLE_CONTENT_POSITION = {
 } as const;
 type DiffDetail = Extract<TranscriptEntry['details'][number], { kind: 'patch' }>;
 
-const DIFF_SCOPE_OPTIONS: { value: DiffScope; label: string }[] = [
-  { value: 'turn', label: 'Turn' },
-  { value: 'uncommitted', label: 'Uncommitted' },
-  { value: 'branch', label: 'Branch' },
+const DIFF_SCOPE_OPTIONS: { value: DiffScope; labelKey: string }[] = [
+  { value: 'turn', labelKey: 'chat:diff.turn' },
+  { value: 'uncommitted', labelKey: 'chat:diff.uncommitted' },
+  { value: 'branch', labelKey: 'chat:diff.branch' },
 ];
 
 type ChatContentProps = {
@@ -157,6 +158,7 @@ export function ChatContent({
   speakingMessageId,
   status,
 }: ChatContentProps) {
+  const { t } = useTranslation();
   const [progressVisible, setProgressVisible] = useState(false);
   const [diffSourcesVisible, setDiffSourcesVisible] = useState(false);
   const [dismissedQuestionId, setDismissedQuestionId] = useState<string>();
@@ -168,17 +170,22 @@ export function ChatContent({
   const isTurnScope = currentDiffScope === 'turn';
   const isLatestTurn = diffTurns.length === 0 || selectedDiffMessageId === diffTurns[diffTurns.length - 1]?.id;
   const scopeTitle = currentDiffScope === 'uncommitted'
-    ? 'Uncommitted changes'
+    ? t('chat:diff.uncommittedTitle')
     : currentDiffScope === 'branch'
-      ? 'Changes vs default branch'
+      ? t('chat:diff.branchTitle')
       : isLatestTurn
-        ? 'Latest turn diff'
-        : 'Selected turn diff';
+        ? t('chat:diff.latestTurnTitle')
+        : t('chat:diff.selectedTurnTitle');
   const scopeEmptyMessage = currentDiffScope === 'uncommitted'
-    ? 'No uncommitted changes.'
+    ? t('chat:diff.noUncommitted')
     : currentDiffScope === 'branch'
-      ? 'No changes against the default branch.'
-      : 'No file changes yet.';
+      ? t('chat:diff.noBranchChanges')
+      : t('chat:diff.noChanges');
+  const scopeLabel = t(DIFF_SCOPE_OPTIONS.find((option) => option.value === currentDiffScope)?.labelKey ?? 'chat:diff.turn');
+  const selectedTurnLabel = diffTurns.find((turn) => turn.id === selectedDiffMessageId)?.label || t('chat:diff.latestTurn');
+  const showingLabel = isTurnScope && diffTurns.length > 1
+    ? `${t('chat:diff.showing', { scope: scopeLabel })}${t('chat:diff.showingTurnSuffix', { turn: selectedTurnLabel })}`
+    : t('chat:diff.showing', { scope: scopeLabel });
   const showDiffDetails = isTurnScope && currentDiffs.length === 0;
 
   useLayoutEffect(() => {
@@ -233,7 +240,7 @@ export function ChatContent({
           ListHeaderComponent={connection.status === 'error' ? (
             <Card mode="contained" style={[styles.noticeCard, styles.transcriptItem, { backgroundColor: palette.surface }]}>
               <Card.Content>
-                <Text variant="titleMedium" style={{ color: palette.text }}>Connection issue</Text>
+                <Text variant="titleMedium" style={{ color: palette.text }}>{t('chat:content.connectionIssue')}</Text>
                 <Text variant="bodyMedium" style={{ color: palette.muted }}>{connection.message}</Text>
               </Card.Content>
             </Card>
@@ -243,19 +250,19 @@ export function ChatContent({
           ) : (
             <Card mode="contained" style={[styles.emptyCard, { backgroundColor: palette.surface }]}>
               <Card.Content style={styles.emptyContent}>
-                <Text variant="headlineSmall" style={[styles.emptyTitle, { color: palette.text }]}>Start a new task</Text>
+                <Text variant="headlineSmall" style={[styles.emptyTitle, { color: palette.text }]}>{t('chat:starter.title')}</Text>
                 <Text variant="bodyMedium" style={{ color: palette.muted }}>
-                  Keep the prompt specific and OpenCode will inspect the workspace, show progress, and stream back file changes.
+                  {t('chat:starter.description')}
                 </Text>
                 <View style={styles.promptStack}>
-                  {STARTER_PROMPTS.map((prompt) => (
+                  {STARTER_PROMPT_KEYS.map((key) => (
                     <TouchableRipple
-                      key={prompt}
+                      key={key}
                       style={[styles.promptCard, { borderColor: palette.border, backgroundColor: palette.background }]}
-                      onPress={() => onSendStarterPrompt(prompt)}>
+                      onPress={() => onSendStarterPrompt(t(key))}>
                       <View style={styles.promptCardInner}>
                         <MaterialCommunityIcons name="lightning-bolt" size={18} color={palette.tint} />
-                        <Text variant="bodyMedium" style={{ color: palette.text }}>{prompt}</Text>
+                        <Text variant="bodyMedium" style={{ color: palette.text }}>{t(key)}</Text>
                       </View>
                     </TouchableRipple>
                   ))}
@@ -268,8 +275,8 @@ export function ChatContent({
               {activeSession?.revert ? (
                 <Card mode="contained" style={[styles.noticeCard, { backgroundColor: palette.surface }]}>
                   <Card.Content>
-                    <Text variant="titleMedium" style={{ color: palette.text }}>Session is reverted</Text>
-                    <Button mode="outlined" onPress={onUnrevert}>Restore reverted work</Button>
+                    <Text variant="titleMedium" style={{ color: palette.text }}>{t('chat:content.sessionReverted')}</Text>
+                    <Button mode="outlined" onPress={onUnrevert}>{t('chat:content.restoreReverted')}</Button>
                   </Card.Content>
                 </Card>
               ) : null}
@@ -278,7 +285,7 @@ export function ChatContent({
                 <View style={styles.loadingRow}>
                   <ActivityIndicator color={palette.tint} />
                   <Text style={{ color: palette.muted }}>
-                    {currentActivityLabel ? `OpenCode is ${currentActivityLabel.toLowerCase()}...` : 'OpenCode is working through the current step...'}
+                    {currentActivityLabel ? t('chat:content.runningActivity', { activity: currentActivityLabel.toLowerCase() }) : t('chat:content.runningGeneric')}
                   </Text>
                 </View>
               ) : null}
@@ -294,7 +301,7 @@ export function ChatContent({
           {connection.status === 'error' ? (
             <Card mode="contained" style={[styles.noticeCard, { backgroundColor: palette.surface }]}>
               <Card.Content>
-                <Text variant="titleMedium" style={{ color: palette.text }}>Connection issue</Text>
+                <Text variant="titleMedium" style={{ color: palette.text }}>{t('chat:content.connectionIssue')}</Text>
                 <Text variant="bodyMedium" style={{ color: palette.muted }}>{connection.message}</Text>
               </Card.Content>
             </Card>
@@ -307,16 +314,20 @@ export function ChatContent({
                 <Text variant="titleMedium" style={{ color: palette.text }}>{scopeTitle}</Text>
                 <Text variant="bodyMedium" style={{ color: palette.muted }}>
                   {currentDiffs.length > 0
-                    ? `${diffCount} files changed, +${currentDiffs.reduce((total, diff) => total + diff.additions, 0)} / -${currentDiffs.reduce((total, diff) => total + diff.deletions, 0)}`
-                    : `${diffCount} files changed`}
+                    ? t('chat:diff.filesChangedCompact', {
+                        files: diffCount,
+                        additions: currentDiffs.reduce((total, diff) => total + diff.additions, 0),
+                        deletions: currentDiffs.reduce((total, diff) => total + diff.deletions, 0),
+                      })
+                    : t('chat:diff.filesChangedSimple', { files: diffCount })}
                 </Text>
               </View>
-              <Text variant="labelMedium" style={{ color: palette.tint }}>{isRefreshingDiffs ? 'Syncing' : status?.type || 'idle'}</Text>
+              <Text variant="labelMedium" style={{ color: palette.tint }}>{isRefreshingDiffs ? t('chat:diff.syncing') : status?.type || 'idle'}</Text>
             </Card.Content>
           </Card>
 
-          <Button mode="outlined" icon="swap-horizontal" onPress={() => setDiffSourcesVisible(true)} accessibilityLabel={`Change files changed source. ${DIFF_SCOPE_OPTIONS.find((option) => option.value === currentDiffScope)?.label || 'Turn'}`}>
-            {`Showing ${DIFF_SCOPE_OPTIONS.find((option) => option.value === currentDiffScope)?.label || 'Turn'}${isTurnScope && diffTurns.length > 1 ? ` · ${diffTurns.find((turn) => turn.id === selectedDiffMessageId)?.label || 'Latest turn'}` : ''}`}
+          <Button mode="outlined" icon="swap-horizontal" onPress={() => setDiffSourcesVisible(true)} accessibilityLabel={t('chat:diff.changeSourceLabel', { source: scopeLabel })}>
+            {showingLabel}
           </Button>
 
           {currentDiffs.length === 0 && !(showDiffDetails && diffDetails.length > 0) ? (
@@ -347,13 +358,13 @@ export function ChatContent({
         </ScrollView>
       )}
 
-      <OverlaySheet visible={activeTab !== 'session' && diffSourcesVisible} testID="diff-source-overlay" title="Files changed source" fitContent onClose={() => setDiffSourcesVisible(false)}>
+      <OverlaySheet visible={activeTab !== 'session' && diffSourcesVisible} testID="diff-source-overlay" title={t('chat:diff.sourceTitle')} fitContent onClose={() => setDiffSourcesVisible(false)}>
         {DIFF_SCOPE_OPTIONS.map((option) => <Pressable key={option.value} accessibilityRole="button" onPress={() => { onSelectDiffScope(option.value); if (option.value !== 'turn' || diffTurns.length <= 1) setDiffSourcesVisible(false); }} style={[styles.sessionPickerItemRow, { borderWidth: 1, borderRadius: 16, borderColor: currentDiffScope === option.value ? palette.tint : palette.border }]}>
           <MaterialCommunityIcons name={currentDiffScope === option.value ? 'check-circle' : 'circle-outline'} size={20} color={currentDiffScope === option.value ? palette.tint : palette.muted} />
-          <Text style={{ color: palette.text }}>{option.label}</Text>
+          <Text style={{ color: palette.text }}>{t(option.labelKey)}</Text>
         </Pressable>)}
         {currentDiffScope === 'turn' && diffTurns.length > 1 ? <>
-          <Text variant="labelLarge" style={{ color: palette.muted }}>Turn</Text>
+          <Text variant="labelLarge" style={{ color: palette.muted }}>{t('chat:diff.turn')}</Text>
           {diffTurns.map((turn) => <Pressable key={turn.id} accessibilityRole="button" onPress={() => { onSelectDiffMessage(turn.id); setDiffSourcesVisible(false); }} style={[styles.sessionPickerItemRow, { borderWidth: 1, borderRadius: 16, borderColor: selectedDiffMessageId === turn.id ? palette.tint : palette.border }]}>
             <MaterialCommunityIcons name={selectedDiffMessageId === turn.id ? 'check-circle' : 'circle-outline'} size={20} color={selectedDiffMessageId === turn.id ? palette.tint : palette.muted} />
             <Text style={{ color: palette.text }}>{turn.label}</Text>
@@ -381,24 +392,24 @@ export function ChatContent({
         <Card mode="elevated" style={[styles.todoOverlay, { backgroundColor: palette.surface, borderColor: palette.border }]}>
           <Card.Content style={styles.todoHeader}>
             <View style={styles.todoSummary}>
-              <Text variant="labelLarge" style={{ color: palette.text }}>Answer needed</Text>
-              <Text variant="bodySmall" style={{ color: palette.muted }}>{currentQuestion.title || 'OpenCode is waiting for your answer'}</Text>
+              <Text variant="labelLarge" style={{ color: palette.text }}>{t('chat:content.answerNeeded')}</Text>
+              <Text variant="bodySmall" style={{ color: palette.muted }}>{currentQuestion.title || t('chat:content.waitingForAnswer')}</Text>
             </View>
-            <Button onPress={() => setDismissedQuestionId(undefined)}>Open</Button>
+            <Button onPress={() => setDismissedQuestionId(undefined)}>{t('common:actions.open')}</Button>
           </Card.Content>
         </Card>
       ) : null}
-      {activeTab === 'session' && !currentQuestion && currentPendingPermissions.length === 0 && currentTodos.length > 0 ? <Pressable accessibilityRole="button" accessibilityLabel={`Open progress. ${completedTodoCount} of ${currentTodos.length} tasks completed`} onPress={() => setProgressVisible(true)} style={[styles.todoOverlay, { backgroundColor: palette.surface, borderColor: palette.border, padding: 12, gap: 8 }]}>
+      {activeTab === 'session' && !currentQuestion && currentPendingPermissions.length === 0 && currentTodos.length > 0 ? <Pressable accessibilityRole="button" accessibilityLabel={t('chat:content.openProgressLabel', { completed: completedTodoCount, total: currentTodos.length })} onPress={() => setProgressVisible(true)} style={[styles.todoOverlay, { backgroundColor: palette.surface, borderColor: palette.border, padding: 12, gap: 8 }]}>
         <View style={styles.todoHeader}>
-          <View style={styles.todoSummary}><Text variant="labelLarge" style={{ color: palette.text }}>Progress · {completedTodoCount}/{currentTodos.length}</Text><Text numberOfLines={1} variant="bodySmall" style={{ color: palette.muted }}>{currentTodos.find((todo) => todo.status === 'in_progress')?.content || (completedTodoCount === currentTodos.length ? 'All tasks completed' : 'Open to see all steps')}</Text></View>
+          <View style={styles.todoSummary}><Text variant="labelLarge" style={{ color: palette.text }}>{t('chat:content.progressTitle', { completed: completedTodoCount, total: currentTodos.length })}</Text><Text numberOfLines={1} variant="bodySmall" style={{ color: palette.muted }}>{currentTodos.find((todo) => todo.status === 'in_progress')?.content || (completedTodoCount === currentTodos.length ? t('chat:content.allTasksCompleted') : t('chat:content.openToSeeSteps'))}</Text></View>
           <MaterialCommunityIcons name="arrow-expand" size={18} color={palette.muted} />
         </View>
         <ProgressBar progress={completedTodoCount / currentTodos.length} color={palette.tint} style={styles.todoProgress} />
       </Pressable> : null}
-      <OverlaySheet visible={activeTab === 'session' && !currentQuestion && currentPendingPermissions.length === 0 && progressVisible} testID="progress-overlay" title="Progress" fitContent onClose={() => setProgressVisible(false)}>
+      <OverlaySheet visible={activeTab === 'session' && !currentQuestion && currentPendingPermissions.length === 0 && progressVisible} testID="progress-overlay" title={t('chat:content.progress')} fitContent onClose={() => setProgressVisible(false)}>
         {currentTodos.map((todo, index) => <View key={`${todo.content}-${index}`} style={styles.todoItemRow}>
           <IconButton icon={todo.status === 'completed' ? 'check-circle' : todo.status === 'in_progress' ? 'progress-clock' : 'circle-outline'} size={20} disabled style={styles.todoStatusIcon} />
-          <View style={styles.todoTextWrap}><Text variant="bodyMedium" style={{ color: palette.text }}>{todo.content || 'Untitled task'}</Text>{todo.priority ? <Text variant="bodySmall" style={{ color: palette.muted }}>{todo.priority}</Text> : null}</View>
+          <View style={styles.todoTextWrap}><Text variant="bodyMedium" style={{ color: palette.text }}>{todo.content || t('chat:content.untitledTask')}</Text>{todo.priority ? <Text variant="bodySmall" style={{ color: palette.muted }}>{todo.priority}</Text> : null}</View>
         </View>)}
       </OverlaySheet>
     </View>

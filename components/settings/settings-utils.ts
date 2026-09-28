@@ -1,55 +1,33 @@
+import type { TFunction } from 'i18next';
+
+import { SUPPORTED_LANGUAGES } from '@/lib/i18n/languages';
 import type { WorkingSoundVariant } from '@/lib/voice/working-sound';
 import type { ResponseScope } from '@/providers/opencode-provider';
 
-export const RESPONSE_SCOPE_OPTIONS: { value: ResponseScope; label: string; description: string }[] = [
-  { value: 'brief', label: 'Brief', description: 'Short, tightly scoped answers for natural back-and-forth.' },
-  { value: 'balanced', label: 'Balanced', description: 'Concise answers with a little more context when helpful.' },
-  { value: 'detailed', label: 'Detailed', description: 'Longer explanations and more supporting detail.' },
+export const RESPONSE_SCOPE_OPTIONS: { value: ResponseScope }[] = [
+  { value: 'brief' },
+  { value: 'balanced' },
+  { value: 'detailed' },
 ];
 
-export const WORKING_SOUND_OPTIONS: { value: WorkingSoundVariant; label: string; description: string }[] = [
-  { value: 'soft', label: 'Soft chime', description: 'Warm layered tone with a gentle pulse.' },
-  { value: 'glass', label: 'Glass tone', description: 'Brighter, lighter ambient loop.' },
+export const WORKING_SOUND_OPTIONS: { value: WorkingSoundVariant }[] = [
+  { value: 'soft' },
+  { value: 'glass' },
 ];
 
-const KNOWN_PROVIDER_COPY: Record<string, { label: string; description: string }> = {
-  openai: {
-    label: 'OpenAI',
-    description: 'GPT models from OpenAI, including the newest reasoning and multimodal options.',
-  },
-  anthropic: {
-    label: 'Anthropic',
-    description: 'Claude models from Anthropic for coding, analysis, and long-context work.',
-  },
-  'github-copilot': {
-    label: 'GitHub Copilot',
-    description: 'Use your GitHub Copilot access to sign in and enable supported foundation models.',
-  },
-  google: {
-    label: 'Google',
-    description: 'Gemini models from Google for multimodal and large-context tasks.',
-  },
-  groq: {
-    label: 'Groq',
-    description: 'Fast hosted inference for supported open and frontier models.',
-  },
-  openrouter: {
-    label: 'OpenRouter',
-    description: 'Route requests across multiple providers and model families from one account.',
-  },
-  mistral: {
-    label: 'Mistral',
-    description: 'Mistral AI hosted models for general-purpose and coding workloads.',
-  },
-  xai: {
-    label: 'xAI',
-    description: 'Grok models from xAI.',
-  },
-  azure: {
-    label: 'Azure OpenAI',
-    description: 'OpenAI-compatible models deployed through Azure.',
-  },
-};
+export const LANGUAGE_OPTIONS: { value: string; label: string }[] = SUPPORTED_LANGUAGES.map((language) => ({ value: language.code, label: language.nativeName }));
+
+const KNOWN_PROVIDER_IDS = new Set([
+  'openai',
+  'anthropic',
+  'github-copilot',
+  'google',
+  'groq',
+  'openrouter',
+  'mistral',
+  'xai',
+  'azure',
+]);
 
 const GENERIC_API_KEY_PROVIDERS = new Set(['anthropic', 'azure', 'google', 'groq', 'mistral', 'openai', 'openrouter', 'xai']);
 
@@ -57,10 +35,16 @@ export function supportsGenericApiKey(providerId?: string) {
   return Boolean(providerId && GENERIC_API_KEY_PROVIDERS.has(providerId));
 }
 
-export function getProviderCopy(providerId: string, fallbackLabel: string) {
-  const copy = KNOWN_PROVIDER_COPY[providerId];
+export function getProviderCopy(providerId: string, fallbackLabel: string, t: TFunction) {
+  if (!KNOWN_PROVIDER_IDS.has(providerId)) {
+    return {
+      label: fallbackLabel,
+      description: undefined,
+    };
+  }
+
   return {
-    label: copy?.label || fallbackLabel,
-    description: copy?.description,
+    label: t(`settings:providerCopy.${providerId}.label`),
+    description: t(`settings:providerCopy.${providerId}.description`),
   };
 }

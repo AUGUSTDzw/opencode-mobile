@@ -1,5 +1,6 @@
 import { Tabs, usePathname } from 'expo-router';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Platform, Text, type ColorValue } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -9,6 +10,7 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function TabLayout() {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme();
   const routerPathname = usePathname();
   const pathname = Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.pathname : routerPathname;
@@ -43,7 +45,7 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'OpenCode Mobile',
-          tabBarLabel: label('/', 'Chat'),
+          tabBarLabel: label('/', t('common:tabs.chat')),
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="message.fill" color={iconColor('/', color)} />,
           tabBarButton: (props) => <HapticTab {...props} route="/" />,
         }}
@@ -51,8 +53,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="terminal"
         options={{
-          title: 'Terminal',
-          tabBarLabel: label('/terminal', 'Terminal'),
+          title: t('common:tabs.terminal'),
+          tabBarLabel: label('/terminal', t('common:tabs.terminal')),
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="terminal.fill" color={iconColor('/terminal', color)} />,
           tabBarButton: (props) => <HapticTab {...props} route="/terminal" />,
         }}
@@ -60,8 +62,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="workspace"
         options={{
-          title: 'Workspace',
-          tabBarLabel: label('/workspace', 'Workspace'),
+          title: t('common:tabs.workspace'),
+          tabBarLabel: label('/workspace', t('common:tabs.workspace')),
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="folder.fill" color={iconColor('/workspace', color)} />,
           tabBarButton: (props) => <HapticTab {...props} route="/workspace" />,
         }}
@@ -69,8 +71,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="settings"
         options={{
-          title: 'Settings',
-          tabBarLabel: label('/settings', 'Settings'),
+          title: t('common:tabs.settings'),
+          tabBarLabel: label('/settings', t('common:tabs.settings')),
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="gearshape.fill" color={iconColor('/settings', color)} />,
           tabBarButton: (props) => <HapticTab {...props} route="/settings" />,
         }}

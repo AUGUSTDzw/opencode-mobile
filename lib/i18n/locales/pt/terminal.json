@@ -1,0 +1,36 @@
+{
+  "screen": {
+    "connectTitle": "Conectar ao OpenCode",
+    "chooseWorkspace": "Escolha um espaço de trabalho",
+    "selectProject": "Selecione um projeto antes de abrir um terminal.",
+    "openWorkspaces": "Abrir Espaços de trabalho",
+    "title": "Terminal"
+  },
+  "console": {
+    "selectTerminal": "Selecionar terminal",
+    "create": "Criar terminal",
+    "refresh": "Atualizar terminais",
+    "connectedWaiting": "Conectado. Aguardando saída...",
+    "openOrCreate": "Abra ou crie um terminal para começar.",
+    "commandPlaceholder": "Digite um comando",
+    "send": "Enviar comando",
+    "terminateTitle": "Encerrar o terminal?",
+    "terminateMessage": "Encerrar {{title}}?",
+    "terminateAction": "Encerrar"
+  },
+  "sessions": {
+    "title": "Terminais",
+    "empty": "Nenhum terminal ainda. Use + para criar um.",
+    "openLabel": "Abrir {{terminal}}",
+    "closeHint": "Deslize para a esquerda para fechar o terminal"
+  },
+  "errors": {
+    "load": "Não foi possível carregar os terminais.",
+    "create": "Não foi possível criar o terminal.",
+    "open": "Não foi possível abrir o terminal.",
+    "terminate": "Não foi possível encerrar o terminal.",
+    "send": "Não foi possível enviar a entrada do terminal.",
+    "connect": "Não foi possível conectar.",
+    "refresh": "Não foi possível atualizar os terminais."
+  }
+}

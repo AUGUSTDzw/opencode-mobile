@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { Appbar, Button, HelperText } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -34,6 +35,7 @@ export function ConnectionProfileDialog({
   onDismiss: () => void;
 }) {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const palette = Colors[useColorScheme() ?? 'light'];
   const [name, setName] = useState(initial?.name ?? '');
   const [serverUrl, setServerUrl] = useState(initial?.serverUrl ?? '');
@@ -46,15 +48,15 @@ export function ConnectionProfileDialog({
     const trimmedName = name.trim();
     const trimmedUrl = serverUrl.trim();
     if (showName && !trimmedName) {
-      setError('Enter a name for this connection.');
+      setError(t('settings:connection.errors.name'));
       return;
     }
     if (!trimmedUrl) {
-      setError('Enter the server URL.');
+      setError(t('settings:connection.errors.serverUrl'));
       return;
     }
     if (!isValidServerUrl(trimmedUrl)) {
-      setError('Enter a complete server URL, such as http://192.168.1.10:4096.');
+      setError(t('settings:connection.errors.invalidUrl'));
       return;
     }
 
@@ -69,7 +71,7 @@ export function ConnectionProfileDialog({
       });
     } catch (submitError) {
       // Keep the dialog open with the values intact so the user can retry.
-      setError(submitError instanceof Error ? submitError.message : 'Could not save this connection.');
+      setError(submitError instanceof Error ? submitError.message : t('settings:connection.errors.save'));
     } finally {
       setSaving(false);
     }
@@ -79,14 +81,14 @@ export function ConnectionProfileDialog({
     <Modal visible animationType="slide" presentationStyle="fullScreen" onRequestClose={saving ? undefined : onDismiss}>
       <KeyboardAvoidingView style={[styles.screen, { backgroundColor: palette.background }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <Appbar.Header statusBarHeight={0} style={{ backgroundColor: palette.surface, paddingTop: insets.top, height: 64 + insets.top }}>
-          <Appbar.BackAction accessibilityLabel="Cancel" disabled={saving} onPress={onDismiss} />
+          <Appbar.BackAction accessibilityLabel={t('common:actions.cancel')} disabled={saving} onPress={onDismiss} />
           <Appbar.Content title={title} />
         </Appbar.Header>
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
           {showName ? (
             <TextInput
               mode="outlined"
-              label="Name"
+              label={t('settings:connection.fields.name')}
               testID="connection-profile-name-input"
               value={name}
               onChangeText={setName}
@@ -95,7 +97,7 @@ export function ConnectionProfileDialog({
           ) : null}
           <TextInput
             mode="outlined"
-            label="Server URL"
+            label={t('settings:connection.fields.serverUrl')}
             testID="connection-profile-url-input"
             value={serverUrl}
             onChangeText={setServerUrl}
@@ -105,7 +107,7 @@ export function ConnectionProfileDialog({
           />
           <TextInput
             mode="outlined"
-            label="Username"
+            label={t('settings:connection.fields.username')}
             testID="connection-profile-username-input"
             value={username}
             onChangeText={setUsername}
@@ -114,7 +116,7 @@ export function ConnectionProfileDialog({
           />
           <TextInput
             mode="outlined"
-            label="Password"
+            label={t('settings:connection.fields.password')}
             testID="connection-profile-password-input"
             value={password}
             onChangeText={setPassword}
@@ -125,7 +127,7 @@ export function ConnectionProfileDialog({
           <HelperText type="error" visible={Boolean(error)}>{error}</HelperText>
         </ScrollView>
         <View style={[styles.actions, { backgroundColor: palette.surface, borderTopColor: palette.border, paddingBottom: Math.max(insets.bottom, 12) }]}>
-          <Button testID="connection-profile-save-cancel" disabled={saving} onPress={onDismiss}>Cancel</Button>
+          <Button testID="connection-profile-save-cancel" disabled={saving} onPress={onDismiss}>{t('common:actions.cancel')}</Button>
           <Button mode="contained" testID="connection-profile-save-confirm" loading={saving} disabled={saving} onPress={() => void handleSubmit()}>
             {submitLabel}
           </Button>

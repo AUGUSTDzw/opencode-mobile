@@ -1,9 +1,18 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
 import { Button, Text } from 'react-native-paper';
 
 import { Fonts } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+
+const PHASE_LABEL_KEYS = {
+  off: 'chat:overlay.phaseOff',
+  listening: 'chat:overlay.phaseListening',
+  submitting: 'chat:overlay.phaseSubmitting',
+  waiting: 'chat:overlay.phaseWaiting',
+  speaking: 'chat:overlay.phaseSpeaking',
+} as const;
 
 export function ConversationOverlay({
   connectionStatus,
@@ -21,6 +30,7 @@ export function ConversationOverlay({
   sessionTitle: string;
 }) {
   const colorScheme = useColorScheme() ?? 'light';
+  const { t } = useTranslation();
   const [orbScale] = useState(() => new Animated.Value(1));
   const [orbOpacity] = useState(() => new Animated.Value(0.9));
 
@@ -51,7 +61,7 @@ export function ConversationOverlay({
   const overlayText = '#F4FBF8';
   const overlayMuted = 'rgba(228, 240, 236, 0.68)';
   const orbRing = phase === 'speaking' ? `${electric}30` : `${accent}24`;
-  const phaseLabel = phase.charAt(0).toUpperCase() + phase.slice(1);
+  const phaseLabel = t(PHASE_LABEL_KEYS[phase]);
   const connectionEmoji = connectionStatus === 'error' ? '⚠️' : connectionStatus === 'connecting' ? '🔄' : undefined;
 
   return (
@@ -59,7 +69,7 @@ export function ConversationOverlay({
       <View style={styles.voiceOverlayContent}>
         <View style={styles.voiceOverlayHeader}>
           <View style={styles.voiceOverlayHeaderCopy}>
-            <Text variant="labelLarge" style={[styles.voiceOverlayEyebrow, { color: overlayMuted }]}>Conversation mode</Text>
+            <Text variant="labelLarge" style={[styles.voiceOverlayEyebrow, { color: overlayMuted }]}>{t('chat:overlay.conversationMode')}</Text>
             <Text numberOfLines={1} variant="headlineMedium" style={[styles.voiceOverlayTitle, { color: overlayText }]}> 
               {sessionTitle}
             </Text>
@@ -85,9 +95,9 @@ export function ConversationOverlay({
 
         <View style={styles.voiceOverlayFooter}>
           <View style={[styles.voiceOverlaySnippetCard, { backgroundColor: overlaySurface, borderColor: 'rgba(255,255,255,0.06)' }]}>
-            <Text variant="labelMedium" style={{ color: overlayMuted }}>Last heard</Text>
+            <Text variant="labelMedium" style={{ color: overlayMuted }}>{t('chat:overlay.lastHeard')}</Text>
             <Text numberOfLines={3} variant="bodyLarge" style={{ color: overlayText }}>
-              {latestUserText?.trim() || 'Start speaking naturally. What you say in the last round will appear here.'}
+              {latestUserText?.trim() || t('chat:overlay.startSpeaking')}
             </Text>
           </View>
           <Button
@@ -98,7 +108,7 @@ export function ConversationOverlay({
             contentStyle={styles.voiceOverlayDoneContent}
             labelStyle={styles.voiceOverlayDoneLabel}
             onPress={onStop}>
-            Done
+            {t('common:actions.done')}
           </Button>
         </View>
       </View>

@@ -1,6 +1,7 @@
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, Keyboard, KeyboardAvoidingView, Platform, View } from 'react-native';
 import { Button, Card, Snackbar, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,6 +22,7 @@ import { useSpeechInput } from '@/lib/voice/use-speech-input';
 import { useOpencode } from '@/providers/opencode-provider';
 
 export function ChatView() {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
   const insets = useSafeAreaInsets();
@@ -154,15 +156,15 @@ export function ChatView() {
     }
 
     return [
-      'OpenCode send failed',
-      `Error: ${sendErrorMessage}`,
-      `Time: ${new Date(promptError?.occurredAt || Date.now()).toISOString()}`,
-      `Session: ${currentSessionId || 'unknown'}`,
-      `Server: ${settings.serverUrl}`,
-      `Model: ${chatPreferences.modelId || 'unknown'}`,
-      `Attachments: ${lastSentAttachmentsRef.current.map((attachment) => attachment.filename || attachment.mime || 'unnamed').join(', ') || 'none'}`,
+      t('chat:view.sendError.title'),
+      t('chat:view.sendError.error', { message: sendErrorMessage }),
+      t('chat:view.sendError.time', { time: new Date(promptError?.occurredAt || Date.now()).toISOString() }),
+      t('chat:view.sendError.session', { session: currentSessionId || t('chat:view.sendError.unknown') }),
+      t('chat:view.sendError.server', { server: settings.serverUrl }),
+      t('chat:view.sendError.model', { model: chatPreferences.modelId || t('chat:view.sendError.unknown') }),
+      t('chat:view.sendError.attachments', { attachments: lastSentAttachmentsRef.current.map((attachment) => attachment.filename || attachment.mime || t('chat:view.sendError.unnamed')).join(', ') || t('chat:view.sendError.none') }),
     ].join('\n');
-  }, [chatPreferences.modelId, currentSessionId, promptError?.occurredAt, sendErrorMessage, settings.serverUrl]);
+  }, [chatPreferences.modelId, currentSessionId, promptError?.occurredAt, sendErrorMessage, settings.serverUrl, t]);
 
   useEffect(() => {
     draftRef.current = draft;
@@ -223,14 +225,14 @@ export function ChatView() {
       if (!sent) {
         setDraft(nextDraft);
         setAttachments(nextAttachments);
-        setSendFeedback('OpenCode could not send that message. Try again in a moment.');
+        setSendFeedback(t('chat:view.couldNotSendRetry'));
       }
     } catch (error) {
       setDraft(nextDraft);
       setAttachments(nextAttachments);
-      setSendFeedback(error instanceof Error ? error.message : 'OpenCode could not send that message.');
+      setSendFeedback(error instanceof Error ? error.message : t('chat:view.couldNotSend'));
     }
-  }, [commands, connection.status, currentSessionId, ensureActiveSession, executeCommand, sendPrompt]);
+  }, [commands, connection.status, currentSessionId, ensureActiveSession, executeCommand, sendPrompt, t]);
 
   useEffect(() => {
     // ponytail: session/tab switch is the escape hatch when the transcript
@@ -288,7 +290,7 @@ export function ChatView() {
         },
         onError: () => {
           if (!cancelled) {
-            setVoiceFeedback('Unable to play this assistant reply.');
+            setVoiceFeedback(t('chat:view.unableToPlay'));
             setSpeakingMessageId(undefined);
           }
         },
@@ -307,7 +309,7 @@ export function ChatView() {
     return () => {
       cancelled = true;
     };
-  }, [chatPreferences.autoPlayAssistantReplies, chatPreferences.speechLocale, chatPreferences.speechRate, chatPreferences.speechVoiceId, conversationActive, latestAssistantEntry, running]);
+  }, [chatPreferences.autoPlayAssistantReplies, chatPreferences.speechLocale, chatPreferences.speechRate, chatPreferences.speechVoiceId, conversationActive, latestAssistantEntry, running, t]);
 
   async function handleCopyMessage(entry: TranscriptEntry) {
     const value = [entry.text.trim(), entry.error?.trim()].filter(Boolean).join('\n\n');
@@ -347,7 +349,7 @@ export function ChatView() {
     }
 
     if (conversationActive) {
-      setVoiceFeedback('Stop conversation mode before playing a reply manually.');
+      setVoiceFeedback(t('chat:view.stopConversationBeforePlay'));
       return;
     }
 
@@ -357,7 +359,7 @@ export function ChatView() {
         setSpeakingMessageId((current) => (current === entry.id ? undefined : current));
       },
       onError: () => {
-        setVoiceFeedback('Unable to play this assistant reply.');
+        setVoiceFeedback(t('chat:view.unableToPlay'));
         setSpeakingMessageId(undefined);
       },
       onStart: () => setSpeakingMessageId(entry.id),
@@ -367,7 +369,7 @@ export function ChatView() {
     });
 
     if (!started) {
-      setVoiceFeedback('There is no readable text in this assistant reply.');
+      setVoiceFeedback(t('chat:view.noReadableText'));
     }
   }
 
@@ -384,7 +386,7 @@ export function ChatView() {
         return;
       }
       if (result.assets.some((asset) => typeof asset.size === 'number' && asset.size > 10 * 1024 * 1024)) {
-        setSendFeedback('File exceeds the 10 MB attachment limit.');
+        setSendFeedback(t('chat:view.fileTooLarge'));
         return;
       }
 
@@ -408,7 +410,7 @@ export function ChatView() {
         return next;
       });
     } catch (error) {
-      setSendFeedback(error instanceof Error ? error.message : 'Could not attach that file.');
+      setSendFeedback(error instanceof Error ? error.message : t('chat:view.couldNotAttach'));
     }
   }
 
@@ -419,7 +421,7 @@ export function ChatView() {
       await openSession(session.id);
       setActiveTab('session');
     } catch (error) {
-      setSendFeedback(error instanceof Error ? error.message : 'Could not create a session.');
+      setSendFeedback(error instanceof Error ? error.message : t('chat:view.couldNotCreateSession'));
     } finally {
       setIsCreatingSession(false);
     }
@@ -434,18 +436,18 @@ export function ChatView() {
     try {
       await abortSession(currentSessionId);
     } catch (error) {
-      setSendFeedback(error instanceof Error ? error.message : 'Could not stop the session.');
+      setSendFeedback(error instanceof Error ? error.message : t('chat:view.couldNotStopSession'));
     } finally {
       setIsStoppingSession(false);
     }
   }
 
   function handleConfirmStopConversation() {
-    Alert.alert('Stop conversation?', 'This will stop conversation mode and OpenCode will stop listening for your next turn.', [
-      { style: 'cancel', text: 'Keep going' },
+    Alert.alert(t('chat:view.stopConversationTitle'), t('chat:view.stopConversationMessage'), [
+      { style: 'cancel', text: t('chat:view.keepGoing') },
       {
         style: 'destructive',
-        text: 'Stop',
+        text: t('common:actions.stop'),
         onPress: () => {
           void toggleConversationMode();
         },
@@ -478,8 +480,8 @@ export function ChatView() {
         />
 
         <View style={[styles.tabsRow, { backgroundColor: palette.surface, borderBottomColor: palette.border }]}>
-          <TopTab active={activeTab === 'session'} label="Session" onPress={() => setActiveTab('session')} />
-          <TopTab active={activeTab === 'changes'} label={`${diffCount} Files Changed`} onPress={() => setActiveTab('changes')} />
+          <TopTab active={activeTab === 'session'} label={t('chat:view.tabSession')} onPress={() => setActiveTab('session')} />
+          <TopTab active={activeTab === 'changes'} label={t('chat:view.tabFilesChanged', { files: diffCount })} onPress={() => setActiveTab('changes')} />
         </View>
 
         <ChatContent
@@ -508,27 +510,27 @@ export function ChatView() {
           onSelectDiffScope={setDiffScope}
           onSelectDiffMessage={selectDiffMessage}
           selectedDiffMessageId={selectedDiffMessageId}
-          onRejectQuestion={(requestId) => rejectQuestion(requestId).catch((error) => { setSendFeedback(error instanceof Error ? error.message : 'Could not reject the question.'); throw error; })}
-          onReplyToPermission={(requestId, reply) => replyToPermission(requestId, reply).catch((error) => { setSendFeedback(error instanceof Error ? error.message : 'Could not reply to the permission request.'); })}
-          onReplyToQuestion={(requestId, answers) => replyToQuestion(requestId, answers).catch((error) => { setSendFeedback(error instanceof Error ? error.message : 'Could not answer the question.'); throw error; })}
+          onRejectQuestion={(requestId) => rejectQuestion(requestId).catch((error) => { setSendFeedback(error instanceof Error ? error.message : t('chat:view.couldNotRejectQuestion')); throw error; })}
+          onReplyToPermission={(requestId, reply) => replyToPermission(requestId, reply).catch((error) => { setSendFeedback(error instanceof Error ? error.message : t('chat:view.couldNotReplyPermission')); })}
+          onReplyToQuestion={(requestId, answers) => replyToQuestion(requestId, answers).catch((error) => { setSendFeedback(error instanceof Error ? error.message : t('chat:view.couldNotAnswerQuestion')); throw error; })}
           onForkMessage={(messageId) => {
             if (!currentSessionId) return;
-            void forkSession(currentSessionId, messageId).catch((error) => setSendFeedback(error instanceof Error ? error.message : 'Could not fork session.'));
+            void forkSession(currentSessionId, messageId).catch((error) => setSendFeedback(error instanceof Error ? error.message : t('chat:view.couldNotFork')));
           }}
           onRevertMessage={(messageId) => {
             if (!currentSessionId) return;
             if (Platform.OS === 'web') {
-              if (globalThis.confirm('Revert from this message?\n\nOpenCode will revert session changes after this point.')) {
-                void revertSession(currentSessionId, messageId).catch((error) => setSendFeedback(error instanceof Error ? error.message : 'Could not revert session.'));
+              if (globalThis.confirm(t('chat:view.revertConfirm'))) {
+                void revertSession(currentSessionId, messageId).catch((error) => setSendFeedback(error instanceof Error ? error.message : t('chat:view.couldNotRevert')));
               }
               return;
             }
-            Alert.alert('Revert from this message?', 'OpenCode will revert session changes after this point.', [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Revert', style: 'destructive', onPress: () => void revertSession(currentSessionId, messageId).catch((error) => setSendFeedback(error instanceof Error ? error.message : 'Could not revert session.')) },
+            Alert.alert(t('chat:view.revertTitle'), t('chat:view.revertMessage'), [
+              { text: t('common:actions.cancel'), style: 'cancel' },
+              { text: t('chat:view.revert'), style: 'destructive', onPress: () => void revertSession(currentSessionId, messageId).catch((error) => setSendFeedback(error instanceof Error ? error.message : t('chat:view.couldNotRevert'))) },
             ]);
           }}
-          onUnrevert={() => currentSessionId ? void unrevertSession(currentSessionId).catch((error) => setSendFeedback(error instanceof Error ? error.message : 'Could not restore the session.')) : undefined}
+          onUnrevert={() => currentSessionId ? void unrevertSession(currentSessionId).catch((error) => setSendFeedback(error instanceof Error ? error.message : t('chat:view.couldNotRestore'))) : undefined}
           onSendStarterPrompt={(prompt) => void handleSendPrompt(prompt)}
           onToggleSpeak={(entry) => void handleSpeakEntry(entry)}
           palette={palette}
@@ -541,16 +543,16 @@ export function ChatView() {
         {sendErrorMessage ? (
           <Card mode="contained" style={[styles.sendErrorCard, { backgroundColor: `${palette.danger}14` }]}>
             <Card.Content style={styles.sendErrorContent}>
-              <Text variant="titleSmall" style={{ color: palette.danger }}>Action failed</Text>
+              <Text variant="titleSmall" style={{ color: palette.danger }}>{t('chat:view.actionFailed')}</Text>
               <Text selectable variant="bodySmall" style={{ color: palette.text }}>{sendErrorMessage}</Text>
               <View style={styles.sendErrorActions}>
                 <Button compact onPress={() => {
                   void Clipboard.setStringAsync(buildSendErrorDetails()).then(() => setCopiedMessageId('__send-error__'));
-                }}>Copy details</Button>
+                }}>{t('chat:view.copyDetails')}</Button>
                 <Button compact onPress={() => {
                   setSendFeedback(undefined);
                   clearPromptError();
-                }}>Dismiss</Button>
+                }}>{t('common:actions.dismiss')}</Button>
               </View>
             </Card.Content>
           </Card>
@@ -593,7 +595,7 @@ export function ChatView() {
           onToggleAutoApprove={() => {
             setIsUpdatingAutoApprove(true);
             void setAutoApprove(!chatPreferences.autoApprove)
-              .catch((error) => setSendFeedback(error instanceof Error ? error.message : 'Could not update auto-approve.'))
+              .catch((error) => setSendFeedback(error instanceof Error ? error.message : t('chat:view.couldNotUpdateAutoApprove')))
               .finally(() => setIsUpdatingAutoApprove(false));
           }}
           onToggleRecording={() => void handleToggleRecording()}
@@ -608,7 +610,7 @@ export function ChatView() {
       <ChatLibrary visible={sessionMenuVisible} onClose={() => setSessionMenuVisible(false)} />
 
       <Snackbar visible={Boolean(copiedMessageId)} onDismiss={() => setCopiedMessageId(undefined)} duration={1800}>
-        {copiedMessageId === '__send-error__' ? 'Error details copied' : 'Message copied to clipboard'}
+        {copiedMessageId === '__send-error__' ? t('chat:view.errorDetailsCopied') : t('chat:view.messageCopied')}
       </Snackbar>
       <Snackbar
         visible={Boolean(conversation.feedback || voiceFeedback)}

@@ -1,0 +1,36 @@
+{
+  "screen": {
+    "connectTitle": "Connect to OpenCode",
+    "chooseWorkspace": "Choose a workspace",
+    "selectProject": "Select a project before opening a terminal.",
+    "openWorkspaces": "Open Workspaces",
+    "title": "Terminal"
+  },
+  "console": {
+    "selectTerminal": "Select terminal",
+    "create": "Create terminal",
+    "refresh": "Refresh terminals",
+    "connectedWaiting": "Connected. Waiting for output...",
+    "openOrCreate": "Open or create a terminal to begin.",
+    "commandPlaceholder": "Enter a command",
+    "send": "Send command",
+    "terminateTitle": "Terminate terminal?",
+    "terminateMessage": "Terminate {{title}}?",
+    "terminateAction": "Terminate"
+  },
+  "sessions": {
+    "title": "Terminals",
+    "empty": "No terminals yet. Use + to create one.",
+    "openLabel": "Open {{terminal}}",
+    "closeHint": "Swipe left to close terminal"
+  },
+  "errors": {
+    "load": "Could not load terminals.",
+    "create": "Could not create the terminal.",
+    "open": "Could not open the terminal.",
+    "terminate": "Could not terminate the terminal.",
+    "send": "Could not send terminal input.",
+    "connect": "Could not connect.",
+    "refresh": "Could not refresh terminals."
+  }
+}

@@ -1,5 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -22,6 +23,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useOpencode } from '@/providers/opencode-provider';
 
 export default function WorkspaceScreen() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const compact = width < 700;
@@ -68,7 +70,7 @@ export default function WorkspaceScreen() {
   const isRefreshing = isRefreshingWorkspaceCatalog;
   async function handleRefresh() {
     await Promise.all([refreshWorkspaceCatalog(), refreshWorkspaceStatus()])
-      .catch((reason) => setError(reason instanceof Error ? reason.message : 'Could not refresh the workspace.'));
+      .catch((reason) => setError(reason instanceof Error ? reason.message : t('workspace:errors.refreshWorkspace')));
   }
 
   function confirmDestructive(title: string, message: string, actionLabel: string, action: () => void) {
@@ -77,7 +79,7 @@ export default function WorkspaceScreen() {
       return;
     }
     Alert.alert(title, message, [
-      { text: 'Cancel', style: 'cancel' },
+      { text: t('common:actions.cancel'), style: 'cancel' },
       { text: actionLabel, style: 'destructive', onPress: action },
     ]);
   }
@@ -89,23 +91,23 @@ export default function WorkspaceScreen() {
         statusBarHeight={0}
         elevated>
         <View style={styles.headerMain}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Change workspace" onPress={() => setWorkspacePickerVisible(true)} style={({ pressed }) => [styles.headerSelector, pressed && styles.headerSelectorPressed]}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('workspace:picker.changeWorkspace')} onPress={() => setWorkspacePickerVisible(true)} style={({ pressed }) => [styles.headerSelector, pressed && styles.headerSelectorPressed]}>
             <View style={styles.headerCopy}>
-              <Text numberOfLines={1} variant="titleMedium" style={[styles.headerTitle, { color: palette.text }]}>{activeProject?.label || 'Workspace'}</Text>
+              <Text numberOfLines={1} variant="titleMedium" style={[styles.headerTitle, { color: palette.text }]}>{activeProject?.label || t('common:tabs.workspace')}</Text>
               <Text numberOfLines={1} variant="bodySmall" style={{ color: palette.muted }}>{connection.status === 'connected' ? activeProject?.path || currentProjectPath || serverRootPath : connection.message}</Text>
             </View>
             <MaterialCommunityIcons name="chevron-down" size={20} color={palette.muted} />
           </Pressable>
         </View>
         <View style={styles.headerActions}>
-          <Appbar.Action testID="workspace-sync-button" icon="sync" accessibilityLabel="Sync projects" onPress={() => void refreshWorkspaceCatalog()} />
-          <Appbar.Action testID="workspace-refresh-button" icon="refresh" accessibilityLabel="Refresh workspace" onPress={() => void handleRefresh()} />
+          <Appbar.Action testID="workspace-sync-button" icon="sync" accessibilityLabel={t('workspace:screen.syncProjects')} onPress={() => void refreshWorkspaceCatalog()} />
+          <Appbar.Action testID="workspace-refresh-button" icon="refresh" accessibilityLabel={t('workspace:screen.refreshWorkspace')} onPress={() => void handleRefresh()} />
         </View>
       </Appbar.Header>
       <WorkspacePicker visible={workspacePickerVisible} testID="workspace-picker" projects={projects} activePath={activeProject?.path} onClose={() => setWorkspacePickerVisible(false)} onSelect={selectProject} onAdd={addWorkspace} />
       <View style={[styles.tabsRow, { backgroundColor: palette.surface, borderBottomColor: palette.border }]}>
-        <TopTab active={activePanel === 'files'} label="Files" onPress={() => setActivePanel('files')} />
-        <TopTab active={activePanel === 'tools'} label="Worktrees" onPress={() => setActivePanel('tools')} />
+        <TopTab active={activePanel === 'files'} label={t('workspace:screen.filesTab')} onPress={() => setActivePanel('files')} />
+        <TopTab active={activePanel === 'tools'} label={t('workspace:screen.worktreesTab')} onPress={() => setActivePanel('tools')} />
       </View>
       <ScrollView
         style={[styles.screen, { backgroundColor: palette.background }]}
@@ -113,19 +115,19 @@ export default function WorkspaceScreen() {
         keyboardDismissMode="on-drag"
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => void handleRefresh()} tintColor={palette.tint} />}>
       {activePanel === 'files' ? <Card mode="contained" style={styles.panel}>
-        <Card.Title title="Workspace files" subtitle={vcsInfo?.branch ? `Branch: ${vcsInfo.branch}` : 'Search and inspect files'} />
+        <Card.Title title={t('workspace:files.title')} subtitle={vcsInfo?.branch ? t('workspace:files.branch', { branch: vcsInfo.branch }) : t('workspace:files.searchAndInspect')} />
         <Card.Content style={styles.fileSection}>
           <View style={[styles.renameRow, compact && styles.compactFormRow]}>
-            <TextInput testID="workspace-file-search" mode="outlined" dense placeholder="Search files" value={fileQuery} onChangeText={setFileQuery} style={styles.renameInput} />
-            <Button mode="contained" onPress={() => void searchWorkspaceFiles(fileQuery).catch((reason) => setError(reason instanceof Error ? reason.message : 'Could not search workspace files.'))}>Search</Button>
+            <TextInput testID="workspace-file-search" mode="outlined" dense placeholder={t('workspace:files.searchPlaceholder')} value={fileQuery} onChangeText={setFileQuery} style={styles.renameInput} />
+            <Button mode="contained" onPress={() => void searchWorkspaceFiles(fileQuery).catch((reason) => setError(reason instanceof Error ? reason.message : t('workspace:errors.searchFiles')))}>{t('workspace:files.search')}</Button>
           </View>
-          {serverCapabilities.fileStatus && workspaceFileStatuses.length > 0 ? <Text style={{ color: palette.muted }}>{workspaceFileStatuses.length} changed files</Text> : null}
-          {workspaceFiles.map((path) => <List.Item key={path} title={path} onPress={() => void openWorkspaceFile(path).then(() => { setEditingFile(undefined); setFileDetailsOpen(true); }).catch((reason) => setError(reason instanceof Error ? reason.message : 'Could not open the file.'))} />)}
+          {serverCapabilities.fileStatus && workspaceFileStatuses.length > 0 ? <Text style={{ color: palette.muted }}>{t('workspace:files.changedFiles', { value: workspaceFileStatuses.length })}</Text> : null}
+          {workspaceFiles.map((path) => <List.Item key={path} title={path} onPress={() => void openWorkspaceFile(path).then(() => { setEditingFile(undefined); setFileDetailsOpen(true); }).catch((reason) => setError(reason instanceof Error ? reason.message : t('workspace:errors.openFile')))} />)}
           {selectedWorkspaceFile ? (
             <Modal visible={fileDetailsOpen} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setFileDetailsOpen(false)}>
               <KeyboardAvoidingView style={{ flex: 1, backgroundColor: palette.background }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
                 <Appbar.Header statusBarHeight={0} style={{ backgroundColor: palette.surface, paddingTop: insets.top, height: 64 + insets.top }}>
-                  <Appbar.BackAction accessibilityLabel="Close file" onPress={() => setFileDetailsOpen(false)} />
+                  <Appbar.BackAction accessibilityLabel={t('workspace:files.close')} onPress={() => setFileDetailsOpen(false)} />
                   <Appbar.Content title={selectedWorkspaceFile.path.split('/').pop() || selectedWorkspaceFile.path} subtitle={selectedWorkspaceFile.path} />
                 </Appbar.Header>
                 <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 16, paddingBottom: Math.max(insets.bottom, 16) + 16 }}>
@@ -133,7 +135,7 @@ export default function WorkspaceScreen() {
               <Text variant="labelLarge" style={{ color: palette.text }}>{selectedWorkspaceFile.path}</Text>
               {editingFile?.path === selectedWorkspaceFile.path ? (
                 <>
-                  <Text style={{ color: palette.warning }}>Saving applies your edits as a VCS patch to the working tree. Review the changes before continuing.</Text>
+                  <Text style={{ color: palette.warning }}>{t('workspace:files.savingNotice')}</Text>
                   <TextInput
                     testID="workspace-file-editor"
                     mode="outlined"
@@ -152,12 +154,12 @@ export default function WorkspaceScreen() {
                         setIsSavingFile(true);
                         void saveWorkspaceFile(editingFile.path, editingFile.original, editingFile.value)
                           .then(() => setEditingFile(undefined))
-                          .catch((reason) => setError(reason instanceof Error ? reason.message : 'Could not save the file.'))
+                          .catch((reason) => setError(reason instanceof Error ? reason.message : t('workspace:errors.saveFile')))
                           .finally(() => setIsSavingFile(false));
                       }}>
-                      Save patch
+                      {t('workspace:files.savePatch')}
                     </Button>
-                    <Button disabled={isSavingFile} onPress={() => setEditingFile(undefined)}>Cancel</Button>
+                    <Button disabled={isSavingFile} onPress={() => setEditingFile(undefined)}>{t('common:actions.cancel')}</Button>
                   </View>
                 </>
               ) : (
@@ -172,10 +174,10 @@ export default function WorkspaceScreen() {
                         original: selectedWorkspaceFile.content.content,
                         value: selectedWorkspaceFile.content.content,
                       })}>
-                      Edit
+                      {t('common:actions.edit')}
                     </Button>
                   ) : (
-                    <Text style={{ color: palette.muted }}>Editing is not available on this server.</Text>
+                    <Text style={{ color: palette.muted }}>{t('workspace:files.editingUnavailable')}</Text>
                   )}
                 </>
               )}
@@ -189,19 +191,19 @@ export default function WorkspaceScreen() {
 
       {activePanel === 'tools' ? <Card mode="contained" style={styles.panel}>
         <Card.Title
-          title="Worktrees"
-          subtitle="Create isolated working directories or manage existing ones."
+          title={t('workspace:worktrees.title')}
+          subtitle={t('workspace:worktrees.subtitle')}
           right={() => (
             isRefreshingWorktrees
               ? <ActivityIndicator style={styles.headerAction} color={palette.tint} />
               : <IconButton
                   icon="refresh"
-                  accessibilityLabel="Refresh worktrees"
+                  accessibilityLabel={t('workspace:worktrees.refresh')}
                   disabled={!activeProject}
                   onPress={() => {
                     setIsRefreshingWorktrees(true);
                     void refreshWorktrees()
-                      .catch((reason) => setError(reason instanceof Error ? reason.message : 'Could not refresh worktrees.'))
+                      .catch((reason) => setError(reason instanceof Error ? reason.message : t('workspace:errors.refreshWorktrees')))
                       .finally(() => setIsRefreshingWorktrees(false));
                   }}
                 />
@@ -209,8 +211,8 @@ export default function WorkspaceScreen() {
         />
         <Card.Content style={styles.worktreeSection}>
           <View style={[styles.worktreeForm, compact && styles.compactFormRow]}>
-            <TextInput testID="workspace-worktree-name" mode="outlined" dense label="Name (optional)" value={worktreeName} onChangeText={setWorktreeName} style={styles.renameInput} />
-            <TextInput testID="workspace-worktree-command" mode="outlined" dense label="Start command (optional)" value={worktreeStartCommand} onChangeText={setWorktreeStartCommand} style={styles.renameInput} />
+            <TextInput testID="workspace-worktree-name" mode="outlined" dense label={t('workspace:worktrees.nameLabel')} value={worktreeName} onChangeText={setWorktreeName} style={styles.renameInput} />
+            <TextInput testID="workspace-worktree-command" mode="outlined" dense label={t('workspace:worktrees.startCommandLabel')} value={worktreeStartCommand} onChangeText={setWorktreeStartCommand} style={styles.renameInput} />
             <Button
               testID="workspace-worktree-create"
               mode="contained"
@@ -220,13 +222,13 @@ export default function WorkspaceScreen() {
                 setIsCreatingWorktree(true);
                 void createWorktree(worktreeName, worktreeStartCommand)
                   .then(() => { setWorktreeName(''); setWorktreeStartCommand(''); })
-                  .catch((reason) => setError(reason instanceof Error ? reason.message : 'Could not create the worktree.'))
+                  .catch((reason) => setError(reason instanceof Error ? reason.message : t('workspace:errors.createWorktree')))
                   .finally(() => setIsCreatingWorktree(false));
               }}>
-              Create
+              {t('common:actions.create')}
             </Button>
           </View>
-          {worktrees.length === 0 ? <Text style={{ color: palette.muted }}>No worktrees available.</Text> : null}
+          {worktrees.length === 0 ? <Text style={{ color: palette.muted }}>{t('workspace:worktrees.empty')}</Text> : null}
           {worktrees.map((worktree, index) => {
             const directory = typeof worktree === 'string' ? worktree : worktree.directory;
             const title = typeof worktree === 'string' ? directory.split('/').filter(Boolean).pop() || directory : worktree.name;
@@ -242,18 +244,18 @@ export default function WorkspaceScreen() {
                     {serverCapabilities.worktreeReset ? (
                       <IconButton
                         icon="backup-restore"
-                        accessibilityLabel={`Reset ${title}`}
+                        accessibilityLabel={t('workspace:worktrees.resetLabel', { name: title })}
                         loading={updatingWorktree === directory}
                         disabled={updatingWorktree === directory}
                         iconColor={palette.danger}
                         onPress={() => confirmDestructive(
-                          'Reset worktree?',
-                          `This discards uncommitted changes in ${directory}.`,
-                          'Reset',
+                          t('workspace:worktrees.resetTitle'),
+                          t('workspace:worktrees.resetMessage', { directory }),
+                          t('workspace:worktrees.resetAction'),
                           () => {
                             setUpdatingWorktree(directory);
                             void resetWorktree(directory)
-                              .catch((reason) => setError(reason instanceof Error ? reason.message : 'Could not reset the worktree.'))
+                              .catch((reason) => setError(reason instanceof Error ? reason.message : t('workspace:errors.resetWorktree')))
                               .finally(() => setUpdatingWorktree(undefined));
                           },
                         )}
@@ -261,17 +263,17 @@ export default function WorkspaceScreen() {
                     ) : null}
                     <IconButton
                       icon="delete-outline"
-                      accessibilityLabel={`Remove ${title}`}
+                      accessibilityLabel={t('workspace:worktrees.removeLabel', { name: title })}
                       disabled={updatingWorktree === directory}
                       iconColor={palette.danger}
                       onPress={() => confirmDestructive(
-                        'Remove worktree?',
-                        `${directory} will be removed. This cannot be undone.`,
-                        'Remove',
+                        t('workspace:worktrees.removeTitle'),
+                        t('workspace:worktrees.removeMessage', { directory }),
+                        t('common:actions.remove'),
                         () => {
                           setUpdatingWorktree(directory);
                           void removeWorktree(directory)
-                            .catch((reason) => setError(reason instanceof Error ? reason.message : 'Could not remove the worktree.'))
+                            .catch((reason) => setError(reason instanceof Error ? reason.message : t('workspace:errors.removeWorktree')))
                             .finally(() => setUpdatingWorktree(undefined));
                         },
                       )}

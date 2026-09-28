@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Switch, View } from 'react-native';
 import { Button, Chip, HelperText, List, SegmentedButtons, Text } from 'react-native-paper';
 
@@ -35,6 +36,7 @@ export function McpSection({
   oauthAvailable?: boolean;
   palette: Palette;
 }) {
+  const { t } = useTranslation();
   const [addType, setAddType] = useState<'local' | 'remote'>('local');
   const [name, setName] = useState('');
   const [target, setTarget] = useState('');
@@ -50,14 +52,14 @@ export function McpSection({
     try {
       await action();
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : 'Could not update MCP servers.');
+      setError(nextError instanceof Error ? nextError.message : t('settings:mcp.couldNotUpdate'));
     } finally {
       setBusy(undefined);
     }
   }
 
   function describeConfig(config?: McpConfig) {
-    if (!config || !('type' in config)) return 'Configuration details unavailable';
+    if (!config || !('type' in config)) return t('settings:mcp.configurationUnavailable');
     return config.type === 'local' ? config.command.join(' ') : config.url;
   }
 
@@ -67,7 +69,7 @@ export function McpSection({
   function localCommand() {
     const command: unknown = JSON.parse(trimmedTarget);
     if (!Array.isArray(command) || command.length === 0 || command.some((part) => typeof part !== 'string' || !part)) {
-      throw new Error('Enter the local command as a JSON string array.');
+      throw new Error(t('settings:mcp.invalidCommand'));
     }
     return command as string[];
   }
@@ -75,19 +77,19 @@ export function McpSection({
   return (
     <View style={styles.section}>
         <View style={styles.header}>
-          <Text variant="titleLarge" style={[styles.title, { color: palette.text }]}>MCP servers</Text>
-          <Button compact loading={busy === 'refresh'} onPress={() => void run('refresh', onRefresh)}>Refresh</Button>
+          <Text variant="titleLarge" style={[styles.title, { color: palette.text }]}>{t('settings:mcp.title')}</Text>
+          <Button compact loading={busy === 'refresh'} onPress={() => void run('refresh', onRefresh)}>{t('common:actions.refresh')}</Button>
         </View>
         <SegmentedButtons
           value={addType}
           onValueChange={(value) => { setAddType(value as 'local' | 'remote'); setTarget(''); }}
-          buttons={[{ value: 'local', label: 'Local' }, { value: 'remote', label: 'Remote' }]}
+          buttons={[{ value: 'local', label: t('settings:mcp.local') }, { value: 'remote', label: t('settings:mcp.remote') }]}
         />
-        <TextInput testID="settings-mcp-name" mode="outlined" label="Server name" value={name} onChangeText={setName} autoCapitalize="none" autoCorrect={false} />
+        <TextInput testID="settings-mcp-name" mode="outlined" label={t('settings:mcp.serverName')} value={name} onChangeText={setName} autoCapitalize="none" autoCorrect={false} />
         <TextInput
           testID="settings-mcp-target"
           mode="outlined"
-          label={addType === 'local' ? 'Command arguments (JSON)' : 'URL'}
+          label={addType === 'local' ? t('settings:mcp.commandArguments') : t('settings:mcp.url')}
           placeholder={addType === 'local' ? '["npx","@modelcontextprotocol/server"]' : 'https://example.com/mcp'}
           value={target}
           onChangeText={setTarget}
@@ -106,10 +108,10 @@ export function McpSection({
             setName('');
             setTarget('');
           })}>
-          Add {addType} server
+          {addType === 'local' ? t('settings:mcp.addLocalServer') : t('settings:mcp.addRemoteServer')}
         </Button>
 
-        {names.length === 0 ? <HelperText type="info">No MCP servers configured.</HelperText> : null}
+        {names.length === 0 ? <HelperText type="info">{t('settings:mcp.noServers')}</HelperText> : null}
         {names.map((serverName) => {
           const config = configs?.[serverName];
           const status = mcpStatuses[serverName];
@@ -124,7 +126,7 @@ export function McpSection({
                 description={describeConfig(config)}
                 titleStyle={{ color: palette.text }}
                 descriptionStyle={{ color: palette.muted }}
-                right={() => <Chip compact>{status?.status || (enabled ? 'configured' : 'disabled')}</Chip>}
+                right={() => <Chip compact>{status?.status || (enabled ? t('settings:mcp.statusConfigured') : t('settings:mcp.statusDisabled'))}</Chip>}
               />
               {status?.status === 'failed' || status?.status === 'needs_client_registration' ? (
                 <HelperText type="error">{status.error}</HelperText>
@@ -132,7 +134,7 @@ export function McpSection({
               <View style={styles.actions}>
                 {config ? (
                   <View style={styles.enabledControl}>
-                    <Text variant="labelMedium">Enabled</Text>
+                    <Text variant="labelMedium">{t('common:labels.enabled')}</Text>
                     <Switch
                       value={enabled}
                       disabled={Boolean(busy)}
@@ -145,17 +147,17 @@ export function McpSection({
                   disabled={!enabled || Boolean(busy)}
                   loading={busy === actionKey}
                   onPress={() => void run(actionKey, () => status?.status === 'connected' ? onDisconnect(serverName) : onConnect(serverName))}>
-                  {status?.status === 'connected' ? 'Disconnect' : 'Connect'}
+                  {status?.status === 'connected' ? t('common:actions.disconnect') : t('common:actions.connect')}
                 </Button>
                 {oauthAvailable && isRemote && status?.status === 'needs_auth' ? (
                   <Button compact disabled={Boolean(busy)} onPress={() => void run(actionKey, async () => {
                     if (await onStartOAuth(serverName)) setOauthName(serverName);
-                  })}>OAuth</Button>
+                  })}>{t('settings:mcp.oauth')}</Button>
                 ) : null}
               </View>
               {oauthAvailable && oauthName === serverName ? (
                 <View style={styles.oauth}>
-                  <TextInput mode="outlined" label="Authorization code (optional)" value={oauthCode} onChangeText={setOauthCode} autoCapitalize="none" />
+                  <TextInput mode="outlined" label={t('settings:mcp.authorizationCode')} value={oauthCode} onChangeText={setOauthCode} autoCapitalize="none" />
                   <Button
                     compact
                     disabled={!oauthCode.trim() || Boolean(busy)}
@@ -164,7 +166,7 @@ export function McpSection({
                       setOauthCode('');
                       setOauthName(undefined);
                     })}>
-                    Complete OAuth
+                    {t('settings:mcp.completeOAuth')}
                   </Button>
                 </View>
               ) : null}

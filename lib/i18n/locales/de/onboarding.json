@@ -1,0 +1,88 @@
+{
+  "welcome": {
+    "title": "OpenCode Mobile",
+    "subtitle": "Connect to the OpenCode server you already run.",
+    "body": "OpenCode Mobile is a client for an existing OpenCode server. You point it at your server, pick a workspace, and start coding. The server keeps running the models and the work.",
+    "start": "Start setup",
+    "points": {
+      "server": {
+        "title": "Connect to your server",
+        "description": "Enter the URL of your OpenCode server. Credentials stay on this device."
+      },
+      "workspace": {
+        "title": "Choose a workspace",
+        "description": "Pick the project folder the server should work in. You can change it later."
+      },
+      "optional": {
+        "title": "Tune it later",
+        "description": "Preferences and permissions are optional and can be changed any time in Settings."
+      }
+    }
+  },
+  "connect": {
+    "title": "Connect to OpenCode",
+    "subtitle": "Point OpenCode Mobile at your running server. Username and password are optional.",
+    "test": "Test connection",
+    "connect": "Connect",
+    "testSuccess": "Connection succeeded.",
+    "failed": "Could not connect to the server.",
+    "hint": "Example: http://192.168.1.10:4096. If you open a web UI at this address, use its API base URL instead, usually ending in /api."
+  },
+  "workspace": {
+    "title": "Choose a workspace",
+    "subtitle": "These are the projects your server knows about. Pick one to start in.",
+    "continue": "Continue with {{name}}",
+    "empty": "This server did not report any projects. Add a directory on the server to get started.",
+    "loading": "Loading workspaces…"
+  },
+  "preferences": {
+    "title": "Basic preferences",
+    "subtitle": "Optional. Everything here can be changed later in Settings.",
+    "model": "Default model",
+    "modelHint": "Leave this on the server default if you are not sure.",
+    "provider": {
+      "title": "No AI provider configured",
+      "body": "Your OpenCode server has no AI provider configured yet. You can continue and set one up later from Settings › AI & providers."
+    },
+    "skip": "Skip",
+    "continue": "Continue"
+  },
+  "permissions": {
+    "title": "Permissions",
+    "subtitle": "Optional. OpenCode Mobile only asks when you choose to enable something.",
+    "skip": "Skip",
+    "continue": "Continue",
+    "notifications": {
+      "title": "Notifications",
+      "body": "Allow OpenCode Mobile to notify you when a task finishes while the app is in the background.",
+      "unsupported": "Notifications are not available on this platform.",
+      "enable": "Enable notifications",
+      "battery": "Review battery / background settings"
+    },
+    "voice": {
+      "title": "Voice input",
+      "body": "Microphone access lets you dictate prompts instead of typing them.",
+      "unsupported": "Voice input is not available on this device.",
+      "enable": "Enable voice input",
+      "deniedHint": "You can still turn voice input on later from Settings › Voice & responses."
+    }
+  },
+  "ready": {
+    "title": "You're ready",
+    "subtitle": "Review your setup and start coding.",
+    "server": "Server",
+    "workspace": "Workspace",
+    "workspaceMissing": "No workspace selected",
+    "model": "Model",
+    "serverDefault": "Server default",
+    "notifications": "Notifications",
+    "voice": "Voice input",
+    "footnote": "You can change any of this later in Settings.",
+    "start": "Start coding",
+    "done": "Done"
+  },
+  "settingsAssistant": {
+    "title": "Setup assistant",
+    "summary": "Review connection, workspace, preferences, and permissions"
+  }
+}

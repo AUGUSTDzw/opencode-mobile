@@ -1,0 +1,242 @@
+{
+  "screen": {
+    "categories": {
+      "connection": "Conexión",
+      "ai": "IA y proveedores",
+      "notifications": "Notificaciones",
+      "voice": "Voz y respuestas",
+      "advanced": "Avanzado"
+    },
+    "summaries": {
+      "configuredCount": "{{value}} configurados",
+      "replyPlaybackOn": "Reproducción de respuestas activada",
+      "replyPlaybackOff": "Reproducción de respuestas desactivada",
+      "advanced": "Servidores MCP y diagnósticos"
+    }
+  },
+  "connection": {
+    "currentConnection": "Conexión actual",
+    "noServerUrl": "No se ha definido una URL del servidor",
+    "notSavedYet": "Aún no guardado. Añade una conexión para conservarla.",
+    "lastChecked": "Última comprobación {{time}}",
+    "serverUrlValue": "URL del servidor: {{url}}",
+    "usernameValue": "Nombre de usuario: {{username}}",
+    "usernameEmpty": "(ninguno)",
+    "addConnection": "Añadir conexión",
+    "editConnection": "Editar conexión",
+    "addDescription": "Añade conexiones para cambiar entre servidores sin volver a escribir la URL y la contraseña.",
+    "saveAndConnect": "Guardar y conectar",
+    "deleteTitle": "Eliminar conexión",
+    "deleteMessage": "¿Quitar \"{{name}}\" de las conexiones guardadas?",
+    "deleteWebConfirm": "Eliminar conexión\n\n{{message}}",
+    "fields": {
+      "name": "Nombre",
+      "serverUrl": "URL del servidor",
+      "username": "Nombre de usuario",
+      "password": "Contraseña"
+    },
+    "errors": {
+      "name": "Introduce un nombre para esta conexión.",
+      "serverUrl": "Introduce la URL del servidor.",
+      "invalidUrl": "Introduce una URL de servidor completa, como http://192.168.1.10:4096.",
+      "save": "No se pudo guardar esta conexión."
+    }
+  },
+  "providers": {
+    "apiKey": "Clave de API",
+    "pasteApiKey": "Pega tu clave de API",
+    "chooseModels": "Elige qué modelos configurados aparecen en el chat. El último modelo que elijas en el chat se mantiene seleccionado para los nuevos chats.",
+    "configuredProviders": "Proveedores configurados",
+    "addProvider": "Añadir proveedor",
+    "connectFirst": "Conéctate primero para cargar los proveedores.",
+    "configureAtLeastOne": "Configura al menos un proveedor para elegir los predeterminados.",
+    "selectedCount": "{{selected}} de {{total}} seleccionados",
+    "reasoningSupported": "Compatible con razonamiento",
+    "standardModel": "Modelo estándar",
+    "noModels": "No se encontraron modelos para tus proveedores configurados.",
+    "configuredSuccess": "{{provider}} se configuró correctamente.",
+    "signInFinished": "El inicio de sesión de {{provider}} ha finalizado. Se ha actualizado el estado del proveedor.",
+    "couldNotConfigure": "No se pudo configurar el proveedor.",
+    "couldNotRemove": "No se pudieron quitar las credenciales del proveedor.",
+    "credentialsRemoved": "Se quitaron las credenciales de {{provider}}.",
+    "removeTitle": "¿Quitar {{provider}}?",
+    "removeMessage": "Se quitarán las credenciales guardadas y la configuración del proveedor.",
+    "removeWebConfirm": "¿Quitar {{provider}}?\n\nSe quitarán las credenciales guardadas y la configuración del proveedor.",
+    "signInTitle": "Completar el inicio de sesión del proveedor",
+    "authorizationCode": "Código de autorización",
+    "complete": "Completar",
+    "continue": "Continuar",
+    "cancelSetup": "Cancelar la configuración del proveedor",
+    "configureProvider": "Configurar {{provider}}",
+    "oauthHint": "Esto abre el flujo de inicio de sesión del proveedor en tu navegador.",
+    "setupUnavailable": "Los detalles de configuración de este proveedor no están disponibles ahora mismo.",
+    "couldNotComplete": "No se pudo completar el inicio de sesión."
+  },
+  "providerCopy": {
+    "openai": {
+      "label": "OpenAI",
+      "description": "Modelos GPT de OpenAI, incluidas las opciones más recientes de razonamiento y multimodales."
+    },
+    "anthropic": {
+      "label": "Anthropic",
+      "description": "Modelos Claude de Anthropic para programación, análisis y trabajo con contextos largos."
+    },
+    "github-copilot": {
+      "label": "GitHub Copilot",
+      "description": "Usa tu acceso de GitHub Copilot para iniciar sesión y habilitar los modelos base compatibles."
+    },
+    "google": {
+      "label": "Google",
+      "description": "Modelos Gemini de Google para tareas multimodales y de contexto amplio."
+    },
+    "groq": {
+      "label": "Groq",
+      "description": "Inferencia rápida alojada para modelos abiertos y de frontera compatibles."
+    },
+    "openrouter": {
+      "label": "OpenRouter",
+      "description": "Enruta solicitudes entre múltiples proveedores y familias de modelos desde una sola cuenta."
+    },
+    "mistral": {
+      "label": "Mistral",
+      "description": "Modelos alojados de Mistral AI para cargas de trabajo generales y de programación."
+    },
+    "xai": {
+      "label": "xAI",
+      "description": "Modelos Grok de xAI."
+    },
+    "azure": {
+      "label": "Azure OpenAI",
+      "description": "Modelos compatibles con OpenAI implementados a través de Azure."
+    }
+  },
+  "notifications": {
+    "status": {
+      "checking": "Comprobando",
+      "enabled": "Activadas",
+      "needsSetup": "Requiere configuración"
+    },
+    "background": {
+      "checking": "Comprobando",
+      "ready": "Listo",
+      "limited": "Limitado"
+    },
+    "summary": {
+      "enabled": "Notificaciones activadas",
+      "off": "Notificaciones desactivadas",
+      "background": "En segundo plano: {{status}}"
+    },
+    "enable": "Activar notificaciones",
+    "settings": "Ajustes de notificaciones",
+    "appSettings": "Ajustes de la aplicación",
+    "appSettingsDescription": "Revisa los ajustes del sistema para esta aplicación.",
+    "batteryOptimization": "Optimización de batería",
+    "batteryOptimizationDescription": "Permite que la aplicación funcione de forma más fiable en segundo plano.",
+    "batterySaver": "Ahorro de batería",
+    "batterySaverDescription": "El ahorro de batería puede retrasar los recordatorios.",
+    "refreshStatus": "Actualizar estado",
+    "enabledFeedback": "Las notificaciones están activadas en este dispositivo.",
+    "disabledFeedback": "Las notificaciones siguen desactivadas. Abre los ajustes del sistema para activarlas manualmente."
+  },
+  "voice": {
+    "onDeviceInput": {
+      "title": "Entrada de voz en el dispositivo",
+      "description": "Prioriza el reconocimiento de voz local y evita el respaldo en la nube cuando sea posible."
+    },
+    "autoPlay": {
+      "title": "Reproducir automáticamente las respuestas del asistente",
+      "description": "Lee en voz alta la última respuesta del asistente cuando termina."
+    },
+    "workingSound": {
+      "title": "Sonido de trabajo",
+      "description": "Reproduce un bucle suave mientras el asistente sigue trabajando en una respuesta."
+    },
+    "resumeListening": {
+      "title": "Reanudar la escucha tras la respuesta",
+      "description": "En el modo conversación, vuelve a escuchar cuando termina la reproducción hablada."
+    },
+    "speechLocale": {
+      "label": "Idioma de voz",
+      "helper": "Déjalo vacío para usar el idioma predeterminado del sistema en la entrada de voz y la reproducción."
+    },
+    "responseScope": {
+      "label": "Alcance de las respuestas",
+      "brief": {
+        "label": "Breve",
+        "description": "Respuestas cortas y muy concretas para un ida y vuelta natural."
+      },
+      "balanced": {
+        "label": "Equilibrado",
+        "description": "Respuestas concisas con algo más de contexto cuando resulta útil."
+      },
+      "detailed": {
+        "label": "Detallado",
+        "description": "Explicaciones más largas y más detalle de apoyo."
+      }
+    },
+    "nextActions": {
+      "title": "Próximas acciones simples",
+      "description": "Termina las respuestas con una recomendación breve cuando haya un próximo paso claro."
+    },
+    "speechRate": {
+      "label": "Velocidad de voz"
+    },
+    "workingSoundVariant": {
+      "label": "Sonido de trabajo",
+      "soft": {
+        "label": "Timbre suave",
+        "description": "Tono cálido por capas con un pulso suave."
+      },
+      "glass": {
+        "label": "Tono cristalino",
+        "description": "Bucle ambiental más brillante y ligero."
+      }
+    },
+    "workingSoundVolume": {
+      "label": "Volumen del sonido de trabajo"
+    },
+    "voiceSelect": {
+      "label": "Voz"
+    },
+    "footer": "Android puede comprobar periódicamente las sesiones en ejecución en segundo plano y publicar una notificación de finalización. No se admiten la voz en segundo plano ni la captura continua del micrófono."
+  },
+  "diagnostics": {
+    "title": "Diagnósticos del servidor",
+    "server": "Servidor",
+    "openCodeVersion": "OpenCode {{version}}",
+    "healthUnavailable": "Punto de conexión de estado no disponible",
+    "healthy": "Correcto",
+    "realtimeUpdates": "Actualizaciones en tiempo real",
+    "eventStreamConnected": "Flujo de eventos global conectado",
+    "pollingFallback": "Respaldo por sondeo activo",
+    "subsystems": "Subsistemas",
+    "subsystemsMcp": "MCP {{value}}",
+    "subsystemsLsp": "LSP {{value}}",
+    "subsystemsFormatters": "Formateadores {{value}}",
+    "notAvailable": "n/d",
+    "refresh": "Actualizar diagnósticos"
+  },
+  "mcp": {
+    "title": "Servidores MCP",
+    "couldNotUpdate": "No se pudieron actualizar los servidores MCP.",
+    "configurationUnavailable": "Detalles de configuración no disponibles",
+    "invalidCommand": "Introduce el comando local como un array de cadenas JSON.",
+    "local": "Local",
+    "remote": "Remoto",
+    "serverName": "Nombre del servidor",
+    "commandArguments": "Argumentos del comando (JSON)",
+    "url": "URL",
+    "addLocalServer": "Añadir servidor local",
+    "addRemoteServer": "Añadir servidor remoto",
+    "noServers": "No hay servidores MCP configurados.",
+    "statusConfigured": "configurado",
+    "statusDisabled": "desactivado",
+    "oauth": "OAuth",
+    "authorizationCode": "Código de autorización (opcional)",
+    "completeOAuth": "Completar OAuth"
+  },
+  "language": {
+    "title": "Idioma",
+    "description": "Usa el idioma del sistema o elige uno para la interfaz de la aplicación."
+  }
+}

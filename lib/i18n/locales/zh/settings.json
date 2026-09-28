@@ -1,0 +1,242 @@
+{
+  "screen": {
+    "categories": {
+      "connection": "连接",
+      "ai": "AI 与提供商",
+      "notifications": "通知",
+      "voice": "语音与回复",
+      "advanced": "高级"
+    },
+    "summaries": {
+      "configuredCount": "已配置 {{value}} 个",
+      "replyPlaybackOn": "回复播放已开启",
+      "replyPlaybackOff": "回复播放已关闭",
+      "advanced": "MCP 服务器与诊断"
+    }
+  },
+  "connection": {
+    "currentConnection": "当前连接",
+    "noServerUrl": "未设置服务器 URL",
+    "notSavedYet": "尚未保存。添加一个连接以便以后使用。",
+    "lastChecked": "上次检查 {{time}}",
+    "serverUrlValue": "服务器 URL：{{url}}",
+    "usernameValue": "用户名：{{username}}",
+    "usernameEmpty": "（无）",
+    "addConnection": "添加连接",
+    "editConnection": "编辑连接",
+    "addDescription": "添加连接即可在多个服务器之间切换，无需重新输入 URL 和密码。",
+    "saveAndConnect": "保存并连接",
+    "deleteTitle": "删除连接",
+    "deleteMessage": "从已保存的连接中移除“{{name}}”？",
+    "deleteWebConfirm": "删除连接\n\n{{message}}",
+    "fields": {
+      "name": "名称",
+      "serverUrl": "服务器 URL",
+      "username": "用户名",
+      "password": "密码"
+    },
+    "errors": {
+      "name": "请输入此连接的名称。",
+      "serverUrl": "请输入服务器 URL。",
+      "invalidUrl": "请输入完整的服务器 URL，例如 http://192.168.1.10:4096。",
+      "save": "无法保存此连接。"
+    }
+  },
+  "providers": {
+    "apiKey": "API 密钥",
+    "pasteApiKey": "粘贴你的 API 密钥",
+    "chooseModels": "选择在聊天中显示哪些已配置的模型。你在聊天中最后选择的模型会保留用于新聊天。",
+    "configuredProviders": "已配置的提供商",
+    "addProvider": "添加提供商",
+    "connectFirst": "请先连接以加载提供商。",
+    "configureAtLeastOne": "至少配置一个提供商以选择默认值。",
+    "selectedCount": "已选择 {{selected}}/{{total}}",
+    "reasoningSupported": "支持推理",
+    "standardModel": "标准模型",
+    "noModels": "未找到你所配置提供商的模型。",
+    "configuredSuccess": "{{provider}} 配置成功。",
+    "signInFinished": "{{provider}} 登录完成。提供商状态已刷新。",
+    "couldNotConfigure": "无法配置提供商。",
+    "couldNotRemove": "无法移除提供商凭据。",
+    "credentialsRemoved": "{{provider}} 的凭据已移除。",
+    "removeTitle": "移除 {{provider}}？",
+    "removeMessage": "已存储的凭据和提供商配置将被移除。",
+    "removeWebConfirm": "移除 {{provider}}？\n\n已存储的凭据和提供商配置将被移除。",
+    "signInTitle": "完成提供商登录",
+    "authorizationCode": "授权码",
+    "complete": "完成",
+    "continue": "继续",
+    "cancelSetup": "取消提供商设置",
+    "configureProvider": "配置 {{provider}}",
+    "oauthHint": "这将在浏览器中打开提供商的登录流程。",
+    "setupUnavailable": "此提供商的设置详情目前不可用。",
+    "couldNotComplete": "无法完成登录。"
+  },
+  "providerCopy": {
+    "openai": {
+      "label": "OpenAI",
+      "description": "来自 OpenAI 的 GPT 模型，包括最新的推理和多模态选项。"
+    },
+    "anthropic": {
+      "label": "Anthropic",
+      "description": "来自 Anthropic 的 Claude 模型，适用于编码、分析和长上下文工作。"
+    },
+    "github-copilot": {
+      "label": "GitHub Copilot",
+      "description": "使用你的 GitHub Copilot 权限登录，并启用受支持的基础模型。"
+    },
+    "google": {
+      "label": "Google",
+      "description": "来自 Google 的 Gemini 模型，适用于多模态和大上下文任务。"
+    },
+    "groq": {
+      "label": "Groq",
+      "description": "为受支持的开源和前沿模型提供快速托管推理。"
+    },
+    "openrouter": {
+      "label": "OpenRouter",
+      "description": "通过一个账户在多个提供商和模型系列之间路由请求。"
+    },
+    "mistral": {
+      "label": "Mistral",
+      "description": "Mistral AI 托管的模型，适用于通用和编码工作负载。"
+    },
+    "xai": {
+      "label": "xAI",
+      "description": "来自 xAI 的 Grok 模型。"
+    },
+    "azure": {
+      "label": "Azure OpenAI",
+      "description": "通过 Azure 部署的 OpenAI 兼容模型。"
+    }
+  },
+  "notifications": {
+    "status": {
+      "checking": "检查中",
+      "enabled": "已启用",
+      "needsSetup": "需要设置"
+    },
+    "background": {
+      "checking": "检查中",
+      "ready": "就绪",
+      "limited": "受限"
+    },
+    "summary": {
+      "enabled": "通知已启用",
+      "off": "通知已关闭",
+      "background": "后台 {{status}}"
+    },
+    "enable": "启用通知",
+    "settings": "通知设置",
+    "appSettings": "应用设置",
+    "appSettingsDescription": "查看此应用的系统设置。",
+    "batteryOptimization": "电池优化",
+    "batteryOptimizationDescription": "允许应用在后台更可靠地运行。",
+    "batterySaver": "省电模式",
+    "batterySaverDescription": "省电模式可能会延迟提醒。",
+    "refreshStatus": "刷新状态",
+    "enabledFeedback": "此设备上的通知已启用。",
+    "disabledFeedback": "通知仍处于禁用状态。打开系统设置以手动启用。"
+  },
+  "voice": {
+    "onDeviceInput": {
+      "title": "设备端语音输入",
+      "description": "尽可能优先使用本地语音识别，避免回退到云端。"
+    },
+    "autoPlay": {
+      "title": "自动播放助手回复",
+      "description": "助手回复完成后朗读最新的回复。"
+    },
+    "workingSound": {
+      "title": "工作提示音",
+      "description": "助手仍在处理回复时播放一段舒缓的循环音。"
+    },
+    "resumeListening": {
+      "title": "回复后恢复聆听",
+      "description": "在对话模式下，语音播放结束后再次开始聆听。"
+    },
+    "speechLocale": {
+      "label": "语音区域设置",
+      "helper": "留空以使用系统默认语言进行语音输入和播放。"
+    },
+    "responseScope": {
+      "label": "回复范围",
+      "brief": {
+        "label": "简短",
+        "description": "简短、范围明确的回答，适合自然的来回对话。"
+      },
+      "balanced": {
+        "label": "均衡",
+        "description": "简洁的回答，在有用时提供稍多背景。"
+      },
+      "detailed": {
+        "label": "详细",
+        "description": "更长的解释和更多支持细节。"
+      }
+    },
+    "nextActions": {
+      "title": "简单的后续操作",
+      "description": "在有明确下一步时，以简短的建议结束回复。"
+    },
+    "speechRate": {
+      "label": "语速"
+    },
+    "workingSoundVariant": {
+      "label": "工作提示音",
+      "soft": {
+        "label": "柔和提示音",
+        "description": "温暖的分层音调，带有轻柔的脉冲。"
+      },
+      "glass": {
+        "label": "玻璃音色",
+        "description": "更明亮、更轻盈的环境循环音。"
+      }
+    },
+    "workingSoundVolume": {
+      "label": "工作提示音音量"
+    },
+    "voiceSelect": {
+      "label": "语音"
+    },
+    "footer": "Android 可以定期在后台检查正在运行的会话，并发布完成通知。不支持后台语音和持续的麦克风采集。"
+  },
+  "diagnostics": {
+    "title": "服务器诊断",
+    "server": "服务器",
+    "openCodeVersion": "OpenCode {{version}}",
+    "healthUnavailable": "健康检查端点不可用",
+    "healthy": "正常",
+    "realtimeUpdates": "实时更新",
+    "eventStreamConnected": "全局事件流已连接",
+    "pollingFallback": "轮询回退已启用",
+    "subsystems": "子系统",
+    "subsystemsMcp": "MCP {{value}}",
+    "subsystemsLsp": "LSP {{value}}",
+    "subsystemsFormatters": "格式化程序 {{value}}",
+    "notAvailable": "不适用",
+    "refresh": "刷新诊断"
+  },
+  "mcp": {
+    "title": "MCP 服务器",
+    "couldNotUpdate": "无法更新 MCP 服务器。",
+    "configurationUnavailable": "配置详情不可用",
+    "invalidCommand": "请将本地命令输入为 JSON 字符串数组。",
+    "local": "本地",
+    "remote": "远程",
+    "serverName": "服务器名称",
+    "commandArguments": "命令参数（JSON）",
+    "url": "URL",
+    "addLocalServer": "添加本地服务器",
+    "addRemoteServer": "添加远程服务器",
+    "noServers": "未配置 MCP 服务器。",
+    "statusConfigured": "已配置",
+    "statusDisabled": "已禁用",
+    "oauth": "OAuth",
+    "authorizationCode": "授权码（可选）",
+    "completeOAuth": "完成 OAuth"
+  },
+  "language": {
+    "title": "语言",
+    "description": "使用系统语言或为应用界面选择一种语言。"
+  }
+}

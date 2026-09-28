@@ -1,5 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActionSheetIOS,
   Modal,
@@ -45,6 +46,7 @@ export function NativeSelect<T extends string>({
 }: NativeSelectProps<T>) {
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
+  const { t } = useTranslation();
   const [visible, setVisible] = useState(false);
 
   const selectedOption = useMemo(
@@ -71,7 +73,7 @@ export function NativeSelect<T extends string>({
       ActionSheetIOS.showActionSheetWithOptions(
         {
           cancelButtonIndex: options.length,
-          options: [...options.map((option) => option.label), 'Cancel'],
+          options: [...options.map((option) => option.label), t('common:actions.cancel')],
           title,
           userInterfaceStyle: colorScheme,
         },
@@ -85,7 +87,7 @@ export function NativeSelect<T extends string>({
     }
 
     setVisible(true);
-  }, [colorScheme, disabled, onValueChange, options, title]);
+  }, [colorScheme, disabled, onValueChange, options, t, title]);
 
   return (
     <>
@@ -102,10 +104,10 @@ export function NativeSelect<T extends string>({
             <View style={[styles.sheet, { backgroundColor: palette.surface, borderColor: palette.border }]}> 
               <View style={[styles.sheetHeader, { borderBottomColor: palette.border }]}> 
                 <Text numberOfLines={1} style={[styles.sheetTitle, { color: palette.text }]}>
-                  {title || 'Choose an option'}
+                  {title || t('common:select.chooseOption')}
                 </Text>
                 <Pressable onPress={close} style={({ pressed }) => [styles.closeButton, pressed && styles.pressed]}>
-                  <Text style={[styles.closeButtonLabel, { color: palette.tint }]}>Close</Text>
+                  <Text style={[styles.closeButtonLabel, { color: palette.tint }]}>{t('common:actions.close')}</Text>
                 </Pressable>
               </View>
               <ScrollView contentContainerStyle={styles.optionList} keyboardShouldPersistTaps="handled">

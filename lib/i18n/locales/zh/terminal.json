@@ -1,0 +1,36 @@
+{
+  "screen": {
+    "connectTitle": "连接到 OpenCode",
+    "chooseWorkspace": "选择工作区",
+    "selectProject": "打开终端前请先选择一个项目。",
+    "openWorkspaces": "打开工作区",
+    "title": "终端"
+  },
+  "console": {
+    "selectTerminal": "选择终端",
+    "create": "创建终端",
+    "refresh": "刷新终端",
+    "connectedWaiting": "已连接。正在等待输出…",
+    "openOrCreate": "打开或创建终端以开始。",
+    "commandPlaceholder": "输入命令",
+    "send": "发送命令",
+    "terminateTitle": "终止终端？",
+    "terminateMessage": "终止 {{title}}？",
+    "terminateAction": "终止"
+  },
+  "sessions": {
+    "title": "终端",
+    "empty": "尚无终端。使用 + 创建一个。",
+    "openLabel": "打开 {{terminal}}",
+    "closeHint": "左滑关闭终端"
+  },
+  "errors": {
+    "load": "无法加载终端。",
+    "create": "无法创建终端。",
+    "open": "无法打开终端。",
+    "terminate": "无法终止终端。",
+    "send": "无法发送终端输入。",
+    "connect": "无法连接。",
+    "refresh": "无法刷新终端。"
+  }
+}

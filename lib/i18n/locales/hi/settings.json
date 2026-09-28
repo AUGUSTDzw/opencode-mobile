@@ -1,0 +1,242 @@
+{
+  "screen": {
+    "categories": {
+      "connection": "कनेक्शन",
+      "ai": "AI और प्रदाता",
+      "notifications": "सूचनाएँ",
+      "voice": "आवाज़ और उत्तर",
+      "advanced": "उन्नत"
+    },
+    "summaries": {
+      "configuredCount": "{{value}} कॉन्फ़िगर किए गए",
+      "replyPlaybackOn": "उत्तर प्लेबैक चालू",
+      "replyPlaybackOff": "उत्तर प्लेबैक बंद",
+      "advanced": "MCP सर्वर और निदान"
+    }
+  },
+  "connection": {
+    "currentConnection": "वर्तमान कनेक्शन",
+    "noServerUrl": "कोई सर्वर URL सेट नहीं",
+    "notSavedYet": "अभी तक सहेजा नहीं गया। बाद के लिए इसे रखने हेतु एक कनेक्शन जोड़ें।",
+    "lastChecked": "अंतिम जाँच {{time}}",
+    "serverUrlValue": "सर्वर URL: {{url}}",
+    "usernameValue": "उपयोगकर्ता नाम: {{username}}",
+    "usernameEmpty": "(कोई नहीं)",
+    "addConnection": "कनेक्शन जोड़ें",
+    "editConnection": "कनेक्शन संपादित करें",
+    "addDescription": "URL और पासवर्ड दोबारा टाइप किए बिना सर्वर के बीच स्विच करने के लिए कनेक्शन जोड़ें।",
+    "saveAndConnect": "सहेजें और कनेक्ट करें",
+    "deleteTitle": "कनेक्शन हटाएँ",
+    "deleteMessage": "सहेजे गए कनेक्शन से \"{{name}}\" निकालें?",
+    "deleteWebConfirm": "कनेक्शन हटाएँ\n\n{{message}}",
+    "fields": {
+      "name": "नाम",
+      "serverUrl": "सर्वर URL",
+      "username": "उपयोगकर्ता नाम",
+      "password": "पासवर्ड"
+    },
+    "errors": {
+      "name": "इस कनेक्शन के लिए एक नाम दर्ज करें।",
+      "serverUrl": "सर्वर URL दर्ज करें।",
+      "invalidUrl": "पूरा सर्वर URL दर्ज करें, जैसे http://192.168.1.10:4096।",
+      "save": "यह कनेक्शन सहेजा नहीं जा सका।"
+    }
+  },
+  "providers": {
+    "apiKey": "API कुंजी",
+    "pasteApiKey": "अपनी API कुंजी पेस्ट करें",
+    "chooseModels": "चुनें कि चैट में कौन-से कॉन्फ़िगर किए गए मॉडल दिखें। चैट में आपके द्वारा चुना गया अंतिम मॉडल नई चैट के लिए चयनित रहता है।",
+    "configuredProviders": "कॉन्फ़िगर किए गए प्रदाता",
+    "addProvider": "प्रदाता जोड़ें",
+    "connectFirst": "प्रदाता लोड करने के लिए पहले कनेक्ट करें।",
+    "configureAtLeastOne": "डिफ़ॉल्ट चुनने के लिए कम से कम एक प्रदाता कॉन्फ़िगर करें।",
+    "selectedCount": "{{total}} में से {{selected}} चयनित",
+    "reasoningSupported": "तर्क समर्थित",
+    "standardModel": "मानक मॉडल",
+    "noModels": "आपके कॉन्फ़िगर किए गए प्रदाताओं के लिए कोई मॉडल नहीं मिला।",
+    "configuredSuccess": "{{provider}} सफलतापूर्वक कॉन्फ़िगर किया गया।",
+    "signInFinished": "{{provider}} साइन-इन पूरा हुआ। प्रदाता स्थिति रीफ़्रेश कर दी गई है।",
+    "couldNotConfigure": "प्रदाता कॉन्फ़िगर नहीं किया जा सका।",
+    "couldNotRemove": "प्रदाता क्रेडेंशियल निकाले नहीं जा सके।",
+    "credentialsRemoved": "{{provider}} क्रेडेंशियल निकाल दिए गए।",
+    "removeTitle": "{{provider}} निकालें?",
+    "removeMessage": "संग्रहीत क्रेडेंशियल और प्रदाता कॉन्फ़िगरेशन निकाल दिए जाएँगे।",
+    "removeWebConfirm": "{{provider}} निकालें?\n\nसंग्रहीत क्रेडेंशियल और प्रदाता कॉन्फ़िगरेशन निकाल दिए जाएँगे।",
+    "signInTitle": "प्रदाता साइन-इन पूरा करें",
+    "authorizationCode": "प्राधिकरण कोड",
+    "complete": "पूरा करें",
+    "continue": "जारी रखें",
+    "cancelSetup": "प्रदाता सेटअप रद्द करें",
+    "configureProvider": "{{provider}} कॉन्फ़िगर करें",
+    "oauthHint": "यह आपके ब्राउज़र में प्रदाता साइन-इन प्रक्रिया खोलता है।",
+    "setupUnavailable": "इस प्रदाता के सेटअप विवरण अभी उपलब्ध नहीं हैं।",
+    "couldNotComplete": "साइन-इन पूरा नहीं किया जा सका।"
+  },
+  "providerCopy": {
+    "openai": {
+      "label": "OpenAI",
+      "description": "OpenAI के GPT मॉडल, जिनमें नवीनतम तर्क और मल्टीमॉडल विकल्प शामिल हैं।"
+    },
+    "anthropic": {
+      "label": "Anthropic",
+      "description": "Anthropic के Claude मॉडल कोडिंग, विश्लेषण और लंबे-संदर्भ कार्य के लिए।"
+    },
+    "github-copilot": {
+      "label": "GitHub Copilot",
+      "description": "साइन इन करने और समर्थित फ़ाउंडेशन मॉडल सक्षम करने के लिए अपनी GitHub Copilot पहुँच का उपयोग करें।"
+    },
+    "google": {
+      "label": "Google",
+      "description": "Google के Gemini मॉडल मल्टीमॉडल और बड़े-संदर्भ कार्यों के लिए।"
+    },
+    "groq": {
+      "label": "Groq",
+      "description": "समर्थित ओपन और फ़्रंटियर मॉडल के लिए तेज़ होस्टेड अनुमान।"
+    },
+    "openrouter": {
+      "label": "OpenRouter",
+      "description": "एक खाते से कई प्रदाताओं और मॉडल परिवारों में अनुरोध रूट करें।"
+    },
+    "mistral": {
+      "label": "Mistral",
+      "description": "सामान्य-उद्देश्य और कोडिंग कार्यभार के लिए Mistral AI होस्टेड मॉडल।"
+    },
+    "xai": {
+      "label": "xAI",
+      "description": "xAI के Grok मॉडल।"
+    },
+    "azure": {
+      "label": "Azure OpenAI",
+      "description": "Azure के माध्यम से तैनात OpenAI-संगत मॉडल।"
+    }
+  },
+  "notifications": {
+    "status": {
+      "checking": "जाँच हो रही है",
+      "enabled": "सक्षम",
+      "needsSetup": "सेटअप आवश्यक"
+    },
+    "background": {
+      "checking": "जाँच हो रही है",
+      "ready": "तैयार",
+      "limited": "सीमित"
+    },
+    "summary": {
+      "enabled": "सूचनाएँ सक्षम",
+      "off": "सूचनाएँ बंद",
+      "background": "पृष्ठभूमि {{status}}"
+    },
+    "enable": "सूचनाएँ सक्षम करें",
+    "settings": "सूचना सेटिंग्स",
+    "appSettings": "ऐप सेटिंग्स",
+    "appSettingsDescription": "इस ऐप के लिए सिस्टम सेटिंग्स की समीक्षा करें।",
+    "batteryOptimization": "बैटरी अनुकूलन",
+    "batteryOptimizationDescription": "ऐप को पृष्ठभूमि में अधिक विश्वसनीय रूप से चलने दें।",
+    "batterySaver": "बैटरी सेवर",
+    "batterySaverDescription": "बैटरी सेवर अनुस्मारक विलंबित कर सकता है।",
+    "refreshStatus": "स्थिति रीफ़्रेश करें",
+    "enabledFeedback": "इस डिवाइस पर सूचनाएँ सक्षम हैं।",
+    "disabledFeedback": "सूचनाएँ अभी भी अक्षम हैं। उन्हें मैन्युअल रूप से सक्षम करने के लिए सिस्टम सेटिंग्स खोलें।"
+  },
+  "voice": {
+    "onDeviceInput": {
+      "title": "डिवाइस पर आवाज़ इनपुट",
+      "description": "जब संभव हो स्थानीय वाक् पहचान को प्राथमिकता दें और क्लाउड फ़ॉलबैक से बचें।"
+    },
+    "autoPlay": {
+      "title": "सहायक उत्तर स्वतः चलाएँ",
+      "description": "समाप्त होने पर नवीनतम सहायक उत्तर ज़ोर से पढ़ें।"
+    },
+    "workingSound": {
+      "title": "कार्य ध्वनि",
+      "description": "सहायक के अभी उत्तर पर काम करते समय एक शांत लूप चलाएँ।"
+    },
+    "resumeListening": {
+      "title": "उत्तर के बाद सुनना फिर शुरू करें",
+      "description": "बातचीत मोड में, बोले गए प्लेबैक के समाप्त होने के बाद फिर से सुनना शुरू करें।"
+    },
+    "speechLocale": {
+      "label": "वाक् लोकेल",
+      "helper": "आवाज़ इनपुट और प्लेबैक के लिए सिस्टम की डिफ़ॉल्ट भाषा उपयोग करने हेतु खाली छोड़ें।"
+    },
+    "responseScope": {
+      "label": "उत्तर का दायरा",
+      "brief": {
+        "label": "संक्षिप्त",
+        "description": "स्वाभाविक बातचीत के लिए छोटे, सीमित उत्तर।"
+      },
+      "balanced": {
+        "label": "संतुलित",
+        "description": "उपयोगी होने पर थोड़े अधिक संदर्भ के साथ संक्षिप्त उत्तर।"
+      },
+      "detailed": {
+        "label": "विस्तृत",
+        "description": "लंबी व्याख्याएँ और अधिक सहायक विवरण।"
+      }
+    },
+    "nextActions": {
+      "title": "सरल अगली कार्रवाइयाँ",
+      "description": "जब कोई स्पष्ट अगला कदम हो तो उत्तरों को एक छोटी सिफ़ारिश के साथ समाप्त करें।"
+    },
+    "speechRate": {
+      "label": "बोलने की गति"
+    },
+    "workingSoundVariant": {
+      "label": "कार्य ध्वनि",
+      "soft": {
+        "label": "कोमल घंटी",
+        "description": "कोमल स्पंदन के साथ गर्म स्तरित स्वर।"
+      },
+      "glass": {
+        "label": "काँच स्वर",
+        "description": "अधिक चमकीला, हल्का परिवेशी लूप।"
+      }
+    },
+    "workingSoundVolume": {
+      "label": "कार्य ध्वनि वॉल्यूम"
+    },
+    "voiceSelect": {
+      "label": "आवाज़"
+    },
+    "footer": "Android समय-समय पर पृष्ठभूमि में चल रहे सेशन जाँच सकता है और पूर्णता सूचना पोस्ट कर सकता है। पृष्ठभूमि वाक् और निरंतर माइक्रोफ़ोन कैप्चर समर्थित नहीं हैं।"
+  },
+  "diagnostics": {
+    "title": "सर्वर निदान",
+    "server": "सर्वर",
+    "openCodeVersion": "OpenCode {{version}}",
+    "healthUnavailable": "हेल्थ एंडपॉइंट अनुपलब्ध",
+    "healthy": "स्वस्थ",
+    "realtimeUpdates": "रीयलटाइम अपडेट",
+    "eventStreamConnected": "ग्लोबल इवेंट स्ट्रीम कनेक्टेड",
+    "pollingFallback": "पोलिंग फ़ॉलबैक सक्रिय",
+    "subsystems": "उपप्रणालियाँ",
+    "subsystemsMcp": "MCP {{value}}",
+    "subsystemsLsp": "LSP {{value}}",
+    "subsystemsFormatters": "फ़ॉर्मेटर {{value}}",
+    "notAvailable": "लागू नहीं",
+    "refresh": "निदान रीफ़्रेश करें"
+  },
+  "mcp": {
+    "title": "MCP सर्वर",
+    "couldNotUpdate": "MCP सर्वर अपडेट नहीं किए जा सके।",
+    "configurationUnavailable": "कॉन्फ़िगरेशन विवरण अनुपलब्ध",
+    "invalidCommand": "स्थानीय कमांड को JSON स्ट्रिंग ऐरे के रूप में दर्ज करें।",
+    "local": "स्थानीय",
+    "remote": "रिमोट",
+    "serverName": "सर्वर नाम",
+    "commandArguments": "कमांड तर्क (JSON)",
+    "url": "URL",
+    "addLocalServer": "स्थानीय सर्वर जोड़ें",
+    "addRemoteServer": "रिमोट सर्वर जोड़ें",
+    "noServers": "कोई MCP सर्वर कॉन्फ़िगर नहीं है।",
+    "statusConfigured": "कॉन्फ़िगर किया गया",
+    "statusDisabled": "अक्षम",
+    "oauth": "OAuth",
+    "authorizationCode": "प्राधिकरण कोड (वैकल्पिक)",
+    "completeOAuth": "OAuth पूरा करें"
+  },
+  "language": {
+    "title": "भाषा",
+    "description": "सिस्टम भाषा उपयोग करें या ऐप इंटरफ़ेस के लिए एक चुनें।"
+  }
+}

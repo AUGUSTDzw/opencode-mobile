@@ -1,22 +1,22 @@
 import type { ModelOption, ReasoningLevel } from '@/providers/opencode-provider';
 
-export const STARTER_PROMPTS = [
-  'Polish this mobile UI to feel closer to OpenCode web mode.',
-  'Review the current workspace and suggest the next highest-impact fix.',
-  'Implement the feature request and keep me updated as you work.',
+export const STARTER_PROMPT_KEYS = [
+  'chat:starter.prompts.polish',
+  'chat:starter.prompts.review',
+  'chat:starter.prompts.implement',
 ];
 
-export const REASONING_OPTIONS: { id: ReasoningLevel; label: string }[] = [
-  { id: 'low', label: 'Low' },
-  { id: 'default', label: 'Default' },
-  { id: 'high', label: 'High' },
+export const REASONING_OPTIONS: { id: ReasoningLevel; labelKey: string }[] = [
+  { id: 'low', labelKey: 'chat:reasoning.low' },
+  { id: 'default', labelKey: 'chat:reasoning.default' },
+  { id: 'high', labelKey: 'chat:reasoning.high' },
 ];
 
 export const TRANSCRIPT_PAGE_SIZE = 20;
 
-export function getModelLabel(models: ModelOption[], modelId?: string) {
+export function getModelLabel(models: ModelOption[], modelId: string | undefined, fallback: string) {
   const match = models.find((model) => model.id === modelId);
-  return match ? match.label : 'Select model';
+  return match ? match.label : fallback;
 }
 
 export function getAutoApproveIcon(autoApprove: boolean) {

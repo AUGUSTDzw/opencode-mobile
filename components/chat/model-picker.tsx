@@ -1,5 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Keyboard, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { ControlButton } from '@/components/chat/chat-controls';
@@ -16,12 +17,13 @@ type ModelPickerProps = {
   selectedModelId?: string;
 };
 
-function getSelectedModelLabel(models: ModelOption[], selectedModelId?: string) {
+function getSelectedModelLabel(models: ModelOption[], selectedModelId: string | undefined, fallback: string) {
   const selected = models.find((model) => model.id === selectedModelId);
-  return selected ? `${selected.providerLabel} · ${selected.label}` : 'Select model';
+  return selected ? `${selected.providerLabel} · ${selected.label}` : fallback;
 }
 
 export function ModelPicker({ disabled = false, models, onSelect, recentModelIds, selectedModelId }: ModelPickerProps) {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
   const [visible, setVisible] = useState(false);
@@ -97,7 +99,7 @@ export function ModelPicker({ disabled = false, models, onSelect, recentModelIds
           <Text style={[styles.optionLabel, { color: palette.text }]}>{model.label}</Text>
           <Text style={[styles.optionDescription, { color: palette.muted }]}>
             {showProvider ? `${model.providerLabel} · ${model.modelID}` : model.modelID}
-            {model.supportsReasoning ? ' · Reasoning supported' : ' · Standard model'}
+            {model.supportsReasoning ? t('chat:modelPicker.reasoningSupported') : t('chat:modelPicker.standardModel')}
           </Text>
         </View>
         {isSelected ? <MaterialCommunityIcons name="check" size={20} color={palette.tint} /> : null}
@@ -115,16 +117,16 @@ export function ModelPicker({ disabled = false, models, onSelect, recentModelIds
         maxWidth={220}
         onPress={() => setVisible(true)}
         testID="chat-model-picker-trigger">
-        {getSelectedModelLabel(models, selectedModelId)}
+        {getSelectedModelLabel(models, selectedModelId, t('chat:modelPicker.selectModel'))}
       </ControlButton>
       <Modal animationType="slide" transparent visible={visible} onRequestClose={close}>
         <View style={[styles.overlay, { paddingBottom: keyboardHeight }]}>
-          <Pressable accessibilityLabel="Close model picker" style={styles.backdrop} onPress={close} />
+          <Pressable accessibilityLabel={t('chat:modelPicker.closePicker')} style={styles.backdrop} onPress={close} />
           <View testID="chat-model-picker" style={[styles.sheet, { backgroundColor: palette.surface, borderColor: palette.border }]}>
               <View style={[styles.header, { borderBottomColor: palette.border }]}>
-                <Text style={[styles.title, { color: palette.text }]}>Choose model</Text>
+                <Text style={[styles.title, { color: palette.text }]}>{t('chat:modelPicker.chooseModel')}</Text>
                 <Pressable accessibilityRole="button" onPress={close} style={({ pressed }) => [styles.closeButton, pressed && styles.pressed]}>
-                  <Text style={[styles.closeLabel, { color: palette.tint }]}>Close</Text>
+                  <Text style={[styles.closeLabel, { color: palette.tint }]}>{t('common:actions.close')}</Text>
                 </Pressable>
               </View>
               <View style={[styles.searchShell, { backgroundColor: palette.background, borderColor: palette.border }]}>
@@ -134,7 +136,7 @@ export function ModelPicker({ disabled = false, models, onSelect, recentModelIds
                   autoCorrect={false}
                   clearButtonMode="while-editing"
                   cursorColor={palette.tint}
-                  placeholder="Search models or providers"
+                  placeholder={t('chat:modelPicker.searchPlaceholder')}
                   placeholderTextColor={palette.muted}
                   selectionColor={palette.tint}
                   style={[styles.searchInput, { color: palette.text }]}
@@ -146,13 +148,13 @@ export function ModelPicker({ disabled = false, models, onSelect, recentModelIds
               <ScrollView contentContainerStyle={styles.list} keyboardShouldPersistTaps="always" style={styles.results}>
                 {!normalizedQuery && selected ? (
                   <View style={styles.group}>
-                    <Text style={[styles.sectionTitle, { color: palette.muted }]}>Selected</Text>
+                    <Text style={[styles.sectionTitle, { color: palette.muted }]}>{t('chat:modelPicker.selected')}</Text>
                     {renderModelRow(selected, true)}
                   </View>
                 ) : null}
                 {!normalizedQuery && recentModels.length > 0 ? (
                   <View style={styles.group}>
-                    <Text style={[styles.sectionTitle, { color: palette.muted }]}>Recent</Text>
+                    <Text style={[styles.sectionTitle, { color: palette.muted }]}>{t('chat:modelPicker.recent')}</Text>
                     {recentModels.map((model) => renderModelRow(model, true))}
                   </View>
                 ) : null}
@@ -169,8 +171,8 @@ export function ModelPicker({ disabled = false, models, onSelect, recentModelIds
                 ))}
                 {matchingModels.length === 0 ? (
                   <View style={styles.empty}>
-                    <Text style={[styles.emptyTitle, { color: palette.text }]}>No matching models</Text>
-                    <Text style={[styles.emptyBody, { color: palette.muted }]}>Try a model or provider name.</Text>
+                    <Text style={[styles.emptyTitle, { color: palette.text }]}>{t('chat:modelPicker.noMatchingModels')}</Text>
+                    <Text style={[styles.emptyBody, { color: palette.muted }]}>{t('chat:modelPicker.emptyHint')}</Text>
                   </View>
                 ) : null}
               </ScrollView>
