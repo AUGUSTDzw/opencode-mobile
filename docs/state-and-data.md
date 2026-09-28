@@ -154,6 +154,7 @@ Primary fields:
 - `queuedConversationPrompt`
 - `pendingConversationTurn`
 - `conversationFeedback`
+- `conversationFeedbackAction`
 - `conversationLatestHeardText`
 
 Supporting refs and timers hold important transient control state for:

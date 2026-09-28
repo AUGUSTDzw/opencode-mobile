@@ -66,6 +66,7 @@ import {
   notifyTaskFinished,
   trackPendingTaskFinishedNotification,
 } from '@/lib/notifications';
+import type { VoiceRecoveryAction } from '@/lib/voice/speech-errors';
 import { speakText, stopSpeaking } from '@/lib/voice/speech-output';
 import { useSpeechInput } from '@/lib/voice/use-speech-input';
 import {
@@ -198,6 +199,18 @@ export type {
 // Foreground notification tracking for prompts sent in this app session. Keyed
 // by connection scope + session ID so switching servers cannot complete or
 // clear another server's pending task.
+// Conversation feedback and its optional recovery action are always written
+// together so a stale action can never outlive the message it belongs to.
+function applyConversationFeedback(
+  setFeedback: (value: string | undefined) => void,
+  setAction: (value: VoiceRecoveryAction) => void,
+  message: string | undefined,
+  action: VoiceRecoveryAction = 'none',
+) {
+  setFeedback(message);
+  setAction(action);
+}
+
 type TrackedPendingNotification = {
   sessionId: string;
   connectionScope: string;
@@ -260,6 +273,7 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
   const [queuedConversationPrompt, setQueuedConversationPrompt] = useState<string>();
   const [pendingConversationTurn, setPendingConversationTurn] = useState<string>();
   const [conversationFeedback, setConversationFeedback] = useState<string>();
+  const [conversationFeedbackAction, setConversationFeedbackAction] = useState<VoiceRecoveryAction>('none');
   const [conversationLatestHeardText, setConversationLatestHeardText] = useState<string>();
   const [eventStreamStatus, setEventStreamStatus] = useState<'idle' | 'connecting' | 'connected' | 'error'>('idle');
   const [commands, setCommands] = useState<Command[]>([]);
@@ -2121,6 +2135,7 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
   const {
     abort: abortSpeechInput,
     error: speechInputError,
+    errorAction: speechInputErrorAction,
     errorCode: speechInputErrorCode,
     isListening: isConversationListening,
     isStarting: isConversationListeningStarting,
@@ -2173,7 +2188,7 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
   );
 
   const clearConversationFeedback = useCallback(() => {
-    setConversationFeedback(undefined);
+    applyConversationFeedback(setConversationFeedback, setConversationFeedbackAction, undefined);
   }, []);
 
   const stopConversationMode = useCallback(async () => {
@@ -2240,12 +2255,12 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
     }
 
     if (connection.status !== 'connected') {
-      setConversationFeedback('Connect to OpenCode before starting conversation mode.');
+      applyConversationFeedback(setConversationFeedback, setConversationFeedbackAction, 'Connect to OpenCode before starting conversation mode.');
       return;
     }
 
     if (sendingState.active) {
-      setConversationFeedback('Wait for the current reply to finish before starting conversation mode.');
+      applyConversationFeedback(setConversationFeedback, setConversationFeedbackAction, 'Wait for the current reply to finish before starting conversation mode.');
       return;
     }
 
@@ -2253,7 +2268,7 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
       ? (pendingPermissionsBySession[currentSessionId] || []).length + (pendingQuestionsBySession[currentSessionId] || []).length
       : 0;
     if (pendingInteractionCount > 0) {
-      setConversationFeedback('Answer the current request before starting conversation mode.');
+      applyConversationFeedback(setConversationFeedback, setConversationFeedbackAction, 'Answer the current request before starting conversation mode.');
       return;
     }
 
@@ -2267,7 +2282,7 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
     await stopWorkingSoundAsync().catch(() => undefined);
     setCurrentSessionId(sessionId);
     setConversationSessionId(sessionId);
-    setConversationFeedback(undefined);
+    applyConversationFeedback(setConversationFeedback, setConversationFeedbackAction, undefined);
     setPendingConversationTurn(undefined);
     setQueuedConversationPrompt(undefined);
     assistantReplyBaselineIdRef.current = getLatestConversationAssistantEntry(sessionId)?.id;
@@ -2354,11 +2369,16 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
       return;
     }
 
-    setConversationFeedback(speechInputError);
+    applyConversationFeedback(
+      setConversationFeedback,
+      setConversationFeedbackAction,
+      speechInputError,
+      speechInputErrorAction,
+    );
     if (conversationPhaseRef.current !== 'off') {
       void stopConversationMode();
     }
-  }, [speechInputError, speechInputErrorCode, stopConversationMode]);
+  }, [speechInputError, speechInputErrorAction, speechInputErrorCode, stopConversationMode]);
 
   useEffect(() => {
     if (conversationPhase === 'off' || conversationPhase !== 'submitting' || !pendingConversationTurn || !conversationSessionId) {
@@ -2400,7 +2420,7 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
         const message = error instanceof Error ? error.message : 'Voice conversation failed while sending your message.';
         setQueuedConversationPrompt(undefined);
         setPendingConversationTurn(undefined);
-        setConversationFeedback(message);
+        applyConversationFeedback(setConversationFeedback, setConversationFeedbackAction, message);
         await stopConversationMode();
       }
     };
@@ -2434,7 +2454,7 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
       : false;
 
     if (pendingInteractions > 0) {
-      setConversationFeedback('Conversation mode paused because the assistant needs your input on screen.');
+      applyConversationFeedback(setConversationFeedback, setConversationFeedbackAction, 'Conversation mode paused because the assistant needs your input on screen.');
       void stopConversationMode();
       return;
     }
@@ -2458,7 +2478,7 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
             }
           },
           onError: () => {
-            setConversationFeedback('Unable to play this assistant reply.');
+            applyConversationFeedback(setConversationFeedback, setConversationFeedbackAction, 'Unable to play this assistant reply.');
             void stopConversationMode();
           },
           onStart: () => {
@@ -2514,7 +2534,11 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
       return;
     }
 
-    setConversationFeedback(connection.message || 'OpenCode disconnected. Conversation mode will resume when the connection returns.');
+    applyConversationFeedback(
+      setConversationFeedback,
+      setConversationFeedbackAction,
+      connection.message || 'OpenCode disconnected. Conversation mode will resume when the connection returns.',
+    );
   }, [connection.message, connection.status, conversationPhase]);
 
   useEffect(() => {
@@ -2998,6 +3022,7 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
     () => ({
       active: conversationActive,
       feedback: conversationFeedback,
+      feedbackAction: conversationFeedbackAction,
       isListening: isConversationListening,
       level: conversationListeningLevel,
       latestHeardText: conversationLatestHeardText,
@@ -3005,7 +3030,7 @@ export function OpencodeProvider({ children }: PropsWithChildren) {
       sessionId: conversationSessionId,
       statusLabel: conversationStatusLabel,
     }),
-    [conversationActive, conversationFeedback, isConversationListening, conversationListeningLevel, conversationLatestHeardText, conversationPhase, conversationSessionId, conversationStatusLabel],
+    [conversationActive, conversationFeedback, conversationFeedbackAction, isConversationListening, conversationListeningLevel, conversationLatestHeardText, conversationPhase, conversationSessionId, conversationStatusLabel],
   );
 
   const onboardingValue = useMemo<OnboardingContextValue>(

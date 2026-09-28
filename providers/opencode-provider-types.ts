@@ -27,6 +27,7 @@ import type {
 import type { Diagnostics } from '@/providers/services/diagnostics-service';
 import type { SessionMessageRecord, TranscriptEntry } from '@/lib/opencode/format';
 import type { SessionUsage } from '@/lib/opencode/usage';
+import type { VoiceRecoveryAction } from '@/lib/voice/speech-errors';
 import type { AgentOption, ModelOption } from '@/providers/opencode-model-selection';
 import type { ChatPreferences, ReasoningLevel, ResponseScope } from '@/providers/opencode-preferences';
 import type { ServerCapabilities } from '@/providers/opencode-capabilities';
@@ -58,6 +59,9 @@ export type ConversationState = {
   phase: ConversationPhase;
   statusLabel?: string;
   feedback?: string;
+  // Recovery action offered alongside `feedback` when it came from a voice
+  // input failure.
+  feedbackAction?: VoiceRecoveryAction;
   latestHeardText?: string;
   isListening: boolean;
   level: number;

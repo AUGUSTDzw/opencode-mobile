@@ -198,7 +198,22 @@
     "voiceSelect": {
       "label": "语音"
     },
-    "footer": "Android 可以定期在后台检查正在运行的会话，并发布完成通知。不支持后台语音和持续的麦克风采集。"
+    "footer": "Android 可以定期在后台检查正在运行的会话，并发布完成通知。不支持后台语音和持续的麦克风采集。",
+    "check": {
+      "title": "语音检查",
+      "permission": "麦克风和语音权限",
+      "recognition": "语音识别",
+      "onDevice": "设备端识别",
+      "restricted": "受设备策略限制",
+      "restrictedHint": "此设备上的语音识别受到限制。请联系设备管理员。",
+      "unavailableHint": "请在设备设置中开启 Siri 与听写，然后重新检查。",
+      "deniedHint": "访问被拒绝。打开设置以手动开启。",
+      "enable": "启用语音输入",
+      "recheck": "重新检查语音",
+      "test": "测试播放",
+      "testPhrase": "语音播放正常。",
+      "testFailed": "语音播放失败。请检查所选语音和设备音量。"
+    }
   },
   "diagnostics": {
     "title": "服务器诊断",

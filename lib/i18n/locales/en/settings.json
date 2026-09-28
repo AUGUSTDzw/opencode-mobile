@@ -198,7 +198,22 @@
     "voiceSelect": {
       "label": "Voice"
     },
-    "footer": "Android can periodically check running sessions in the background and post a completion notification. Background speech and continuous microphone capture are not supported."
+    "footer": "Android can periodically check running sessions in the background and post a completion notification. Background speech and continuous microphone capture are not supported.",
+    "check": {
+      "title": "Voice check",
+      "permission": "Microphone & speech access",
+      "recognition": "Speech recognition",
+      "onDevice": "On-device recognition",
+      "restricted": "Restricted by device policy",
+      "restrictedHint": "Speech recognition is restricted on this device. Contact your device administrator.",
+      "unavailableHint": "Turn on Siri & Dictation in your device Settings, then re-check.",
+      "deniedHint": "Access was denied. Open settings to enable it manually.",
+      "enable": "Enable voice input",
+      "recheck": "Re-check voice",
+      "test": "Test playback",
+      "testPhrase": "Voice playback is working.",
+      "testFailed": "Speech playback failed. Check the selected voice and the device volume."
+    }
   },
   "diagnostics": {
     "title": "Server diagnostics",

@@ -8,33 +8,36 @@ import { OnboardingStep } from '@/components/onboarding/onboarding-step';
 import { useNotificationSetup } from '@/components/settings/use-notification-setup';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import {
-  getVoiceInputPermissionAsync,
-  requestVoiceInputPermissionAsync,
-  type VoiceInputPermission,
-} from '@/lib/voice/permissions';
+import { getVoiceCapabilitiesAsync, type VoiceCapabilities } from '@/lib/voice/capabilities';
+import { requestVoiceInputPermissionAsync } from '@/lib/voice/permissions';
 
 export default function OnboardingPermissionsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const palette = Colors[useColorScheme() ?? 'light'];
   const notifications = useNotificationSetup();
-  const [voice, setVoice] = useState<VoiceInputPermission>();
+  const [voice, setVoice] = useState<VoiceCapabilities>();
   const [isEnablingVoice, setIsEnablingVoice] = useState(false);
 
   useEffect(() => {
     // Read-only: never prompts. Voice setup stays optional.
-    void getVoiceInputPermissionAsync().then(setVoice);
+    void getVoiceCapabilitiesAsync().then(setVoice);
   }, []);
 
   async function enableVoice() {
     setIsEnablingVoice(true);
     try {
-      setVoice(await requestVoiceInputPermissionAsync());
+      await requestVoiceInputPermissionAsync();
+      setVoice(await getVoiceCapabilitiesAsync());
     } finally {
       setIsEnablingVoice(false);
     }
   }
+
+  const voicePermission = voice?.permission;
+  // Permission may be granted while the recognizer itself is unavailable, so
+  // treat either condition as "voice input is not usable on this device".
+  const voiceUnsupported = Boolean(voice && (!voice.permission.available || !voice.recognitionAvailable));
 
   const notificationsGranted = Boolean(notifications.status?.permissionGranted);
   const notificationsUnsupported = notifications.status?.notificationsSupported === false;
@@ -97,24 +100,24 @@ export default function OnboardingPermissionsScreen() {
       <View style={[styles.card, { backgroundColor: palette.surface, borderColor: palette.border }]}>
         <View style={styles.cardHeader}>
           <Text variant="titleSmall" style={{ color: palette.text }}>{t('onboarding:permissions.voice.title')}</Text>
-          <Text variant="labelSmall" style={{ color: voice?.granted ? palette.success : palette.muted }}>
-            {voice?.granted ? t('common:labels.enabled') : t('common:labels.off')}
+          <Text variant="labelSmall" style={{ color: voicePermission?.granted ? palette.success : palette.muted }}>
+            {voicePermission?.granted ? t('common:labels.enabled') : t('common:labels.off')}
           </Text>
         </View>
         <Text variant="bodySmall" style={{ color: palette.muted }}>{t('onboarding:permissions.voice.body')}</Text>
-        {voice?.available === false ? (
+        {voiceUnsupported ? (
           <HelperText type="info">{t('onboarding:permissions.voice.unsupported')}</HelperText>
         ) : (
           <Button
             mode="contained-tonal"
             testID="onboarding-enable-voice"
-            disabled={Boolean(voice?.granted)}
+            disabled={Boolean(voicePermission?.granted)}
             loading={isEnablingVoice}
             onPress={() => void enableVoice()}>
             {t('onboarding:permissions.voice.enable')}
           </Button>
         )}
-        {voice && voice.available && !voice.granted ? (
+        {voicePermission && voicePermission.available && !voicePermission.granted ? (
           <HelperText type="info">{t('onboarding:permissions.voice.deniedHint')}</HelperText>
         ) : null}
       </View>

@@ -407,8 +407,18 @@ Behavior exposed today:
 - speech rate
 - working sound variant and volume
 - TTS voice selection
+- voice check (microphone/speech permission, recognition availability, on-device support, and a playback test) with an app-settings shortcut
 
 Working sound runs while a prompt is being submitted or any session is non-idle when enabled. It is stopped while conversation mode is listening or speaking and after work becomes idle.
+
+Voice input degrades gracefully on iOS instead of failing outright:
+
+- recognition availability is re-checked when listening starts, not only on mount
+- an on-device attempt that fails because the language model is missing, or because Siri/Dictation is off, retries once through network recognition before surfacing an error
+- errors are classified so the UI can offer the right next step: retry (including re-prompting while the OS still allows it), open app settings after a denial, or no action when device policy restricts speech recognition
+- speech playback validates the selected voice and falls back to the system default when it no longer exists, and a watchdog reports an error if the synthesizer never starts or finishes
+
+Existing configuration is unchanged: the on-device toggle still prefers local recognition, and onboarding only requests permission when the user chooses to enable voice.
 
 Important current implementation note:
 
@@ -500,7 +510,8 @@ The following values are not persisted and are rebuilt from the server:
 - If no project exists yet, Chat shows a `Choose a workspace` prompt.
 - If a project exists but no session is ready yet, Chat shows a loading panel.
 - If connection fails, error copy is shown in the landing/loading states and inside chat content.
-- If speech input is unavailable or denied, user-friendly errors are shown.
+- If speech input is unavailable or denied, a user-friendly error is shown with a recovery action (retry, or open app settings after a denial).
+- If on-device recognition cannot run for the chosen locale, it retries through network recognition before showing an error.
 - If TTS cannot speak a message, a snackbar error is shown.
 - If sending fails, draft text and attachments are restored locally.
 - Send failures remain visible until dismissed, include asynchronous `session.error` events, and can be copied with session/model context for diagnostics.

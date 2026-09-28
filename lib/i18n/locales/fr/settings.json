@@ -198,7 +198,22 @@
     "voiceSelect": {
       "label": "Voix"
     },
-    "footer": "Android peut vérifier périodiquement les sessions en cours en arrière-plan et publier une notification de fin. La parole en arrière-plan et la capture continue du microphone ne sont pas prises en charge."
+    "footer": "Android peut vérifier périodiquement les sessions en cours en arrière-plan et publier une notification de fin. La parole en arrière-plan et la capture continue du microphone ne sont pas prises en charge.",
+    "check": {
+      "title": "Vérification vocale",
+      "permission": "Accès au micro et à la parole",
+      "recognition": "Reconnaissance vocale",
+      "onDevice": "Reconnaissance sur l'appareil",
+      "restricted": "Restreint par la stratégie de l'appareil",
+      "restrictedHint": "La reconnaissance vocale est restreinte sur cet appareil. Contactez l'administrateur de l'appareil.",
+      "unavailableHint": "Activez Siri et Dictée dans les réglages de l'appareil, puis vérifiez à nouveau.",
+      "deniedHint": "L'accès a été refusé. Ouvrez les réglages pour l'activer manuellement.",
+      "enable": "Activer la saisie vocale",
+      "recheck": "Revérifier la voix",
+      "test": "Tester la lecture",
+      "testPhrase": "La lecture vocale fonctionne.",
+      "testFailed": "La lecture vocale a échoué. Vérifiez la voix sélectionnée et le volume de l'appareil."
+    }
   },
   "diagnostics": {
     "title": "Diagnostics du serveur",

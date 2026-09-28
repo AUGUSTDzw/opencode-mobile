@@ -28,7 +28,8 @@
     "submit": "सबमिट करें",
     "stop": "रोकें",
     "select": "चुनें",
-    "closeWithName": "{{title}} बंद करें"
+    "closeWithName": "{{title}} बंद करें",
+    "openSettings": "सेटिंग्स खोलें"
   },
   "select": {
     "chooseOption": "एक विकल्प चुनें"

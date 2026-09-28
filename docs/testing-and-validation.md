@@ -232,7 +232,14 @@ seed used by `flows.spec.mjs`, so the assistant is exercised:
 Provider permission prompts (notifications, microphone) cannot be exercised on
 web because the platform APIs are unavailable there; the suite covers the
 optional/skippable UI instead. Native permission behavior still needs device
-validation.
+validation. The voice check surfaces the same status on device, so a physical
+iOS run should cover: enable/deny permission, the Settings deep link after a
+denial, on-device -> network fallback when Siri/Dictation is off, and the
+playback test against a stale saved voice.
+
+The `test:voice-errors` static suite pins the pure recovery classification
+(retry vs open-settings vs no action) and the on-device fallback policy; it does
+not exercise the native recognizer.
 
 The `test:onboarding` static suite pins the completion-marker contract:
 malformed markers are removed, version 0 is sticky, an existing configuration
@@ -256,8 +263,8 @@ This strategy gives confidence in:
 The following important behaviors are present in code but are not obviously covered by the current documented E2E suite:
 
 - conversation mode state machine
-- speech recognition failures and permission edge cases
-- TTS playback behavior
+- native speech recognition failures and permission edge cases (the pure recovery policy is covered by `test:voice-errors`; the native paths still need device validation)
+- TTS playback behavior and the completion watchdog
 - notification initialization and background monitoring
 - session fork, revert/unrevert, and share/unshare
 - attachment upload behavior

@@ -198,7 +198,22 @@
     "voiceSelect": {
       "label": "Voz"
     },
-    "footer": "Android puede comprobar periódicamente las sesiones en ejecución en segundo plano y publicar una notificación de finalización. No se admiten la voz en segundo plano ni la captura continua del micrófono."
+    "footer": "Android puede comprobar periódicamente las sesiones en ejecución en segundo plano y publicar una notificación de finalización. No se admiten la voz en segundo plano ni la captura continua del micrófono.",
+    "check": {
+      "title": "Comprobación de voz",
+      "permission": "Acceso a micrófono y voz",
+      "recognition": "Reconocimiento de voz",
+      "onDevice": "Reconocimiento en el dispositivo",
+      "restricted": "Restringido por la política del dispositivo",
+      "restrictedHint": "El reconocimiento de voz está restringido en este dispositivo. Contacta con el administrador del dispositivo.",
+      "unavailableHint": "Activa Siri y Dictado en los Ajustes del dispositivo y vuelve a comprobar.",
+      "deniedHint": "Se denegó el acceso. Abre los ajustes para activarlo manualmente.",
+      "enable": "Activar entrada de voz",
+      "recheck": "Volver a comprobar",
+      "test": "Probar reproducción",
+      "testPhrase": "La reproducción de voz funciona.",
+      "testFailed": "Falló la reproducción de voz. Comprueba la voz seleccionada y el volumen del dispositivo."
+    }
   },
   "diagnostics": {
     "title": "Diagnósticos del servidor",

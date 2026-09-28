@@ -243,9 +243,20 @@ they cannot silently regrow.
 - `lib/notifications.ts`
   Local notifications, background monitoring task, and notification debug status.
 - `lib/voice/speech-output.ts`
-  Text-to-speech and audio ducking.
+  Text-to-speech, audio ducking, stale-voice fallback, and a completion watchdog
+  so a silent native failure cannot hang callers.
 - `lib/voice/use-speech-input.ts`
-  Speech recognition hook.
+  Speech recognition hook. Re-checks recognition availability at start, pins an
+  explicit iOS audio session category, and retries once through network
+  recognition when an on-device attempt fails.
+- `lib/voice/speech-errors.ts`
+  Pure error classification into a message plus a recovery action
+  (`retry`, `open-settings`, `none`).
+- `lib/voice/capabilities.ts`
+  Read-only recognition capability snapshot (permission, availability,
+  on-device support) for onboarding and the Settings voice check.
+- `lib/voice/permissions.ts`
+  Voice permission reads/requests plus the app-settings deep link.
 - `lib/voice/working-sound.ts`
   Generated looping working sound.
 

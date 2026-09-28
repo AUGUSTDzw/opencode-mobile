@@ -23,6 +23,7 @@ import {
 } from '@/components/settings/settings-sections';
 import { useNotificationSetup } from '@/components/settings/use-notification-setup';
 import { useProviderConfiguration } from '@/components/settings/use-provider-configuration';
+import { useVoiceSetup } from '@/components/settings/use-voice-setup';
 import {
   getProviderCopy,
   LANGUAGE_OPTIONS,
@@ -59,6 +60,11 @@ export default function SettingsScreen() {
   const router = useRouter();
   const notifications = useNotificationSetup();
   const providerConfig = useProviderConfiguration();
+  const voiceSetup = useVoiceSetup({
+    locale: chatPreferences.speechLocale,
+    rate: chatPreferences.speechRate,
+    voiceId: chatPreferences.speechVoiceId,
+  });
   const [isConnecting, setIsConnecting] = useState(false);
   const [openSection, setOpenSection] = useState<string>();
   const [expandedProviderId, setExpandedProviderId] = useState<string>();
@@ -163,7 +169,7 @@ export default function SettingsScreen() {
       title: t('settings:screen.categories.voice'),
       summary: chatPreferences.autoPlayAssistantReplies ? t('settings:screen.summaries.replyPlaybackOn') : t('settings:screen.summaries.replyPlaybackOff'),
       onPress: () => setOpenSection('voice'),
-      render: () => <VoiceSection availableSpeechVoices={availableSpeechVoices} chatPreferences={chatPreferences} isRefreshingSpeechVoices={isRefreshingSpeechVoices} palette={palette} selectedResponseScope={selectedResponseScope} selectedSpeechVoiceLabel={selectedSpeechVoiceLabel} selectedWorkingSound={selectedWorkingSound} updateChatPreferences={updateChatPreferences} />,
+      render: () => <VoiceSection availableSpeechVoices={availableSpeechVoices} chatPreferences={chatPreferences} isRefreshingSpeechVoices={isRefreshingSpeechVoices} isRefreshingVoiceCapabilities={voiceSetup.isRefreshing} isTestingVoice={voiceSetup.isTesting} onEnableVoiceInput={() => void voiceSetup.enable()} onOpenVoiceSettings={() => void voiceSetup.openAppSettings()} onRefreshVoiceCapabilities={() => void voiceSetup.refreshStatus()} onTestVoicePlayback={() => void voiceSetup.testPlayback()} palette={palette} selectedResponseScope={selectedResponseScope} selectedSpeechVoiceLabel={selectedSpeechVoiceLabel} selectedWorkingSound={selectedWorkingSound} updateChatPreferences={updateChatPreferences} voiceCapabilities={voiceSetup.capabilities} />,
     },
     {
       id: 'advanced',
@@ -242,6 +248,12 @@ export default function SettingsScreen() {
         onDismiss={notifications.clearFeedback}
         duration={4000}>
         {notifications.feedback}
+      </Snackbar>
+      <Snackbar
+        visible={Boolean(voiceSetup.feedback)}
+        onDismiss={voiceSetup.clearFeedback}
+        duration={4000}>
+        {voiceSetup.feedback}
       </Snackbar>
     </>
   );

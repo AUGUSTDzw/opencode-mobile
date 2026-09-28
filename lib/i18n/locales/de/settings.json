@@ -198,7 +198,22 @@
     "voiceSelect": {
       "label": "Stimme"
     },
-    "footer": "Android kann laufende Sitzungen regelmäßig im Hintergrund prüfen und eine Abschlussbenachrichtigung senden. Hintergrundsprache und kontinuierliche Mikrofonaufnahme werden nicht unterstützt."
+    "footer": "Android kann laufende Sitzungen regelmäßig im Hintergrund prüfen und eine Abschlussbenachrichtigung senden. Hintergrundsprache und kontinuierliche Mikrofonaufnahme werden nicht unterstützt.",
+    "check": {
+      "title": "Sprachprüfung",
+      "permission": "Mikrofon- und Sprachzugriff",
+      "recognition": "Spracherkennung",
+      "onDevice": "Erkennung auf dem Gerät",
+      "restricted": "Durch Geräterichtlinie eingeschränkt",
+      "restrictedHint": "Die Spracherkennung ist auf diesem Gerät eingeschränkt. Wende dich an deine Geräteverwaltung.",
+      "unavailableHint": "Aktiviere Siri & Diktat in den Geräteeinstellungen und prüfe erneut.",
+      "deniedHint": "Der Zugriff wurde verweigert. Öffne die Einstellungen, um ihn manuell zu aktivieren.",
+      "enable": "Spracheingabe aktivieren",
+      "recheck": "Sprache erneut prüfen",
+      "test": "Wiedergabe testen",
+      "testPhrase": "Die Sprachwiedergabe funktioniert.",
+      "testFailed": "Sprachwiedergabe fehlgeschlagen. Prüfe die gewählte Stimme und die Gerätelautstärke."
+    }
   },
   "diagnostics": {
     "title": "Serverdiagnose",

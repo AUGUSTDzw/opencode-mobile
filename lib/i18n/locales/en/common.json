@@ -28,7 +28,8 @@
     "submit": "Submit",
     "stop": "Stop",
     "select": "Select",
-    "closeWithName": "Close {{title}}"
+    "closeWithName": "Close {{title}}",
+    "openSettings": "Open settings"
   },
   "select": {
     "chooseOption": "Choose an option"

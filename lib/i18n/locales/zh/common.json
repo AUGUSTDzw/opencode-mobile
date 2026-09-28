@@ -28,7 +28,8 @@
     "submit": "提交",
     "stop": "停止",
     "select": "选择",
-    "closeWithName": "关闭 {{title}}"
+    "closeWithName": "关闭 {{title}}",
+    "openSettings": "打开设置"
   },
   "select": {
     "chooseOption": "选择一个选项"

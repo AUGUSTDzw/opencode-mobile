@@ -17,6 +17,7 @@ import { renderProviderIcon } from '@/components/ui/provider-icon';
 import { Colors, Fonts } from '@/constants/theme';
 import { formatTimestamp } from '@/lib/opencode/format';
 import type { NotificationDebugStatus } from '@/lib/notifications';
+import type { VoiceCapabilities } from '@/lib/voice/capabilities';
 import type { SpeechVoiceOption } from '@/lib/voice/speech-output';
 import type { WorkingSoundVariant } from '@/lib/voice/working-sound';
 import type { ChatPreferences, ModelOption, ProviderOption, ResponseScope } from '@/providers/opencode-provider';
@@ -301,24 +302,58 @@ type VoiceSectionProps = {
   availableSpeechVoices: SpeechVoiceOption[];
   chatPreferences: ChatPreferences;
   isRefreshingSpeechVoices: boolean;
+  isRefreshingVoiceCapabilities: boolean;
+  isTestingVoice: boolean;
+  onEnableVoiceInput: () => void;
+  onOpenVoiceSettings: () => void;
+  onRefreshVoiceCapabilities: () => void;
+  onTestVoicePlayback: () => void;
   palette: Palette;
   selectedResponseScope: { value: ResponseScope };
   selectedSpeechVoiceLabel: string;
   selectedWorkingSound: { value: WorkingSoundVariant };
   updateChatPreferences: (patch: Partial<ChatPreferences>) => void;
+  voiceCapabilities?: VoiceCapabilities;
 };
+
+function VoiceCheckRow({ label, palette, status }: { label: string; palette: Palette; status: string }) {
+  return (
+    <View style={styles.voiceCheckRow}>
+      <Text variant="bodyMedium" style={{ color: palette.text }}>{label}</Text>
+      <Text variant="labelMedium" style={{ color: palette.muted }}>{status}</Text>
+    </View>
+  );
+}
 
 export function VoiceSection({
   availableSpeechVoices,
   chatPreferences,
   isRefreshingSpeechVoices,
+  isRefreshingVoiceCapabilities,
+  isTestingVoice,
+  onEnableVoiceInput,
+  onOpenVoiceSettings,
+  onRefreshVoiceCapabilities,
+  onTestVoicePlayback,
   palette,
   selectedResponseScope,
   selectedSpeechVoiceLabel,
   selectedWorkingSound,
   updateChatPreferences,
+  voiceCapabilities,
 }: VoiceSectionProps) {
   const { t } = useTranslation();
+  const voicePermission = voiceCapabilities?.permission;
+  const enabledLabel = t('common:labels.enabled');
+  const offLabel = t('common:labels.off');
+  const unavailableLabel = t('common:labels.unavailable');
+  const permissionStatus = !voicePermission || voicePermission.available === false
+    ? unavailableLabel
+    : voicePermission.restricted
+      ? t('settings:voice.check.restricted')
+      : voicePermission.granted
+        ? enabledLabel
+        : offLabel;
   const responseScopeOptions: NativeSelectOption<ResponseScope>[] = RESPONSE_SCOPE_OPTIONS.map((option) => ({
     description: t(`settings:voice.responseScope.${option.value}.description`),
     label: t(`settings:voice.responseScope.${option.value}.label`),
@@ -343,6 +378,39 @@ export function VoiceSection({
 
   return (
     <View style={styles.section}>
+        <View style={[styles.voiceCheckCard, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+          <Text variant="titleSmall" style={{ color: palette.text }}>{t('settings:voice.check.title')}</Text>
+          <VoiceCheckRow label={t('settings:voice.check.permission')} palette={palette} status={permissionStatus} />
+          <VoiceCheckRow
+            label={t('settings:voice.check.recognition')}
+            palette={palette}
+            status={voiceCapabilities ? (voiceCapabilities.recognitionAvailable ? enabledLabel : unavailableLabel) : t('common:labels.unknown')}
+          />
+          <VoiceCheckRow
+            label={t('settings:voice.check.onDevice')}
+            palette={palette}
+            status={voiceCapabilities ? (voiceCapabilities.onDeviceSupported ? enabledLabel : offLabel) : t('common:labels.unknown')}
+          />
+          {voiceCapabilities && !voiceCapabilities.recognitionAvailable ? (
+            <HelperText type="info">{t('settings:voice.check.unavailableHint')}</HelperText>
+          ) : null}
+          {voicePermission?.restricted ? (
+            <HelperText type="info">{t('settings:voice.check.restrictedHint')}</HelperText>
+          ) : null}
+          {voicePermission && voicePermission.available && !voicePermission.granted && !voicePermission.canAskAgain ? (
+            <HelperText type="info">{t('settings:voice.check.deniedHint')}</HelperText>
+          ) : null}
+          <View style={styles.actionRow}>
+            {voicePermission && voicePermission.available && !voicePermission.granted && voicePermission.canAskAgain ? (
+              <Button mode="contained-tonal" onPress={onEnableVoiceInput}>{t('settings:voice.check.enable')}</Button>
+            ) : null}
+            <Button loading={isRefreshingVoiceCapabilities} mode="outlined" onPress={onRefreshVoiceCapabilities}>{t('settings:voice.check.recheck')}</Button>
+            <Button loading={isTestingVoice} mode="outlined" onPress={onTestVoicePlayback}>{t('settings:voice.check.test')}</Button>
+            {voicePermission && voicePermission.available && !voicePermission.granted ? (
+              <Button mode="text" onPress={onOpenVoiceSettings}>{t('common:actions.openSettings')}</Button>
+            ) : null}
+          </View>
+        </View>
         <List.Section style={styles.infoListSection}>
           <SettingSwitchRow
             description={t('settings:voice.onDeviceInput.description')}
@@ -581,6 +649,8 @@ export function SettingSelectField<T extends string>({
 const styles = StyleSheet.create({
   card: { borderRadius: 16 },
   section: { gap: 14, paddingBottom: 8 },
+  voiceCheckCard: { borderRadius: 16, borderWidth: 1, gap: 8, padding: 14 },
+  voiceCheckRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
   title: { fontWeight: '600' },
   connectionStatusCard: { borderRadius: 14, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 12 },
   numericSlider: { gap: 8 },

@@ -17,6 +17,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { type TranscriptEntry } from '@/lib/opencode/format';
 import { getTranscriptActivityLabel, isTranscriptDisplayMessage } from '@/lib/opencode/transcript';
 import { getLatestContextTokens } from '@/lib/opencode/usage';
+import { openVoiceSettingsAsync } from '@/lib/voice/permissions';
 import { speakText, stopSpeaking } from '@/lib/voice/speech-output';
 import { useSpeechInput } from '@/lib/voice/use-speech-input';
 import {
@@ -64,6 +65,8 @@ export function ChatView() {
   const [voiceFeedback, setVoiceFeedback] = useState<string | undefined>(undefined);
   const [sendFeedback, setSendFeedback] = useState<string | undefined>(undefined);
   const speechDraftPrefixRef = useRef('');
+  const conversationActiveRef = useRef(false);
+  const voiceRecoveryContextRef = useRef<'conversation' | 'dictation'>('dictation');
   const draftRef = useRef('');
   const attachmentsRef = useRef<{ uri: string; mime?: string; filename?: string }[]>([]);
   const lastSentAttachmentsRef = useRef<{ uri: string; mime?: string; filename?: string }[]>([]);
@@ -162,11 +165,22 @@ export function ChatView() {
   });
   const {
     error: speechInputError,
+    errorAction: speechInputErrorAction,
     isAvailable: isSpeechInputAvailable,
     isListening: isSpeechInputListening,
     start: startSpeechInput,
     stop: stopSpeechInput,
   } = speechInput;
+  // Only offer a recovery action when the snackbar is actually showing a
+  // voice-input error, not unrelated conversation or playback feedback.
+  // Dictation failures live in this component's own hook; conversation
+  // failures carry their action from the provider so the two always match.
+  const dictationVoiceFailure = Boolean(voiceFeedback && voiceFeedback === speechInputError);
+  const voiceRecoveryAction = dictationVoiceFailure
+    ? speechInputErrorAction
+    : conversation.feedback
+      ? conversation.feedbackAction ?? 'none'
+      : 'none';
 
   const handleSendPrompt = useCallback(async (promptOverride?: string) => {
     const nextDraft = promptOverride ?? draftRef.current;
@@ -229,11 +243,24 @@ export function ChatView() {
   }, [copiedMessageId]);
 
   useEffect(() => {
+    conversationActiveRef.current = conversationActive;
+  }, [conversationActive]);
+
+  useEffect(() => {
     if (!speechInputError) {
       return;
     }
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- surface speech-hook errors as dismissible voice feedback.
+    voiceRecoveryContextRef.current = conversationActiveRef.current ? 'conversation' : 'dictation';
+
+    // While conversation mode is active the provider owns the listening
+    // session, including its own retry/fallback and feedback. Surfacing this
+    // hook's error too would flash a false failure during the automatic
+    // on-device -> network retry.
+    if (conversationActiveRef.current) {
+      return;
+    }
+
     setVoiceFeedback(speechInputError);
   }, [speechInputError]);
 
@@ -311,6 +338,26 @@ export function ChatView() {
     }
 
     void Haptics.selectionAsync().catch(() => undefined);
+  }
+
+  // Just-in-time recovery for a voice-input failure: prompt again when the OS
+  // still allows it, deep-link to app settings after a denial, or restart the
+  // surface the user was in.
+  function handleVoiceRecovery() {
+    setVoiceFeedback(undefined);
+    clearConversationFeedback();
+
+    if (voiceRecoveryAction === 'open-settings') {
+      void openVoiceSettingsAsync();
+      return;
+    }
+
+    if (voiceRecoveryContextRef.current === 'conversation') {
+      void toggleConversationMode();
+      return;
+    }
+
+    void handleToggleRecording();
   }
 
   async function handleSpeakEntry(entry: TranscriptEntry) {
@@ -591,7 +638,11 @@ export function ChatView() {
           setVoiceFeedback(undefined);
           clearConversationFeedback();
         }}
-        duration={3200}>
+        duration={voiceRecoveryAction === 'none' ? 3200 : 6000}
+        action={voiceRecoveryAction === 'none' ? undefined : {
+          label: voiceRecoveryAction === 'open-settings' ? t('common:actions.openSettings') : t('common:actions.retry'),
+          onPress: handleVoiceRecovery,
+        }}>
         {conversation.feedback || voiceFeedback}
       </Snackbar>
     </>

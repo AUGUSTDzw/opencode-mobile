@@ -28,7 +28,8 @@
     "submit": "送信",
     "stop": "停止",
     "select": "選択",
-    "closeWithName": "{{title}}を閉じる"
+    "closeWithName": "{{title}}を閉じる",
+    "openSettings": "設定を開く"
   },
   "select": {
     "chooseOption": "オプションを選択"
