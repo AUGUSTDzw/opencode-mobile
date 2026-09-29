@@ -135,6 +135,12 @@ Connection settings are configured inside the app. By default, the app expects a
 
 Local configuration files (`.env`, `config.json`) are gitignored for security.
 
+## ❤️ Support OpenCode Mobile
+
+OpenCode Mobile is free and open source. If you find it useful and want to support its continued development, you can sponsor the project through GitHub Sponsors, Ko-fi, or cryptocurrency (BTC/ETH).
+
+[Support OpenCode Mobile](https://getopencode.app/support)
+
 ## Contributors ✨
 
 Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/docs/en/emoji-key)):
