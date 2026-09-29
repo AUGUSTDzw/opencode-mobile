@@ -1,167 +1,63 @@
-import { memo, useMemo, type ReactNode } from 'react';
-import { StyleSheet, View } from 'react-native';
-import { Text } from 'react-native-paper';
+import { memo, useMemo } from 'react';
+import { Linking } from 'react-native';
+import { EnrichedMarkdownText, type MarkdownStyle } from 'react-native-enriched-markdown';
 
-function renderInlineMarkdown(text: string, color: string, codeColor: string): ReactNode[] {
-  const parts = text.split(/(`[^`]+`|\*\*[^*]+\*\*)/g).filter(Boolean);
+const allowedLinkProtocols = new Set(['http:', 'https:', 'mailto:', 'tel:']);
 
-  return parts.map((part, index) => {
-    if (part.startsWith('`') && part.endsWith('`')) {
-      return (
-        <Text key={`inline-${index}`} style={[styles.inlineCode, { color: codeColor }]}>
-          {part.slice(1, -1)}
-        </Text>
-      );
+function openMarkdownLink(url: string) {
+  try {
+    if (!allowedLinkProtocols.has(new URL(url).protocol.toLowerCase())) {
+      return;
     }
+  } catch {
+    return;
+  }
 
-    if (part.startsWith('**') && part.endsWith('**')) {
-      return (
-        <Text key={`inline-${index}`} style={{ color, fontWeight: '700' }}>
-          {part.slice(2, -2)}
-        </Text>
-      );
-    }
-
-    return (
-      <Text key={`inline-${index}`} style={{ color }}>
-        {part}
-      </Text>
-    );
-  });
+  void Linking.openURL(url).catch(() => undefined);
 }
 
 function MarkdownTextImpl({ text, color, mutedColor }: { text: string; color: string; mutedColor: string }) {
-  // Tokenize once per unique (text, color, mutedColor) tuple. During streaming
-  // token deltas, parent re-renders fire on every delta; without this memo the
-  // whole tokenizer re-runs each time even though props are stable between deltas.
-  const content = useMemo(() => {
-    const lines = text.split('\n');
-    const blocks: ReactNode[] = [];
-    let paragraph: string[] = [];
-    let codeBlock: string[] = [];
-    let inCodeBlock = false;
+  const markdownStyle = useMemo<MarkdownStyle>(() => ({
+    paragraph: { fontSize: 16, color, lineHeight: 26 },
+    h1: { fontSize: 24, fontWeight: '700', color },
+    h2: { fontSize: 18, fontWeight: '700', color },
+    h3: { fontSize: 16, fontWeight: '700', color },
+    h4: { fontSize: 15, fontWeight: '700', color },
+    h5: { fontSize: 14, fontWeight: '700', color },
+    h6: { fontSize: 13, fontWeight: '700', color },
+    list: { fontSize: 16, color, lineHeight: 26, bulletColor: color, markerColor: color, gapWidth: 10 },
+    link: { color, underline: true },
+    code: { fontFamily: 'monospace', fontSize: 12, color, backgroundColor: 'rgba(0,0,0,0.08)' },
+    codeBlock: { fontFamily: 'monospace', fontSize: 12, lineHeight: 18, color, backgroundColor: 'rgba(0,0,0,0.08)', padding: 14, borderRadius: 14 },
+    blockquote: { color, borderColor: mutedColor, borderWidth: 3 },
+    table: {
+      fontSize: 14,
+      lineHeight: 20,
+      color,
+      borderColor: mutedColor,
+      borderRadius: 8,
+      headerBackgroundColor: 'rgba(0,0,0,0.08)',
+      headerTextColor: color,
+      rowEvenBackgroundColor: 'transparent',
+      rowOddBackgroundColor: 'rgba(0,0,0,0.04)',
+      cellPaddingHorizontal: 8,
+      cellPaddingVertical: 6,
+    },
+    thematicBreak: { color: mutedColor },
+  }), [color, mutedColor]);
 
-    function pushParagraph() {
-      if (paragraph.length === 0) {
-        return;
-      }
-
-      const paragraphContent = paragraph.join(' ').trim();
-      if (paragraphContent) {
-        blocks.push(
-          <Text
-            key={`p-${blocks.length}`}
-            variant="bodyLarge"
-            style={{ color, lineHeight: 26, flexShrink: 1, minWidth: 0 }}>
-            {renderInlineMarkdown(paragraphContent, color, mutedColor)}
-          </Text>,
-        );
-      }
-      paragraph = [];
-    }
-
-    function pushCodeBlock() {
-      if (codeBlock.length === 0) {
-        return;
-      }
-
-      blocks.push(
-        <View key={`code-${blocks.length}`} style={styles.codeBlock}>
-          <Text variant="bodySmall" style={[styles.code, { color }]}>
-            {codeBlock.join('\n')}
-          </Text>
-        </View>,
-      );
-      codeBlock = [];
-    }
-
-    lines.forEach((line) => {
-      if (line.trim().startsWith('```')) {
-        if (inCodeBlock) {
-          pushCodeBlock();
-        } else {
-          pushParagraph();
-        }
-        inCodeBlock = !inCodeBlock;
-        return;
-      }
-
-      if (inCodeBlock) {
-        codeBlock.push(line);
-        return;
-      }
-
-      const heading = line.match(/^(#{1,3})\s+(.*)$/);
-      if (heading) {
-        pushParagraph();
-        blocks.push(
-          <Text
-            key={`h-${blocks.length}`}
-            variant={heading[1].length === 1 ? 'headlineSmall' : 'titleMedium'}
-            style={{ color, fontWeight: '700' }}>
-            {heading[2]}
-          </Text>,
-        );
-        return;
-      }
-
-      const bullet = line.match(/^[-*]\s+(.*)$/);
-      if (bullet) {
-        pushParagraph();
-        blocks.push(
-          <View key={`b-${blocks.length}`} style={styles.markdownBulletRow}>
-            <Text style={{ color }}>{'\u2022'}</Text>
-            <Text variant="bodyLarge" style={[styles.markdownBulletText, { color, lineHeight: 26, flexShrink: 1, minWidth: 0 }]}>
-              {renderInlineMarkdown(bullet[1], color, mutedColor)}
-            </Text>
-          </View>,
-        );
-        return;
-      }
-
-      if (!line.trim()) {
-        pushParagraph();
-        return;
-      }
-
-      paragraph.push(line.trim());
-    });
-
-    pushParagraph();
-    pushCodeBlock();
-
-    return <View style={styles.markdownStack}>{blocks}</View>;
-  }, [text, color, mutedColor]);
-
-  return content;
+  return (
+    <EnrichedMarkdownText
+      markdown={text}
+      flavor="github"
+      selectable
+      containerStyle={{ width: '100%', flexShrink: 1, minWidth: 0 }}
+      markdownStyle={markdownStyle}
+      onLinkPress={({ url }) => openMarkdownLink(url)}
+    />
+  );
 }
 
-// Memo at component boundary too — guards against parent renders that pass
-// stable props (the common case once TranscriptMessage is memoized, since
-// streaming deltas only flip the entry ref of the active cell).
+// Keep the transcript boundary memoized; only the active streaming message
+// changes text on each server delta.
 export const MarkdownText = memo(MarkdownTextImpl);
-
-const styles = StyleSheet.create({
-  markdownStack: { gap: 12 },
-  markdownBulletRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  markdownBulletText: { flex: 1 },
-  inlineCode: {
-    fontFamily: 'monospace',
-    backgroundColor: 'rgba(0,0,0,0.08)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    flexShrink: 1,
-    minWidth: 0,
-  },
-  codeBlock: {
-    borderRadius: 14,
-    padding: 14,
-    backgroundColor: 'rgba(0,0,0,0.08)',
-  },
-  code: {
-    fontFamily: 'monospace',
-    fontSize: 12,
-    lineHeight: 18,
-  },
-});

@@ -312,6 +312,40 @@ test('happy path keeps the main chat flow stable', async ({ page, request }) => 
   await expect(page.getByText('2 changed files', { exact: true })).toBeVisible();
 });
 
+test('chat renders GFM tables, ordered lists, and tappable links', async ({ page, request }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await resetScenario(request, 'happy-path');
+  await openReadyChat(page);
+
+  await sendPrompt(page, 'Render markdown regression fixture');
+
+  const table = page.getByRole('table');
+  await expect(table).toBeVisible({ timeout: 20_000 });
+  await expect(table.getByRole('columnheader', { name: 'Tool' })).toBeVisible();
+  await expect(table.getByRole('columnheader', { name: 'Status' })).toHaveCSS('text-align', 'center');
+  await expect(table.locator('tbody tr').nth(1).locator('td').nth(2)).toHaveCSS('text-align', 'right');
+  await expect.poll(() => table.evaluate((element) => {
+    const viewport = element.parentElement;
+    return viewport ? getComputedStyle(viewport).overflowX : '';
+  })).toBe('auto');
+  await expect.poll(() => table.evaluate((element) => {
+    const viewport = element.parentElement;
+    return Boolean(viewport && viewport.scrollWidth > viewport.clientWidth);
+  })).toBe(true);
+  const tableViewport = table.locator('xpath=..');
+  await tableViewport.evaluate((element) => {
+    element.scrollLeft = element.scrollWidth;
+  });
+  await expect.poll(() => tableViewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+
+  const orderedList = page.locator('ol');
+  await expect(orderedList).toBeVisible();
+  await expect(orderedList.locator('li')).toHaveCount(2);
+  const link = page.getByRole('link', { name: 'Markdown reference' });
+  await expect(link).toHaveAttribute('href', 'https://example.com/markdown-reference');
+  await expect(link).toHaveCSS('text-decoration-line', 'underline');
+});
+
 test('files changed follows the latest user turn', async ({ page, request }) => {
   await resetScenario(request, 'happy-path');
   await openReadyChat(page);

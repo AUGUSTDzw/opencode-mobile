@@ -151,6 +151,7 @@ The SSE endpoint intentionally fails, forcing the app to complete the workflow t
 - send a prompt
 - wait for finished assistant text
 - verify the resulting chat appears in the Workspace tab
+- verify a deterministic assistant response renders a horizontally scrollable aligned GFM table, an ordered list, and a tappable link
 
 ### Permission Blocking Flow
 

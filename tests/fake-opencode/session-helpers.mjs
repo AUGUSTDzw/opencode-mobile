@@ -96,7 +96,10 @@ export function createSessionHelpers({ getNow, getState, emitEvent }) {
       { content: 'Validate session transcript', status: 'completed', priority: 'high' },
       { content: 'Confirm fake server integration', status: 'completed', priority: 'medium' },
     ];
-    const assistantText = `Finished: ${promptText || 'task complete'}. Flow stayed stable against the fake OpenCode server.`;
+    const markdownFixture = promptText === 'Render markdown regression fixture'
+      ? '\n\n| Tool | Status | Notes | BuildVersion | ArtifactPath | Verification |\n| :---- | :----: | ----: | :------------ | :------------: | -------------: |\n| build | OK | 12s | 1.0.32 | artifacts/android-development-build.apk | passed-on-390px-viewport |\n| test | FAIL | flaky | 1.0.32 | tests/e2e/flows.spec.mjs | retried-after-failure |\n\n1. Verify the table formatting.\n2. Open the [Markdown reference](https://example.com/markdown-reference).'
+      : '';
+    const assistantText = `Finished: ${promptText || 'task complete'}. Flow stayed stable against the fake OpenCode server.${markdownFixture}`;
 
     if (latestUserMessage) {
       latestUserMessage.info.summary = { diffs: diff };

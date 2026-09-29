@@ -261,19 +261,12 @@ Responsibility:
 
 ### Responsibility
 
-- render a small markdown subset for assistant/user messages
+- render assistant/user messages with `react-native-enriched-markdown` in GitHub flavor
 
 ### Supported formatting
 
-- headings `#` to `###`
-- bullets using `-` or `*`
-- fenced code blocks
-- inline code
-- bold text
-
-### Important limitation
-
-- this is not full markdown compatibility
+- GitHub-flavored Markdown, including tables, ordered and unordered lists, links, emphasis, blockquotes, and fenced code blocks
+- native text selection and link handling on iOS/Android, plus semantic HTML rendering on web
 
 ## `components/chat/chat-overlay.tsx`
 

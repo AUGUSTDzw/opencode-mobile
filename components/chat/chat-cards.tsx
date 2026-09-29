@@ -539,6 +539,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     gap: 10,
     flexShrink: 1,
+    maxWidth: '100%',
     overflow: 'hidden',
   },
   messageBubbleUser: { borderBottomRightRadius: 10, marginLeft: '8%', marginRight: 8, alignSelf: 'flex-end' },

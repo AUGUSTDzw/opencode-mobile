@@ -230,7 +230,7 @@ they cannot silently regrow.
 - `components/chat/chat-cards.tsx`
   Message, diff, and permission cards, including message fork/revert actions.
 - `components/chat/chat-markdown.tsx`
-  Small custom markdown renderer.
+  Memoized GFM renderer backed by `react-native-enriched-markdown`.
 - `components/chat/chat-overlay.tsx`
   Full-screen conversation mode overlay.
 
