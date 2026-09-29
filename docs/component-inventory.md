@@ -262,6 +262,7 @@ Responsibility:
 ### Responsibility
 
 - render assistant/user messages with `react-native-enriched-markdown` in GitHub flavor
+- Message bubbles stretch within their side margins; the renderer stretches within the bubble padding and keeps its measured content height. Avoid percentage widths inside content-sized bubbles, which can mismeasure native wrapping and height.
 
 ### Supported formatting
 

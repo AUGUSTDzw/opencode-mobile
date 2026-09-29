@@ -51,7 +51,7 @@ function MarkdownTextImpl({ text, color, mutedColor }: { text: string; color: st
       markdown={text}
       flavor="github"
       selectable
-      containerStyle={{ width: '100%', flexShrink: 1, minWidth: 0 }}
+      containerStyle={{ alignSelf: 'stretch', minWidth: 0 }}
       markdownStyle={markdownStyle}
       onLinkPress={({ url }) => openMarkdownLink(url)}
     />
