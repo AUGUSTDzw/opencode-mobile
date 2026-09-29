@@ -346,7 +346,7 @@ test('chat renders GFM tables, ordered lists, and tappable links', async ({ page
   await expect(link).toHaveCSS('text-decoration-line', 'underline');
   const inlineCode = page.locator('code').filter({ hasText: '<text>' });
   await expect(inlineCode).toHaveCount(1);
-  await expect(inlineCode).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  await expect(inlineCode).toHaveCSS('background-color', 'rgba(0, 0, 0, 0.08)');
 });
 
 test('files changed follows the latest user turn', async ({ page, request }) => {
