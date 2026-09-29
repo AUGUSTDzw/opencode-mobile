@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { KeyboardAvoidingView, Linking, Modal, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { Keyboard, KeyboardAvoidingView, Linking, Modal, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { Appbar, Button, Card, Chip, Divider, IconButton, List, Surface, Switch, Text, TouchableRipple } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -394,7 +394,7 @@ function TranscriptMessageImpl({
 
   return (
     <View style={[styles.messageRow, isUser && styles.messageRowUser]}>
-      <TouchableRipple borderless={false} rippleColor={`${palette.tint}22`} style={styles.messageTouchable} onLongPress={onCopy}>
+      <TouchableRipple borderless={false} rippleColor={`${palette.tint}22`} style={styles.messageTouchable} onPress={Keyboard.dismiss} onLongPress={onCopy}>
         <Surface
           style={[
             styles.messageBubble,
