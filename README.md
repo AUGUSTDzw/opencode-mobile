@@ -1,7 +1,4 @@
 # OpenCode Mobile
-<!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-6-orange.svg?style=flat-square)](#contributors-)
-<!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 [![Get it on Google Play](https://img.shields.io/badge/Get_it_on-Google_Play-4285F4?style=for-the-badge&logo=googleplay&logoColor=white)](https://play.google.com/store/apps/details?id=app.getopencode)
 [![Download APK](https://img.shields.io/badge/Download-APK-18A748?style=for-the-badge&logo=android&logoColor=white)](https://github.com/alvarolorentedev/opencode-mobile/releases/latest/download/opencode-mobile.apk)
@@ -22,8 +19,6 @@ OpenCode Mobile brings the full power of your self-hosted OpenCode AI assistant 
 
 ## Quick Start
 
-### For Users
-
 1. **Download the app**:
    - [Google Play](https://play.google.com/store/apps/details?id=app.getopencode)
    - [TestFlight (Beta)](https://testflight.apple.com/join/ddcE5Wzz)
@@ -32,10 +27,6 @@ OpenCode Mobile brings the full power of your self-hosted OpenCode AI assistant 
 2. **Connect to your server**: Open the app and enter your OpenCode server URL (default: `http://ip:4096`)
 
 3. **Start chatting**: Begin conversations with your AI models instantly
-
-### For Developers
-
-Want to build from source or contribute? See the [Development](#development) section below.
 
 ## Features
 
@@ -51,119 +42,20 @@ Want to build from source or contribute? See the [Development](#development) sec
 
 Check out screenshots and more details on the [official website](https://getopencode.app/).
 
----
+## For Developers
 
-## Development
+Want to build from source or contribute? See the [Development](docs/development.md) document.
 
-OpenCode Mobile is built with Expo and React Native.
-
-### Requirements
-
-- Node.js 20+
-- npm
-- Android Studio / Xcode for native builds
-
-### Getting Started
-
-1. Clone the repository and install dependencies:
-   ```bash
-   git clone https://github.com/alvarolorentedev/opencode-mobile.git
-   cd opencode-mobile
-   npm install
-   ```
-
-2. Start the development server:
-   ```bash
-   npm run start
-   ```
-
-3. For a development client build:
-   ```bash
-   npm run start:dev-client
-   ```
-
-### Common Commands
-
-```bash
-npm run lint           # Run linter
-npm run typecheck      # Type checking
-npm run test:e2e:web   # End-to-end tests
-npm run android        # Build Android app
-npm run ios            # Build iOS app
-npm run prebuild:ios   # Generate iOS native project
-npm run build:ios:local # Build iOS release archive locally
-```
-
-### Android Builds
-
-Build a production Android release:
-```bash
-npm run build:android
-```
-
-Build a development client:
-```bash
-npm run build:development:android
-```
-
-**Release Automation**:
-- Every CI run (push to `main`, tags, manual dispatch) builds the Android release and uploads it as the `android-release-artifacts` artifact
-- The GitHub Release asset and production Play Store upload happen only on `v*` tags
-
-### iOS Builds
-
-Build a local iOS release:
-```bash
-npm run build:ios:local
-```
-
-**Release Automation**:
-- Push to `main` to trigger iOS release build and artifact upload
-- Push a version tag (e.g., `v1.2.3`) to trigger production TestFlight upload
-- Use `workflow_dispatch` with `upload_to_app_store: true` for manual TestFlight uploads
-- The `.ipa` artifact can be found in the workflow run's artifacts section
-
-### Testing
-
-- Flow validation runs against the fake OpenCode server in `tests/fake-opencode/server.mjs`
-- End-to-end suite uses Playwright (`tests/e2e/flows.spec.mjs`)
-- Full testing strategy documented in `TESTING.md`
-
-### Configuration
-
-Connection settings are configured inside the app. By default, the app expects an OpenCode server at `http://127.0.0.1:4096`.
-
-Local configuration files (`.env`, `config.json`) are gitignored for security.
-
-## ❤️ Support OpenCode Mobile
+## ❤️ Support
 
 OpenCode Mobile is free and open source. If you find it useful and want to support its continued development, you can sponsor the project through GitHub Sponsors, Ko-fi, or cryptocurrency (BTC/ETH).
 
 [Support OpenCode Mobile](https://getopencode.app/support)
 
-## Contributors ✨
+## ✨ Contributors
 
-Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/docs/en/emoji-key)):
+<a href="https://github.com/alvarolorentedev/opencode-mobile/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=alvarolorentedev/opencode-mobile" />
+</a>
 
-<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
-<!-- prettier-ignore-start -->
-<!-- markdownlint-disable -->
-<table>
-  <tbody>
-    <tr>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/jonathanvanherpe"><img src="https://avatars.githubusercontent.com/u/2920210?v=4?s=100" width="100px;" alt="Jonathan Vanherpe"/><br /><sub><b>Jonathan Vanherpe</b></sub></a><br /><a href="https://github.com/alvarolorentedev/opencode-mobile/commits?author=jonathanvanherpe" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/robbe1912"><img src="https://avatars.githubusercontent.com/u/20685876?v=4?s=100" width="100px;" alt="Robin Fröhlich"/><br /><sub><b>Robin Fröhlich</b></sub></a><br /><a href="https://github.com/alvarolorentedev/opencode-mobile/commits?author=robbe1912" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/NANAMINER"><img src="https://avatars.githubusercontent.com/u/142423117?v=4?s=100" width="100px;" alt="NANAMINER"/><br /><sub><b>NANAMINER</b></sub></a><br /><a href="https://github.com/alvarolorentedev/opencode-mobile/issues?q=author%3ANANAMINER" title="Bug reports">🐛</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/electronrancher"><img src="https://avatars.githubusercontent.com/u/6657599?v=4?s=100" width="100px;" alt="electronrancher"/><br /><sub><b>electronrancher</b></sub></a><br /><a href="https://github.com/alvarolorentedev/opencode-mobile/commits?author=electronrancher" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/subho1999"><img src="https://avatars.githubusercontent.com/u/29020364?v=4?s=100" width="100px;" alt="Subhabrata Ghosh"/><br /><sub><b>Subhabrata Ghosh</b></sub></a><br /><a href="https://github.com/alvarolorentedev/opencode-mobile/issues?q=author%3Asubho1999" title="Bug reports">🐛</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://aewens.com"><img src="https://avatars.githubusercontent.com/u/5826776?v=4?s=100" width="100px;" alt="Austin Ewens"/><br /><sub><b>Austin Ewens</b></sub></a><br /><a href="https://github.com/alvarolorentedev/opencode-mobile/issues?q=author%3Aaewens" title="Bug reports">🐛</a></td>
-    </tr>
-  </tbody>
-</table>
-
-<!-- markdownlint-restore -->
-<!-- prettier-ignore-end -->
-
-<!-- ALL-CONTRIBUTORS-LIST:END -->
-
-This project follows the [all-contributors](https://github.com/all-contributors/all-contributors) specification. Contributions of any kind welcome!
+Made with [contrib.rocks](https://contrib.rocks).
