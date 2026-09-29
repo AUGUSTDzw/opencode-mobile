@@ -54,6 +54,7 @@ export default function OnboardingPermissionsScreen() {
         <>
           <Button
             mode="text"
+            style={{ marginRight: 'auto' }}
             testID="onboarding-permissions-skip"
             onPress={() => router.push('/onboarding/ready')}>
             {t('onboarding:permissions.skip')}

@@ -76,6 +76,7 @@ export default function OnboardingConnectScreen() {
         <>
           <Button
             mode="text"
+            style={{ marginRight: 'auto' }}
             testID="onboarding-connect-skip"
             disabled={connecting || testing}
             onPress={() => router.push('/onboarding/workspace')}>

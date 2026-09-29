@@ -60,11 +60,13 @@ export default function OnboardingWorkspaceScreen() {
       title={t('onboarding:workspace.title')}
       subtitle={t('onboarding:workspace.subtitle')}
       testID="onboarding-workspace"
+      footerSingleLine
       onBack={() => router.back()}
       footer={
         <>
           <Button
             mode="text"
+            style={{ marginRight: 'auto' }}
             testID="onboarding-workspace-skip"
             disabled={isRefreshingWorkspaceCatalog || isAdding}
             onPress={() => router.push('/onboarding/preferences')}>
@@ -83,7 +85,7 @@ export default function OnboardingWorkspaceScreen() {
               mode="contained"
               testID="onboarding-workspace-continue"
               onPress={() => choose(activeProject.path)}>
-              {t('onboarding:workspace.continue', { name: activeProject.label })}
+              {t('onboarding:workspace.continue')}
             </Button>
           ) : null}
         </>

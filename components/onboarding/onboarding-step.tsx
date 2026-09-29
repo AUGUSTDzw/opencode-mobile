@@ -20,6 +20,7 @@ export function OnboardingStep({
   onBack,
   children,
   footer,
+  footerSingleLine = false,
   testID,
   scrollEnabled = true,
 }: {
@@ -30,6 +31,7 @@ export function OnboardingStep({
   onBack?: () => void;
   children: ReactNode;
   footer: ReactNode;
+  footerSingleLine?: boolean;
   testID?: string;
   scrollEnabled?: boolean;
 }) {
@@ -67,7 +69,7 @@ export function OnboardingStep({
         {children}
       </ScrollView>
 
-      <View style={[styles.footer, { backgroundColor: palette.surface, borderTopColor: palette.border, paddingBottom: Math.max(insets.bottom, 12) }]}>
+      <View style={[styles.footer, footerSingleLine && styles.footerSingleLine, { backgroundColor: palette.surface, borderTopColor: palette.border, paddingBottom: Math.max(insets.bottom, 12) }]}>
         {footer}
       </View>
     </View>
@@ -84,4 +86,5 @@ const styles = StyleSheet.create({
   heading: { gap: 8 },
   title: { fontFamily: Fonts.display, fontWeight: '700' },
   footer: { borderTopWidth: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'flex-end', paddingHorizontal: 20, paddingTop: 12 },
+  footerSingleLine: { flexWrap: 'nowrap' },
 });
