@@ -60,6 +60,35 @@ test('fresh install walks through onboarding into a working chat', async ({ page
   await expect(page.getByTestId('onboarding-welcome')).toHaveCount(0);
 });
 
+test('every onboarding step can be skipped', async ({ page }) => {
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
+
+  await expect(page.getByTestId('onboarding-welcome')).toBeVisible({ timeout: 30_000 });
+  await page.getByTestId('onboarding-welcome-start').click();
+
+  // Skip the connection step without contacting a server.
+  await expect(page.getByTestId('onboarding-connect')).toBeVisible();
+  await page.getByTestId('onboarding-connect-skip').click();
+
+  // No connection was made, so the workspace step has nothing to pick.
+  await expect(page.getByTestId('onboarding-workspace')).toBeVisible();
+  await page.getByTestId('onboarding-workspace-skip').click();
+
+  await expect(page.getByTestId('onboarding-preferences')).toBeVisible();
+  await page.getByTestId('onboarding-preferences-skip').click();
+  await expect(page.getByTestId('onboarding-permissions')).toBeVisible();
+  await page.getByTestId('onboarding-permissions-skip').click();
+
+  await expect(page.getByTestId('onboarding-ready')).toBeVisible();
+  await page.getByTestId('onboarding-ready-start').click();
+
+  // Completing without a workspace lands on the chat workspace prompt instead
+  // of a crash, and onboarding does not reappear on relaunch.
+  await expect(page.getByText('Select a project in the Workspaces tab to open its chat context.')).toBeVisible({ timeout: 30_000 });
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await expect(page.getByTestId('onboarding-welcome')).toHaveCount(0);
+});
+
 test('a failed connection keeps entered values and allows retry', async ({ page }) => {
   await page.goto('/', { waitUntil: 'domcontentloaded' });
   await page.getByTestId('onboarding-welcome-start').click();

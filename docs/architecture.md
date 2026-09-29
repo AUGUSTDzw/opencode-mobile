@@ -112,6 +112,11 @@ carousel: welcome, connect, workspace, preferences, permissions, and ready.
   and `useNotificationSetup`/`lib/voice/permissions.ts` for permissions. The
   provider configuration dialog state machine is shared through
   `components/settings/use-provider-configuration.tsx`.
+- Every configured step can be skipped: connect and workspace each expose a
+  `skip` action that advances one step without persisting anything, matching
+  the existing preferences and permissions skips. Skipping never mutates
+  settings, so a setup can be completed with no server or workspace and the
+  app lands on the chat workspace prompt, where the user can configure later.
 
 ### Screens
 

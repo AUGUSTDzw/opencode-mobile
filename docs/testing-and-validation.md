@@ -224,6 +224,7 @@ The SSE endpoint intentionally fails, forcing the app to complete the workflow t
 seed used by `flows.spec.mjs`, so the assistant is exercised:
 
 - fresh install shows the welcome step, walks connect → workspace → preferences skip → permissions skip → ready, enters chat, and does not reappear on relaunch
+- every configured step can be skipped (connect and workspace included) and finishing without a workspace lands on the chat workspace prompt
 - a failed connection keeps the entered values and allows a retry
 - an installation with a stored settings key but no onboarding marker skips onboarding (upgrade migration)
 - clearing `localStorage` shows onboarding again

@@ -64,6 +64,13 @@ export default function OnboardingWorkspaceScreen() {
       footer={
         <>
           <Button
+            mode="text"
+            testID="onboarding-workspace-skip"
+            disabled={isRefreshingWorkspaceCatalog || isAdding}
+            onPress={() => router.push('/onboarding/preferences')}>
+            {t('onboarding:workspace.skip')}
+          </Button>
+          <Button
             mode="outlined"
             testID="onboarding-workspace-refresh"
             loading={isRefreshingWorkspaceCatalog}

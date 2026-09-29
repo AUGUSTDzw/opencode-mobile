@@ -537,6 +537,7 @@ Main relevant props:
 Responsibility:
 
 - the six first-run setup steps: welcome, connect, workspace, preferences, permissions, ready
+- connect, workspace, preferences, and permissions are skippable; skipping advances one step without persisting anything
 - thin controllers only; connection/workspace/preference persistence and permission requests are delegated to the provider and existing helpers
 - seeded from current provider state so re-running from Settings reviews rather than resets
 
